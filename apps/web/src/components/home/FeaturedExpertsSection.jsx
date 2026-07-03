@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-const EXPERT_PHOTOS = ["/expert.jpg", "/expert2.jpg", "/expert3.jpg", "/expert4.jpg", "/expert5.jpg"];
+const EXPERT_PHOTOS = ["/expert2.jpg", "/expert.jpg", "/expert2.jpg", "/expert4.jpg", "/expert5.jpg"];
 
 const MOCK_EXPERTS = [
   { id: 1, name: "Rajesh Sharma", title: "Hotel Management Consultant", company: "HospitalityFirst", bio: "25+ years transforming hotel operations across India. Specialist in luxury hospitality." },
