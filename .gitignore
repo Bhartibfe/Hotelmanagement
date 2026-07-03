@@ -1,0 +1,28 @@
+node_modules/
+.env
+.env.local
+.env.*.local
+dist/
+build/
+.turbo/
+*.log
+.DS_Store
+coverage/
+.claude/
+documentation/
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Windows
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Linting
+.eslintcache
+
+# IDE
+.vscode/
+.idea/

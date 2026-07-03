@@ -1,0 +1,542 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ───
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum MembershipStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+  REVISION_REQUESTED
+}
+
+enum ProfileStatus {
+  INCOMPLETE
+  PENDING_REVIEW
+  REVISION_REQUESTED
+  APPROVED
+  EDIT_PENDING
+}
+
+enum ProductStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum MemberType {
+  HOTEL_OWNER
+  VENDOR
+  CONSULTANT
+  PROFESSIONAL
+  OTHER
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ConnectionType {
+  FOLLOW
+  CONNECTION
+  BUSINESS_REQUEST
+}
+
+enum PostType {
+  HOTEL_UPDATE
+  INDUSTRY_INSIGHT
+  TECHNOLOGY_IMPLEMENTATION
+  BUSINESS_ANNOUNCEMENT
+  HOSPITALITY_INNOVATION
+  EVENT_UPDATE
+  GENERAL
+}
+
+enum EventType {
+  CONFERENCE
+  SUMMIT
+  NETWORKING
+  WEBINAR
+}
+
+enum HotelMemberRole {
+  OWNER
+  GENERAL_MANAGER
+  IT_HEAD
+  FINANCE_HEAD
+  PROCUREMENT_HEAD
+  OPERATIONS_HEAD
+  FB_HEAD
+  MARKETING_HEAD
+  ENGINEERING_HEAD
+  HR_HEAD
+  GUEST_EXPERIENCE_HEAD
+}
+
+enum MarketplaceCategory {
+  TECHNOLOGY
+  ARCHITECTURE
+  INTERIOR_DESIGN
+  HVAC
+  PROCUREMENT
+  SECURITY
+  MARKETING
+  RECRUITMENT
+  CONSULTING
+  LEGAL
+  FINANCE
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum NotificationType {
+  CONNECTION_REQUEST
+  CONNECTION_ACCEPTED
+  POST_LIKE
+  POST_COMMENT
+  EVENT_REMINDER
+  MEMBERSHIP_APPROVED
+  MEMBERSHIP_REJECTED
+  REVISION_REQUESTED
+  PRODUCT_APPROVED
+  PRODUCT_REJECTED
+  PROFILE_EDIT_APPROVED
+  SYSTEM
+}
+
+// ─── MODELS ───
+
+model User {
+  id                    String            @id @default(cuid())
+  email                 String            @unique
+  passwordHash          String?
+  googleId              String?           @unique
+  role                  Role              @default(MEMBER)
+  memberType            MemberType?
+  membershipStatus      MembershipStatus  @default(PENDING)
+  profileStatus         ProfileStatus     @default(INCOMPLETE)
+  salutation            String?
+  firstName             String
+  lastName              String
+  title                 String?
+  phone                 String?
+  avatar                String?
+  bio                   String?           @db.Text
+  city                  String?
+  state                 String?
+  country               String?           @default("India")
+  linkedinUrl           String?
+  websiteUrl            String?
+  organizationName      String?
+  organizationRole      String?
+  achievements          String?           @db.Text
+  industryContributions String?           @db.Text
+  businessOverview      String?           @db.Text
+  yearsInIndustry       Int?
+  isFeaturedExpert      Boolean           @default(false)
+  isFeaturedVendor      Boolean           @default(false)
+  isActive              Boolean           @default(true)
+  approvedAt            DateTime?
+  approvedBy            String?
+  rejectionReason       String?
+  profileCompletedAt    DateTime?
+  lastLoginAt           DateTime?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  hotels              Hotel[]                 @relation("HotelOwner")
+  hotelMemberships    HotelMember[]
+  vendorProfile       VendorProfile?
+  expertProfile       IndustryExpert?
+  products            Product[]
+  testimonials        Testimonial[]
+  profileRevisions    ProfileRevision[]
+  profileEditDrafts   ProfileEditDraft[]
+  posts               FeedPost[]
+  comments            Comment[]
+  likes               Like[]
+  saves               SavedPost[]
+  sentConnections     Connection[]            @relation("ConnectionSender")
+  receivedConnections Connection[]            @relation("ConnectionReceiver")
+  eventRegistrations  EventRegistration[]
+  sentMessages        Message[]               @relation("MessageSender")
+  receivedMessages    Message[]               @relation("MessageReceiver")
+  notifications       Notification[]
+
+  @@index([role])
+  @@index([memberType])
+  @@index([membershipStatus])
+  @@index([profileStatus])
+  @@index([city, state])
+}
+
+model Hotel {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String?  @db.Text
+  city         String
+  state        String
+  country      String   @default("India")
+  address      String?
+  pincode      String?
+  latitude     Float?
+  longitude    Float?
+  rooms        Int?
+  starRating   Int?
+  website      String?
+  logo         String?
+  coverImage   String?
+  photos       String[]
+  phone        String?
+  email        String?
+  propertyType String?
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownerId String
+  owner   User          @relation("HotelOwner", fields: [ownerId], references: [id])
+  members HotelMember[]
+  posts   FeedPost[]
+
+  @@index([city, state])
+  @@index([ownerId])
+}
+
+model HotelMember {
+  id         String          @id @default(cuid())
+  role       HotelMemberRole
+  isApproved Boolean         @default(false)
+  joinedAt   DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  hotelId String
+  hotel   Hotel  @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, userId])
+  @@index([hotelId])
+  @@index([userId])
+}
+
+model Connection {
+  id        String           @id @default(cuid())
+  type      ConnectionType
+  status    ConnectionStatus @default(PENDING)
+  message   String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  senderId   String
+  sender     User   @relation("ConnectionSender", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User   @relation("ConnectionReceiver", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId, type])
+  @@index([receiverId, status])
+  @@index([senderId, status])
+}
+
+model FeedPost {
+  id        String   @id @default(cuid())
+  type      PostType @default(GENERAL)
+  content   String   @db.Text
+  mediaUrls String[]
+  isPublic  Boolean  @default(true)
+  isPinned  Boolean  @default(false)
+  isHidden  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId String
+  author   User       @relation(fields: [authorId], references: [id])
+  hotelId  String?
+  hotel    Hotel?     @relation(fields: [hotelId], references: [id])
+  comments Comment[]
+  likes    Like[]
+  saves    SavedPost[]
+
+  @@index([authorId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([hotelId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  authorId String
+  author   User      @relation(fields: [authorId], references: [id])
+  postId   String
+  post     FeedPost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId String?
+  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("CommentReplies")
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  postId String
+  post   FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+}
+
+model SavedPost {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User     @relation(fields: [userId], references: [id])
+  postId String
+  post   FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+}
+
+model VendorProfile {
+  id              String              @id @default(cuid())
+  companyName     String
+  slug            String              @unique
+  description     String?             @db.Text
+  category        MarketplaceCategory
+  services        String[]
+  portfolio       String[]
+  logo            String?
+  coverImage      String?
+  city            String
+  state           String
+  country         String              @default("India")
+  website         String?
+  phone           String?
+  email           String?
+  employeeCount   String?
+  yearEstablished Int?
+  previousClients   String[]
+  caseStudies       String[]
+  certifications    String[]
+  gstNumber         String?
+  panNumber         String?
+  msmeRegistration  String?
+  tradeLicense      String?
+  isoCertification  String?
+  dunsNumber        String?
+  annualTurnover    String?
+  hotelClientsServed Int?
+  serviceRegions    String[]
+  insuranceDetails  String?
+  isFeatured      Boolean             @default(false)
+  displayOrder    Int                 @default(0)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  userId   String    @unique
+  user     User      @relation(fields: [userId], references: [id])
+  products Product[]
+
+  @@index([category])
+  @@index([city, state])
+  @@index([isFeatured])
+}
+
+model Product {
+  id            String              @id @default(cuid())
+  name          String
+  slug          String              @unique
+  category      MarketplaceCategory
+  description   String?             @db.Text
+  priceRange    String?
+  photos        String[]
+  companyName   String?
+  status        ProductStatus       @default(PENDING_REVIEW)
+  rejectionNote String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  vendorId String
+  vendor   VendorProfile @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User          @relation(fields: [userId], references: [id])
+
+  @@index([vendorId])
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+}
+
+model IndustryExpert {
+  id                  String   @id @default(cuid())
+  expertise           String[]
+  bio                 String?  @db.Text
+  currentOrganization String?
+  currentRole         String?
+  yearsOfExperience   Int?
+  industryInsights    String?  @db.Text
+  publishedArticles   String[]
+  speakingEngagements String[]
+  awards              String[]
+  certifications      String[]
+  isFeatured          Boolean  @default(false)
+  displayOrder        Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([isFeatured])
+}
+
+model ProfileRevision {
+  id            String    @id @default(cuid())
+  flaggedFields String[]
+  adminNote     String    @db.Text
+  userResponse  String?   @db.Text
+  status        String    @default("OPEN")
+  createdAt     DateTime  @default(now())
+  resolvedAt    DateTime?
+
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  adminId String
+
+  @@index([userId, status])
+}
+
+model ProfileEditDraft {
+  id         String    @id @default(cuid())
+  draftData  Json
+  status     String    @default("PENDING")
+  adminNote  String?
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+}
+
+model Testimonial {
+  id            String   @id @default(cuid())
+  content       String   @db.Text
+  authorName    String
+  authorTitle   String?
+  authorCompany String?
+  authorAvatar  String?
+  isFeatured    Boolean  @default(false)
+  isPublished   Boolean  @default(false)
+  displayOrder  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  @@index([isFeatured, isPublished])
+}
+
+model Event {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  type            EventType
+  description     String    @db.Text
+  venue           String?
+  city            String
+  state           String
+  country         String    @default("India")
+  startDate       DateTime
+  endDate         DateTime
+  registrationUrl String?
+  coverImage      String?
+  maxAttendees    Int?
+  isFeatured      Boolean   @default(false)
+  isPublished     Boolean   @default(true)
+  displayOrder    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  registrations EventRegistration[]
+
+  @@index([startDate])
+  @@index([type])
+  @@index([city, state])
+  @@index([isFeatured])
+}
+
+model EventRegistration {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+}
+
+model Message {
+  id        String        @id @default(cuid())
+  content   String        @db.Text
+  status    MessageStatus @default(SENT)
+  createdAt DateTime      @default(now())
+
+  senderId   String
+  sender     User   @relation("MessageSender", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User   @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, status])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
