@@ -51,16 +51,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Debug endpoint (temporary)
-app.get("/api/debug/db", async (_req, res) => {
-  try {
-    const { prisma } = await import("@hospitality/database");
-    const count = await prisma.user.count();
-    res.json({ dbConnected: true, userCount: count, dbUrl: process.env.DATABASE_URL ? "set (" + process.env.DATABASE_URL.substring(0, 15) + "...)" : "NOT SET" });
-  } catch (err: any) {
-    res.status(500).json({ dbConnected: false, error: err.message, dbUrl: process.env.DATABASE_URL ? "set (" + process.env.DATABASE_URL.substring(0, 15) + "...)" : "NOT SET" });
-  }
-});
 
 // Error handler
 app.use(errorHandler);
