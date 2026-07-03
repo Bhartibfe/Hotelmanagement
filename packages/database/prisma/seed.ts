@@ -23,7 +23,7 @@ async function main() {
 
   console.log("Seeding database...\n");
 
-  const pw = await bcrypt.hash("admin123", 12);
+  const pw = await bcrypt.hash("Admin@123", 12);
   const mpw = await bcrypt.hash("member123", 12);
 
   // ─── ADMIN ───
@@ -207,7 +207,7 @@ async function main() {
 
   console.log("\n=== Seed completed successfully! ===\n");
   console.log("--- Login Credentials ---");
-  console.log("Admin:   admin@hospitalitynetwork.in / admin123");
+  console.log("Admin:   admin@hospitalitynetwork.in / Admin@123");
   console.log("Member:  rajesh@sharmahotels.com / member123");
   console.log("Pending: pending1@test.com / member123");
   console.log("\nAll members use password: member123");
