@@ -164,9 +164,9 @@ const SectionCard = ({ id, icon, title, subtitle, children, toggle, toggleValue,
       {/* Content */}
       <div
         style={{
-          maxHeight: expanded ? "1200px" : "0",
+          maxHeight: expanded ? "5000px" : "0",
           overflow: "hidden",
-          transition: "max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          transition: "max-height 0.5s ease-in-out",
         }}
       >
         <div style={{ padding: "20px 24px" }}>{children}</div>
