@@ -38,8 +38,8 @@ export const HeaderOne = ({ transparent }) => {
                   </li>
                   <li>
                     <i className="flaticon-mail"></i>
-                    <a href="mailto:connect@hotelsircle.in">
-                      connect@hotelsircle.in
+                    <a href="mailto:hello@hotelsircle.com">
+                      hello@hotelsircle.com
                     </a>
                   </li>
                 </ul>

@@ -359,7 +359,7 @@ const TestimonialsPage = () => {
                 the next wave of hospitality leaders.
               </p>
               <a
-                href="mailto:testimonials@hotelsircle.in"
+                href="mailto:hello@hotelsircle.com"
                 className="btn"
                 style={{
                   padding: "16px 40px",

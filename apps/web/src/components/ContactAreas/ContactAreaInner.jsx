@@ -14,7 +14,7 @@ export const ContactAreaInner = () => {
               </p>
               <div style={{ marginBottom: "24px" }}>
                 <h5 style={{ color: "#FFFFFF", fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>Email</h5>
-                <a href="mailto:connect@hotelsircle.in" style={{ color: "#C6A962", textDecoration: "none", fontSize: "15px" }}>connect@hotelsircle.in</a>
+                <a href="mailto:hello@hotelsircle.com" style={{ color: "#C6A962", textDecoration: "none", fontSize: "15px" }}>hello@hotelsircle.com</a>
               </div>
               <div style={{ marginBottom: "24px" }}>
                 <h5 style={{ color: "#FFFFFF", fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>Phone</h5>

@@ -27,8 +27,8 @@ export const FooterOne = () => {
                           <i className="flaticon-mail"></i>
                         </div>
                         <div className="content">
-                          <a href="mailto:connect@hotelsircle.in">
-                            connect@hotelsircle.in
+                          <a href="mailto:hello@hotelsircle.com">
+                            hello@hotelsircle.com
                           </a>
                         </div>
                       </li>

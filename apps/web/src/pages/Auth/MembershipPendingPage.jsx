@@ -259,10 +259,10 @@ const MembershipPendingPage = () => {
                   <p style={{ fontSize: "14px", color: "var(--tg-body-font-color)", margin: 0 }}>
                     Have questions about your application? Contact us at{" "}
                     <a
-                      href="mailto:membership@hotelsircle.in"
+                      href="mailto:hello@hotelsircle.com"
                       style={{ color: "#C6A962", fontWeight: 600, textDecoration: "none" }}
                     >
-                      membership@hotelsircle.in
+                      hello@hotelsircle.com
                     </a>
                   </p>
                 </div>
