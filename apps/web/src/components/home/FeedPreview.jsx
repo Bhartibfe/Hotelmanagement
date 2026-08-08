@@ -57,7 +57,7 @@ export const FeedPreview = () => {
 
   return (
     <section
-      style={{ padding: "100px 0", background: "#FFFFFF" }}
+      style={{ padding: "clamp(60px, 8vw, 100px) 0", background: "#FFFFFF" }}
     >
       <div className="container">
         <div className="row align-items-end mb-50">
@@ -121,10 +121,8 @@ export const FeedPreview = () => {
                   background: "#FFFFFF",
                   padding: "28px",
                   marginBottom: "30px",
-                  borderTop: `3px solid ${clickedId === post.id ? "var(--tg-primary-color)" : "var(--tg-accent-color)"}`,
                   border: "1px solid #E2DDD5",
-                  borderTopWidth: "3px",
-                  borderTopColor: clickedId === post.id ? "var(--tg-primary-color)" : "var(--tg-accent-color)",
+                  borderTop: `3px solid ${clickedId === post.id ? "var(--tg-primary-color)" : "var(--tg-accent-color)"}`,
                   transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
                   cursor: "pointer",
                   transform: clickedId === post.id

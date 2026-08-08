@@ -3,11 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../layouts/Layout";
 
-const SALUTATIONS = ["Mr", "Mrs", "Miss", "Ms", "Dr"];
-
 const VendorRegisterPage = () => {
   const [formData, setFormData] = useState({
-    salutation: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -63,7 +60,7 @@ const VendorRegisterPage = () => {
   };
 
   return (
-    <Layout header={1} footer={1} breadcrumb="Join as Vendor" title="Join as Vendor">
+    <Layout header={1} footer={1} breadcrumb="Join as Partner" title="Join as Partner">
       <section style={{ padding: "80px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">
@@ -123,7 +120,7 @@ const VendorRegisterPage = () => {
                       marginBottom: "8px",
                     }}
                   >
-                    Join as Vendor
+                    Join as Partner
                   </h2>
                   <p style={{ color: "#6B7280", fontSize: "15px" }}>
                     Showcase your products and services to hotel owners across India
@@ -145,29 +142,6 @@ const VendorRegisterPage = () => {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                  {/* Salutation */}
-                  <div className="row">
-                    <div className="col-md-4" style={{ marginBottom: "20px" }}>
-                      <label style={labelStyle}>
-                        Salutation<span style={requiredStar}>*</span>
-                      </label>
-                      <select
-                        name="salutation"
-                        value={formData.salutation}
-                        onChange={handleChange}
-                        required
-                        style={inputStyle}
-                      >
-                        <option value="">Select</option>
-                        {SALUTATIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
                   {/* Personal Info */}
                   <div className="row">
                     <div className="col-md-6" style={{ marginBottom: "20px" }}>
@@ -271,12 +245,12 @@ const VendorRegisterPage = () => {
                   }}
                 >
                   <p style={{ fontSize: "14px", color: "#6B7280", margin: 0 }}>
-                    Are you a Hotel Owner?{" "}
+                    Not a Partner?{" "}
                     <Link
                       to="/register"
                       style={{ color: "#C6A962", fontWeight: 600, textDecoration: "none" }}
                     >
-                      Register here
+                      Choose a different role
                     </Link>
                     .
                   </p>

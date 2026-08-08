@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PhotoUpload from "./PhotoUpload";
+import api from "../../services/api";
 
 const sectionHeaderStyle = {
   display: "flex",
@@ -34,7 +35,7 @@ const sectionWrapperStyle = () => ({
 const sectionBodyStyle = (isOpen) => ({
   padding: isOpen ? "24px 20px" : "0 20px",
   maxHeight: isOpen ? "5000px" : "0",
-  overflow: "hidden",
+  overflow: isOpen ? "visible" : "hidden",
   transition: "max-height 0.4s ease, padding 0.3s ease",
 });
 
@@ -101,13 +102,68 @@ const requiredStar = {
   marginLeft: "2px",
 };
 
+const DEPARTMENT_OPTIONS = [
+  "General Management",
+  "Hotel Owners / Ownership",
+  "Asset Management",
+  "Operations",
+  "Sales",
+  "Marketing",
+  "Business Development",
+  "Revenue Management",
+  "Distribution",
+  "Digital Marketing",
+  "Brand Marketing & Communications",
+  "Finance & Accounts",
+  "Human Resources (People & Culture)",
+  "Learning & Development",
+  "Procurement & Supply Chain",
+  "Information Technology",
+  "Information Security (Cybersecurity)",
+  "Artificial Intelligence & Emerging Technologies",
+  "Engineering & Maintenance",
+  "Projects & Development",
+  "Design & Architecture",
+  "Housekeeping",
+  "Front Office",
+  "Reservations",
+  "Food & Beverage",
+  "Culinary",
+  "Banquets & Events",
+  "Spa & Wellness",
+  "Recreation",
+  "Security & Loss Prevention",
+  "Quality Assurance",
+  "Guest Experience",
+  "Customer Relations",
+  "Legal & Compliance",
+  "ESG & Sustainability",
+  "Franchise Development",
+  "Development & Feasibility",
+  "Consulting & Advisory",
+  "Hospitality Technology",
+  "Travel & Tourism",
+  "Academia & Training",
+  "Purchasing",
+  "Public Relations (PR)",
+];
+
 const ExpertProfileForm = ({ onSubmit, initialData }) => {
+  const [departmentOptions, setDepartmentOptions] = useState(DEPARTMENT_OPTIONS);
   const [openSections, setOpenSections] = useState({
     personal: true,
     professional: false,
     thoughts: false,
     achievements: false,
   });
+
+  useEffect(() => {
+    api.getHomepageConfig().then((data) => {
+      if (data?.expertiseOptions?.length > 0) {
+        setDepartmentOptions(data.expertiseOptions);
+      }
+    }).catch(() => {});
+  }, []);
 
   const [formData, setFormData] = useState(() => {
     if (initialData) {
@@ -149,7 +205,6 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
     };
   });
 
-  const [specializationInput, setSpecializationInput] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [validationError, setValidationError] = useState("");
 
@@ -162,18 +217,15 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSpecializationKeyDown = (e) => {
-    if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault();
-      const value = specializationInput.trim().replace(/,$/g, "");
-      if (value && !formData.specializations.includes(value)) {
-        setFormData((prev) => ({
-          ...prev,
-          specializations: [...prev.specializations, value],
-        }));
-      }
-      setSpecializationInput("");
+  const handleAddSpecialization = (e) => {
+    const value = e.target.value;
+    if (value && !formData.specializations.includes(value)) {
+      setFormData((prev) => ({
+        ...prev,
+        specializations: [...prev.specializations, value],
+      }));
     }
+    e.target.value = "";
   };
 
   const removeSpecialization = (index) => {
@@ -206,34 +258,46 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
     setSubmitting(true);
     try {
       const payload = {
-        ...formData,
-        yearsOfExperience: formData.yearsOfExperience
-          ? parseInt(formData.yearsOfExperience, 10)
-          : null,
-        publishedArticles: formData.publishedArticles
-          ? formData.publishedArticles
-              .split("\n")
-              .map((u) => u.trim())
-              .filter(Boolean)
-          : [],
-        speakingEngagements: formData.speakingEngagements
-          ? formData.speakingEngagements
-              .split("\n")
-              .map((s) => s.trim())
-              .filter(Boolean)
-          : [],
-        awards: formData.awards
-          ? formData.awards
-              .split("\n")
-              .map((a) => a.trim())
-              .filter(Boolean)
-          : [],
-        certifications: formData.certifications
-          ? formData.certifications
-              .split("\n")
-              .map((c) => c.trim())
-              .filter(Boolean)
-          : [],
+        bio: formData.bio,
+        phone: formData.phone,
+        avatar: formData.avatar,
+        linkedinUrl: formData.linkedinUrl,
+        organizationName: formData.currentOrganization,
+        title: formData.designation,
+        expertProfile: {
+          expertise: formData.specializations,
+          bio: formData.bio,
+          currentOrganization: formData.currentOrganization,
+          currentRole: formData.currentRole,
+          yearsOfExperience: formData.yearsOfExperience
+            ? parseInt(formData.yearsOfExperience, 10)
+            : null,
+          industryInsights: formData.industryInsights,
+          publishedArticles: formData.publishedArticles
+            ? formData.publishedArticles
+                .split("\n")
+                .map((u) => u.trim())
+                .filter(Boolean)
+            : [],
+          speakingEngagements: formData.speakingEngagements
+            ? formData.speakingEngagements
+                .split("\n")
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [],
+          awards: formData.awards
+            ? formData.awards
+                .split("\n")
+                .map((a) => a.trim())
+                .filter(Boolean)
+            : [],
+          certifications: formData.certifications
+            ? formData.certifications
+                .split("\n")
+                .map((c) => c.trim())
+                .filter(Boolean)
+            : [],
+        },
       };
       await onSubmit(payload);
     } catch (err) {
@@ -369,6 +433,74 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
           </span>
         </div>
         <div style={sectionBodyStyle(openSections.professional)}>
+          {/* Specializations first so dropdown opens downward */}
+          <div className="row">
+            <div className="col-lg-12" style={{ marginBottom: "16px" }}>
+              <label style={labelStyle}>
+                Specializations / Expertise<span style={requiredStar}>*</span>
+                {" "}
+                <span style={{ fontWeight: 400, textTransform: "none", fontSize: "11px", color: "#9CA3AF" }}>
+                  (select from dropdown; at least 1 required)
+                </span>
+              </label>
+              <select
+                onChange={handleAddSpecialization}
+                defaultValue=""
+                style={{ ...inputStyle, size: "1" }}
+              >
+                <option value="" disabled>
+                  -- Select Department / Expertise --
+                </option>
+                {departmentOptions
+                  .filter((dept) => !formData.specializations.includes(dept))
+                  .map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+              </select>
+
+              {/* Selected Expertise Tags */}
+              {formData.specializations.length > 0 && (
+                <div
+                  style={{
+                    marginTop: "16px",
+                    padding: "16px",
+                    background: "#F8FAFC",
+                    border: "1px solid #E2DDD5",
+                  }}
+                >
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: "#6B7280",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      marginBottom: "10px",
+                    }}
+                  >
+                    Selected Expertise ({formData.specializations.length})
+                  </label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {formData.specializations.map((spec, index) => (
+                      <span key={index} style={tagStyle}>
+                        {spec}
+                        <button
+                          type="button"
+                          onClick={() => removeSpecialization(index)}
+                          style={tagRemoveStyle}
+                        >
+                          x
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="row">
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
@@ -411,41 +543,6 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
                 placeholder="e.g. 12"
                 style={inputStyle}
               />
-            </div>
-          </div>
-          <div className="row">
-            <div className="col-lg-12" style={{ marginBottom: "16px" }}>
-              <label style={labelStyle}>
-                Specializations / Expertise<span style={requiredStar}>*</span>
-                {" "}
-                <span style={{ fontWeight: 400, textTransform: "none", fontSize: "11px", color: "#9CA3AF" }}>
-                  (type and press Enter or comma to add; at least 1 required)
-                </span>
-              </label>
-              <input
-                type="text"
-                value={specializationInput}
-                onChange={(e) => setSpecializationInput(e.target.value)}
-                onKeyDown={handleSpecializationKeyDown}
-                placeholder="e.g. Revenue Management, F&B Strategy, Hotel Design"
-                style={inputStyle}
-              />
-              {formData.specializations.length > 0 && (
-                <div style={{ marginTop: "12px" }}>
-                  {formData.specializations.map((spec, index) => (
-                    <span key={index} style={tagStyle}>
-                      {spec}
-                      <button
-                        type="button"
-                        onClick={() => removeSpecialization(index)}
-                        style={tagRemoveStyle}
-                      >
-                        x
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>

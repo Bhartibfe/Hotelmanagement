@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { api } from "../../services/api";
+import api from "../../services/api";
 import { Layout } from "../../layouts/Layout";
 import HotelOwnerProfileForm from "../../components/profile/HotelOwnerProfileForm";
 import VendorProfileForm from "../../components/profile/VendorProfileForm";
@@ -48,13 +48,12 @@ const CompleteProfilePage = () => {
     return <Navigate to="/login" replace />;
   }
 
-  // If profile is already submitted and NOT a revision, redirect
+  // If profile is approved, redirect (allow re-submit for PENDING_REVIEW and INCOMPLETE)
   if (
-    user.profileStatus &&
-    user.profileStatus !== "INCOMPLETE" &&
-    !isRevision
+    user.profileStatus === "APPROVED" &&
+    user.membershipStatus === "APPROVED"
   ) {
-    return <Navigate to="/membership-pending" replace />;
+    return <Navigate to="/my-profile" replace />;
   }
 
   const handleSubmit = async (data) => {

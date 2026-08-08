@@ -1,400 +1,209 @@
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
-const getHeaders = () => {
-  const token = localStorage.getItem("accessToken");
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+let isRefreshing = false;
+let refreshQueue = [];
+
+const processQueue = (token) => {
+  refreshQueue.forEach(({ resolve }) => resolve(token));
+  refreshQueue = [];
 };
 
-const handleResponse = async (response) => {
+const failQueue = (error) => {
+  refreshQueue.forEach(({ reject }) => reject(error));
+  refreshQueue = [];
+};
+
+const refreshTokens = async () => {
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) throw new Error("No refresh token");
+  const response = await fetch(`${API_URL}/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  if (!response.ok) throw new Error("Refresh failed");
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || "Request failed");
-  }
-  return data;
+  localStorage.setItem("accessToken", data.accessToken);
+  if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
+  return data.accessToken;
 };
 
-export const api = {
+const request = async (method, path, { body, auth = true, timeout = 30000 } = {}) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  const headers = { "Content-Type": "application/json" };
+  if (auth) {
+    const token = localStorage.getItem("accessToken");
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    let response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      signal: controller.signal,
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+
+    // Handle 401 with token refresh
+    if (response.status === 401 && auth) {
+      if (isRefreshing) {
+        const newToken = await new Promise((resolve, reject) => {
+          refreshQueue.push({ resolve, reject });
+        });
+        headers["Authorization"] = `Bearer ${newToken}`;
+        response = await fetch(`${API_URL}${path}`, {
+          method,
+          headers,
+          ...(body ? { body: JSON.stringify(body) } : {}),
+        });
+      } else {
+        isRefreshing = true;
+        try {
+          const newToken = await refreshTokens();
+          isRefreshing = false;
+          processQueue(newToken);
+          headers["Authorization"] = `Bearer ${newToken}`;
+          response = await fetch(`${API_URL}${path}`, {
+            method,
+            headers,
+            ...(body ? { body: JSON.stringify(body) } : {}),
+          });
+        } catch (err) {
+          isRefreshing = false;
+          failQueue(err);
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
+          window.location.href = "/login";
+          throw err;
+        }
+      }
+    }
+
+    clearTimeout(timeoutId);
+
+    // Handle non-JSON responses
+    const contentType = response.headers.get("content-type");
+    if (response.status === 204) return null;
+    if (!contentType || !contentType.includes("application/json")) {
+      if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`);
+    return data;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") throw new Error("Request timed out");
+    throw err;
+  }
+};
+
+const api = {
   // Auth
-  register: (data) =>
-    fetch(`${API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  login: (data) =>
-    fetch(`${API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  getMe: () =>
-    fetch(`${API_URL}/auth/me`, { headers: getHeaders() }).then(handleResponse),
+  register: (data) => request("POST", "/auth/register", { body: data, auth: false }),
+  login: (data) => request("POST", "/auth/login", { body: data, auth: false }),
+  logout: () => request("POST", "/auth/logout"),
+  getMe: () => request("GET", "/auth/me"),
 
   // Users
-  getUsers: (params) =>
-    fetch(`${API_URL}/users?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
+  getUsers: (params) => request("GET", `/users?${new URLSearchParams(params || {})}`),
+  getUser: (id) => request("GET", `/users/${id}`, { auth: false }),
+  updateProfile: (data) => request("PUT", "/users/me", { body: data }),
 
-  getUser: (id) =>
-    fetch(`${API_URL}/users/${id}`, { headers: getHeaders() }).then(handleResponse),
-
-  updateProfile: (data) =>
-    fetch(`${API_URL}/users/me`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  // Profile - Complete & Manage
-  submitProfile: (data) =>
-    fetch(`${API_URL}/profile/complete`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  getMyProfile: () =>
-    fetch(`${API_URL}/profile/me`, { headers: getHeaders() }).then(handleResponse),
-
-  resubmitProfile: (data) =>
-    fetch(`${API_URL}/profile/resubmit`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  addProduct: (data) =>
-    fetch(`${API_URL}/profile/products`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  getMyProducts: () =>
-    fetch(`${API_URL}/profile/products`, { headers: getHeaders() }).then(handleResponse),
-
-  updateProduct: (id, data) =>
-    fetch(`${API_URL}/profile/products/${id}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  submitProfileEdit: (data) =>
-    fetch(`${API_URL}/profile/edit-draft`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  getMyEditDraft: () =>
-    fetch(`${API_URL}/profile/edit-draft`, { headers: getHeaders() }).then(handleResponse),
+  // Profile
+  submitProfile: (data) => request("POST", "/profile/complete", { body: data }),
+  getMyProfile: () => request("GET", "/profile/me"),
+  resubmitProfile: (data) => request("PUT", "/profile/resubmit", { body: data }),
+  addProduct: (data) => request("POST", "/profile/products", { body: data }),
+  getMyProducts: () => request("GET", "/profile/products"),
+  updateProduct: (id, data) => request("PUT", `/profile/products/${id}`, { body: data }),
+  submitProfileEdit: (data) => request("POST", "/profile/edit-draft", { body: data }),
+  getMyEditDraft: () => request("GET", "/profile/edit-draft"),
 
   // Feed
-  getFeed: (params) =>
-    fetch(`${API_URL}/feed?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  createPost: (data) =>
-    fetch(`${API_URL}/feed`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  likePost: (id) =>
-    fetch(`${API_URL}/feed/${id}/like`, {
-      method: "POST",
-      headers: getHeaders(),
-    }).then(handleResponse),
+  getFeed: (params) => request("GET", `/feed?${new URLSearchParams(params || {})}`),
+  createPost: (data) => request("POST", "/feed", { body: data }),
+  likePost: (id) => request("POST", `/feed/${id}/likes`),
 
   // Hotels
-  getHotels: (params) =>
-    fetch(`${API_URL}/hotels?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
+  getHotels: (params) => request("GET", `/hotels?${new URLSearchParams(params || {})}`, { auth: false }),
+  getHotel: (id) => request("GET", `/hotels/${id}`, { auth: false }),
+  createHotel: (data) => request("POST", "/hotels", { body: data }),
 
-  getHotel: (id) =>
-    fetch(`${API_URL}/hotels/${id}`, { headers: getHeaders() }).then(handleResponse),
+  // Vendors/Marketplace
+  getVendors: (params) => request("GET", `/marketplace?${new URLSearchParams(params || {})}`, { auth: false }),
+  getFeaturedVendors: () => request("GET", "/marketplace/featured", { auth: false }),
 
-  createHotel: (data) =>
-    fetch(`${API_URL}/hotels`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
+  // Experts
+  getExperts: (params) => request("GET", `/experts?${new URLSearchParams(params || {})}`, { auth: false }),
+  getExpert: (id) => request("GET", `/experts/${id}`, { auth: false }),
+  getFeaturedExperts: () => request("GET", "/experts/featured", { auth: false }),
 
-  // Vendors (Public)
-  getVendors: (params) =>
-    fetch(`${API_URL}/vendors?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  getFeaturedVendors: () =>
-    fetch(`${API_URL}/vendors/featured`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  // Experts (Public)
-  getExperts: (params) =>
-    fetch(`${API_URL}/experts?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  getExpert: (id) =>
-    fetch(`${API_URL}/experts/${id}`, { headers: getHeaders() }).then(handleResponse),
-
-  getFeaturedExperts: () =>
-    fetch(`${API_URL}/experts/featured`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  // Testimonials (Public)
-  getTestimonials: (params) =>
-    fetch(`${API_URL}/testimonials?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  getFeaturedTestimonials: () =>
-    fetch(`${API_URL}/testimonials/featured`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
+  // Testimonials
+  getTestimonials: (params) => request("GET", `/testimonials?${new URLSearchParams(params || {})}`, { auth: false }),
+  getFeaturedTestimonials: () => request("GET", "/testimonials/featured", { auth: false }),
 
   // Events
-  getEvents: (params) =>
-    fetch(`${API_URL}/events?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  getEvent: (id) =>
-    fetch(`${API_URL}/events/${id}`, { headers: getHeaders() }).then(handleResponse),
-
-  getFeaturedEvents: () =>
-    fetch(`${API_URL}/events/featured`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  registerForEvent: (id) =>
-    fetch(`${API_URL}/events/${id}/register`, {
-      method: "POST",
-      headers: getHeaders(),
-    }).then(handleResponse),
+  getEvents: (params) => request("GET", `/events?${new URLSearchParams(params || {})}`, { auth: false }),
+  getEvent: (id) => request("GET", `/events/${id}`, { auth: false }),
+  getFeaturedEvents: () => request("GET", "/events/featured", { auth: false }),
+  registerForEvent: (id) => request("POST", `/events/${id}/register`),
 
   // Connections
-  getConnections: () =>
-    fetch(`${API_URL}/connections`, { headers: getHeaders() }).then(handleResponse),
-
-  sendConnection: (data) =>
-    fetch(`${API_URL}/connections`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
+  getConnections: (params) => request("GET", `/connections?${new URLSearchParams(params || {})}`),
+  sendConnection: (data) => request("POST", "/connections", { body: data }),
 
   // Messages
-  getConversations: () =>
-    fetch(`${API_URL}/messages/conversations`, { headers: getHeaders() }).then(handleResponse),
-
-  getMessages: (userId) =>
-    fetch(`${API_URL}/messages/${userId}`, { headers: getHeaders() }).then(handleResponse),
-
-  sendMessage: (userId, content) =>
-    fetch(`${API_URL}/messages/${userId}`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({ content }),
-    }).then(handleResponse),
+  getConversations: () => request("GET", "/messages"),
+  getMessages: (userId) => request("GET", `/messages/${userId}`),
+  sendMessage: (userId, data) => request("POST", `/messages/${userId}`, { body: data }),
 
   // Notifications
-  getNotifications: () =>
-    fetch(`${API_URL}/notifications`, { headers: getHeaders() }).then(handleResponse),
+  getNotifications: () => request("GET", "/notifications"),
 
-  // ===== Admin Endpoints =====
+  // Admin
+  getMembershipRequests: (params) => request("GET", `/admin/membership-requests?${new URLSearchParams(params || {})}`),
+  approveMembership: (id, data) => request("PUT", `/admin/membership-requests/${id}`, { body: data }),
+  getAdminMembers: (params) => request("GET", `/admin/users?${new URLSearchParams(params || {})}`),
+  updateMember: (id, data) => request("PUT", `/admin/users/${id}`, { body: data }),
+  getAdminVendors: (params) => request("GET", `/admin/vendors?${new URLSearchParams(params || {})}`),
+  toggleVendorFeatured: (id, data) => request("PUT", `/admin/vendors/${id}`, { body: data }),
+  getAdminExperts: (params) => request("GET", `/admin/experts?${new URLSearchParams(params || {})}`),
+  createExpert: (data) => request("POST", "/admin/experts", { body: data }),
+  toggleExpertFeatured: (id) => request("PUT", `/admin/experts/${id}`),
+  toggleExpertPinned: (id) => request("PUT", `/admin/experts/${id}/pin`),
+  deleteExpert: (id) => request("DELETE", `/admin/experts/${id}`),
+  getAdminEvents: (params) => request("GET", `/admin/events?${new URLSearchParams(params || {})}`),
+  createEvent: (data) => request("POST", "/admin/events", { body: data }),
+  updateEvent: (id, data) => request("PUT", `/admin/events/${id}`, { body: data }),
+  deleteEvent: (id) => request("DELETE", `/admin/events/${id}`),
+  getAdminTestimonials: (params) => request("GET", `/admin/testimonials?${new URLSearchParams(params || {})}`),
+  createTestimonial: (data) => request("POST", "/admin/testimonials", { body: data }),
+  updateTestimonial: (id, data) => request("PUT", `/admin/testimonials/${id}`, { body: data }),
+  deleteTestimonial: (id) => request("DELETE", `/admin/testimonials/${id}`),
+  getAdminFeed: (params) => request("GET", `/admin/feed?${new URLSearchParams(params || {})}`),
+  moderatePost: (id, data) => request("PUT", `/admin/feed/${id}`, { body: data }),
+  getAdminStats: () => request("GET", "/admin/stats"),
+  getProfileForReview: (id) => request("GET", `/admin/profile-review/${id}`),
+  approveProfile: (id, data) => request("PUT", `/admin/profile-review/${id}`, { body: data }),
+  requestRevision: (id, data) => request("POST", `/admin/profile-review/${id}/revision`, { body: data }),
+  getPendingProducts: (params) => request("GET", `/admin/products?${new URLSearchParams(params || {})}`),
+  approveProduct: (id, data) => request("PUT", `/admin/products/${id}`, { body: data }),
+  getPendingEdits: (params) => request("GET", `/admin/profile-edits?${new URLSearchParams(params || {})}`),
+  reviewProfileEdit: (id, data) => request("PUT", `/admin/profile-edits/${id}`, { body: data }),
+  adminEditProfile: (id, data) => request("PUT", `/admin/users/${id}/profile`, { body: data }),
 
-  // Admin - Membership Requests
-  getMembershipRequests: (params) =>
-    fetch(`${API_URL}/admin/membership-requests?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
+  // Homepage Config
+  getHomepageConfig: () => request("GET", "/homepage-config", { auth: false }),
+  saveHomepageConfig: (config) => request("PUT", "/admin/homepage-config", { body: config }),
 
-  approveMembership: (id, data) =>
-    fetch(`${API_URL}/admin/membership-requests/${id}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  // Admin - Members
-  getAdminMembers: (params) =>
-    fetch(`${API_URL}/admin/members?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  updateMember: (id, data) =>
-    fetch(`${API_URL}/admin/members/${id}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  // Admin - Vendors
-  getAdminVendors: (params) =>
-    fetch(`${API_URL}/admin/vendors?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  toggleVendorFeatured: (id) =>
-    fetch(`${API_URL}/admin/vendors/${id}/toggle-featured`, {
-      method: "PUT",
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  // Admin - Experts
-  getAdminExperts: (params) =>
-    fetch(`${API_URL}/admin/experts?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  createExpert: (data) =>
-    fetch(`${API_URL}/admin/experts`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  toggleExpertFeatured: (id) =>
-    fetch(`${API_URL}/admin/experts/${id}/toggle-featured`, {
-      method: "PUT",
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  deleteExpert: (id) =>
-    fetch(`${API_URL}/admin/experts/${id}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  // Admin - Events
-  getAdminEvents: (params) =>
-    fetch(`${API_URL}/admin/events?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  createEvent: (data) =>
-    fetch(`${API_URL}/admin/events`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  updateEvent: (id, data) =>
-    fetch(`${API_URL}/admin/events/${id}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  deleteEvent: (id) =>
-    fetch(`${API_URL}/admin/events/${id}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  // Admin - Testimonials
-  getAdminTestimonials: (params) =>
-    fetch(`${API_URL}/admin/testimonials?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  createTestimonial: (data) =>
-    fetch(`${API_URL}/admin/testimonials`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  updateTestimonial: (id, data) =>
-    fetch(`${API_URL}/admin/testimonials/${id}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  deleteTestimonial: (id) =>
-    fetch(`${API_URL}/admin/testimonials/${id}`, {
-      method: "DELETE",
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  // Admin - Feed
-  getAdminFeed: (params) =>
-    fetch(`${API_URL}/admin/feed?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  moderatePost: (id, data) =>
-    fetch(`${API_URL}/admin/feed/${id}/moderate`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  // Admin - Stats
-  getAdminStats: () =>
-    fetch(`${API_URL}/admin/stats`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  // Admin - Profile Review
-  getProfileForReview: (userId) =>
-    fetch(`${API_URL}/admin/profile-review/${userId}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  approveProfile: (userId, data) =>
-    fetch(`${API_URL}/admin/profile-review/${userId}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  requestRevision: (userId, data) =>
-    fetch(`${API_URL}/admin/profile-review/${userId}/revision`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  // Admin - Product Approvals
-  getPendingProducts: (params) =>
-    fetch(`${API_URL}/admin/product-approvals?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  approveProduct: (id, data) =>
-    fetch(`${API_URL}/admin/product-approvals/${id}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
-  // Admin - Profile Edits
-  getPendingEdits: (params) =>
-    fetch(`${API_URL}/admin/profile-edits?${new URLSearchParams(params)}`, {
-      headers: getHeaders(),
-    }).then(handleResponse),
-
-  reviewProfileEdit: (id, data) =>
-    fetch(`${API_URL}/admin/profile-edits/${id}`, {
-      method: "PUT",
-      headers: getHeaders(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
+  // Share
+  createShareToken: (data) => request("POST", "/share/token", { body: data }),
+  validateShareToken: (token) => request("GET", `/share/${token}`, { auth: false }),
+  submitSharedProfile: (token, data) => request("POST", `/share/submit/${token}`, { body: data, auth: false }),
 };
+
+export default api;

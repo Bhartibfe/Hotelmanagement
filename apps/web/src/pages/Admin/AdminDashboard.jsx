@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
-import { api } from "../../services/api";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import api from "../../services/api";
 
 const EMPTY_STATS = {
   totalMembers: 0,
@@ -34,7 +34,7 @@ const AnimatedNumber = ({ end, duration = 2000, suffix = "" }) => {
 
 // Mini bar chart component
 const MiniBarChart = ({ data, color, height = 60 }) => {
-  const max = Math.max(...data);
+  const max = Math.max(...data) || 1;
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: "3px", height }}>
       {data.map((val, i) => (
@@ -105,10 +105,11 @@ const Sparkline = ({ data, color, width = 120, height = 32 }) => {
   );
 };
 
-const TYPE_LABEL_MAP = { HOTEL_OWNER: "Hotel Owners", VENDOR: "Vendors", PROFESSIONAL: "Professionals", CONSULTANT: "Consultants", OTHER: "Other" };
+const TYPE_LABEL_MAP = { HOTEL_OWNER: "Hotel Owners", VENDOR: "Partners", PROFESSIONAL: "Professionals", CONSULTANT: "Consultants", OTHER: "Other" };
 const TYPE_COLOR_MAP = { HOTEL_OWNER: "#C6A962", VENDOR: "#10B981", PROFESSIONAL: "#8B5CF6", CONSULTANT: "#3B82F6", OTHER: "#64748B" };
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [recentMembers, setRecentMembers] = useState([]);
   const [memberTypeData, setMemberTypeData] = useState([]);
@@ -149,7 +150,7 @@ const AdminDashboard = () => {
   const statCards = [
     { label: "Total Members", value: s.totalMembers || 0, icon: "fas fa-users", color: "#C6A962", gradient: "linear-gradient(135deg, #0A1628, #1C2A3A)", sparkData: [180, 220, 195, 240, 280, 310, 290, 340, 380, 420, 460, s.totalMembers || 500], link: "/admin/members" },
     { label: "Pending Requests", value: s.pendingRequests || 0, icon: "fas fa-user-clock", color: "#F59E0B", gradient: "linear-gradient(135deg, #451A03, #78350F)", sparkData: [5, 8, 12, 9, 15, 18, 14, 20, s.pendingRequests || 23], link: "/admin/membership-requests", urgent: (s.pendingRequests || 0) > 0 },
-    { label: "Vendors", value: s.totalVendors || 0, icon: "fas fa-building", color: "#10B981", gradient: "linear-gradient(135deg, #064E3B, #065F46)", sparkData: [80, 95, 110, 120, 135, 145, 155, 168, 175, 182, s.totalVendors || 186], link: "/admin/vendors" },
+    { label: "Partners", value: s.totalVendors || 0, icon: "fas fa-building", color: "#10B981", gradient: "linear-gradient(135deg, #064E3B, #065F46)", sparkData: [80, 95, 110, 120, 135, 145, 155, 168, 175, 182, s.totalVendors || 186], link: "/admin/vendors" },
     { label: "Industry Experts", value: s.totalExperts || 0, icon: "fas fa-user-tie", color: "#8B5CF6", gradient: "linear-gradient(135deg, #2E1065, #4C1D95)", sparkData: [15, 18, 22, 25, 28, 32, 35, 38, 40, s.totalExperts || 42], link: "/admin/experts" },
   ];
 
@@ -310,7 +311,7 @@ const AdminDashboard = () => {
               opacity: mounted ? 1 : 0,
               transitionDelay: `${0.4 + i * 0.08}s`,
             }}
-            onClick={() => card.link && (window.location.href = card.link)}
+            onClick={() => card.link && navigate(card.link)}
             onMouseEnter={(e) => { e.currentTarget.style.borderColor = card.color; e.currentTarget.style.transform = "translateY(-2px)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E2E8F0"; e.currentTarget.style.transform = "translateY(0)"; }}
           >

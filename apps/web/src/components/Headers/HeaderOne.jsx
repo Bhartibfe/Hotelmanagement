@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { HeaderSearch } from "./HeaderSearch";
 import { MobileMenu } from "./MobileMenu";
 import { NavMenus } from "./NavMenus";
@@ -6,11 +6,19 @@ import { LOGO_DARK, LOGO_LIGHT } from "../../lib/assets";
 import { useStickyMenu } from "../../lib/hooks/useStickyMenu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import api from "../../services/api";
 
-export const HeaderOne = () => {
+export const HeaderOne = ({ transparent }) => {
   useStickyMenu();
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
+  const [tagline, setTagline] = useState("India's Premier Hotels Owner Platforms");
+
+  useEffect(() => {
+    api.getHomepageConfig().then((data) => {
+      if (data?.heroTitle) setTagline(data.heroTitle);
+    }).catch(() => {});
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -18,16 +26,15 @@ export const HeaderOne = () => {
   };
 
   return (
-    <header className="transparent-header">
-      <div className="heder-top-wrap" style={{ background: "var(--tg-primary-color)" }}>
+    <header className={transparent ? "transparent-header header-overlay" : "transparent-header header-static"}>
+      <div className="heder-top-wrap">
         <div className="container">
           <div className="row align-items-center">
             <div className="col-lg-7">
               <div className="header-top-left">
                 <ul className="list-wrap">
                   <li>
-                    <i className="flaticon-location"></i>India's Premier
-                    Hospitality Leadership Platform
+                    <i className="flaticon-location"></i>{tagline}
                   </li>
                   <li>
                     <i className="flaticon-mail"></i>
@@ -105,9 +112,9 @@ export const HeaderOne = () => {
                       </li>
                       {user ? (
                         <>
-                          <li className="header-btn" style={{ position: "relative" }}>
+                          <li className="header-btn header-profile-link">
                             <Link
-                              to={`/members/${user.id}`}
+                              to="/my-profile"
                               style={{
                                 display: "flex",
                                 alignItems: "center",
@@ -121,11 +128,11 @@ export const HeaderOne = () => {
                                   width: "36px",
                                   height: "36px",
                                   borderRadius: "50%",
-                                  background: "var(--tg-accent-color)",
+                                  background: "#C6A962",
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
-                                  color: "var(--tg-primary-color)",
+                                  color: "#FFFFFF",
                                   fontWeight: 700,
                                   fontSize: "14px",
                                   fontFamily: "var(--tg-heading-font-family)",
@@ -133,13 +140,7 @@ export const HeaderOne = () => {
                               >
                                 {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
                               </div>
-                              <span
-                                style={{
-                                  fontSize: "13px",
-                                  fontWeight: 600,
-                                  color: "var(--tg-primary-color)",
-                                }}
-                              >
+                              <span className="header-profile-name">
                                 {user.firstName} {user.lastName}
                               </span>
                             </Link>
@@ -158,14 +159,12 @@ export const HeaderOne = () => {
                           <li className="header-btn">
                             <button
                               onClick={handleLogout}
-                              className="btn transparent-btn"
+                              className="btn transparent-btn header-logout-btn"
                               style={{
                                 padding: "10px 18px",
                                 fontSize: "11px",
                                 cursor: "pointer",
-                                border: "1px solid var(--tg-border-color)",
                                 background: "transparent",
-                                color: "var(--tg-body-font-color)",
                               }}
                             >
                               Logout

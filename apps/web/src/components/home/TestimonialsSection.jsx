@@ -97,22 +97,24 @@ const AOS_ANIMATIONS = [
   "fade-up",
 ];
 
-export const TestimonialsSection = () => {
+export const TestimonialsSection = ({ config }) => {
   const [hoveredId, setHoveredId] = useState(null);
 
   // Distribute testimonials across 3 columns for masonry effect
+  const count = config?.testimonialsCount || 4;
+  const displayTestimonials = MOCK_TESTIMONIALS.slice(0, count);
   const columns = [[], [], []];
-  MOCK_TESTIMONIALS.forEach((t, i) => {
+  displayTestimonials.forEach((t, i) => {
     columns[i % 3].push({ ...t, index: i });
   });
 
   // Staggered margin offsets for masonry feel
-  const columnOffsets = ["0px", "40px", "20px"];
+  const columnOffsets = ["0px", "24px", "12px"];
 
   return (
     <section
       style={{
-        padding: "100px 0",
+        padding: "clamp(48px, 6vw, 72px) 0",
         background: "#0A1628",
         position: "relative",
         overflow: "hidden",
@@ -146,7 +148,7 @@ export const TestimonialsSection = () => {
 
       <div className="container">
         {/* Section Header */}
-        <div className="text-center" style={{ marginBottom: "60px" }}>
+        <div className="text-center" style={{ marginBottom: "36px" }}>
           <span
             data-aos="fade-up"
             data-aos-duration="800"
@@ -198,10 +200,10 @@ export const TestimonialsSection = () => {
                   onMouseEnter={() => setHoveredId(testimonial.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   style={{
-                    padding: "30px 28px",
+                    padding: "24px 22px",
                     background: "rgba(255,255,255,0.04)",
                     borderRadius: "4px",
-                    marginBottom: "24px",
+                    marginBottom: "16px",
                     transition: "all 0.4s ease",
                     transform:
                       hoveredId === testimonial.id
@@ -273,7 +275,7 @@ export const TestimonialsSection = () => {
         {/* View All Link */}
         <div
           className="text-center"
-          style={{ marginTop: "40px" }}
+          style={{ marginTop: "24px" }}
           data-aos="fade-up"
           data-aos-duration="800"
           data-aos-delay="300"

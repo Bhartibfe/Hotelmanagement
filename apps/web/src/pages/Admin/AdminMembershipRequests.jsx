@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { api } from "../../services/api";
+import { createPortal } from "react-dom";
+import api from "../../services/api";
+import AdminEditProfileModal from "./AdminEditProfileModal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -79,7 +81,7 @@ const renderStars = (count) => {
 
 // ─── Modal Profile Panel ────────────────────────────────────────────────────
 
-const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLoading }) => {
+const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, onEditProfile, actionLoading }) => {
   const [activeAction, setActiveAction] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [revisionNote, setRevisionNote] = useState("");
@@ -87,15 +89,19 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
   const [animateIn, setAnimateIn] = useState(false);
   const modalRef = useRef(null);
 
-  // Animate in on mount
+  // Animate in on mount + lock body scroll
   useEffect(() => {
     if (user) {
+      document.body.style.overflow = "hidden";
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setAnimateIn(true);
         });
       });
     }
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [user]);
 
   // Reset state when user changes
@@ -160,7 +166,7 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
   const hotels = user.hotels || [];
   const vendorProfile = user.vendorProfile || {};
   const vendorProducts = vendorProfile.products || [];
-  const expertProfile = user.expertProfile || {};
+  const expertProfile = user.expertProfile || null;
   const statusCfg = STATUS_CONFIG[user.membershipStatus] || STATUS_CONFIG.PENDING;
   const isPending = user.membershipStatus === "PENDING" || user.membershipStatus === "REVISION_REQUESTED";
 
@@ -198,16 +204,17 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
   );
 
   const InfoRow = ({ label, value }) => {
-    if (!value) return null;
+    if (!value || (Array.isArray(value) && value.length === 0)) return null;
+    const display = Array.isArray(value) ? value.join(", ") : value;
     return (
       <div style={{ display: "flex", marginBottom: "8px", fontSize: "13px", lineHeight: 1.6 }}>
         <span style={{ color: "#64748B", minWidth: "130px", flexShrink: 0, fontWeight: 500 }}>{label}</span>
-        <span style={{ color: "#0A1628", wordBreak: "break-word" }}>{value}</span>
+        <span style={{ color: "#0A1628", wordBreak: "break-word", whiteSpace: "pre-line" }}>{display}</span>
       </div>
     );
   };
 
-  return (
+  return createPortal(
     <>
       {/* Modal animation styles */}
       <style>{`
@@ -230,7 +237,7 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
           background: "rgba(10, 22, 40, 0.6)",
           backdropFilter: "blur(8px)",
           WebkitBackdropFilter: "blur(8px)",
-          zIndex: 999,
+          zIndex: 1100,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -552,14 +559,29 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
             )}
 
             {/* Professional / Consultant Specific */}
-            {isProfessional && (expertProfile.expertise || expertProfile.insights || expertProfile.articles || expertProfile.awards) && (
+            {isProfessional && (
               <Section title="Expert Profile" icon="fa-graduation-cap">
-                <InfoRow label="Expertise" value={expertProfile.expertise} />
-                <InfoRow label="Specializations" value={Array.isArray(expertProfile.specializations) ? expertProfile.specializations.join(", ") : expertProfile.specializations} />
-                <InfoRow label="Insights" value={expertProfile.insights} />
-                <InfoRow label="Articles" value={expertProfile.articles} />
-                <InfoRow label="Awards" value={expertProfile.awards} />
-                <InfoRow label="Certifications" value={Array.isArray(expertProfile.certifications) ? expertProfile.certifications.join(", ") : expertProfile.certifications} />
+                <InfoRow label="Organization" value={expertProfile?.currentOrganization || user.organizationName} />
+                <InfoRow label="Role" value={expertProfile?.currentRole || user.title} />
+                <InfoRow label="Experience" value={
+                  expertProfile?.yearsOfExperience
+                    ? `${expertProfile.yearsOfExperience} years`
+                    : user.yearsInIndustry
+                    ? `${user.yearsInIndustry} years`
+                    : null
+                } />
+                <InfoRow label="Expertise" value={expertProfile?.expertise} />
+                <InfoRow label="Bio" value={expertProfile?.bio || user.bio} />
+                <InfoRow label="Industry Insights" value={expertProfile?.industryInsights} />
+                <InfoRow label="Published Articles" value={expertProfile?.publishedArticles} />
+                <InfoRow label="Speaking Events" value={expertProfile?.speakingEngagements} />
+                <InfoRow label="Awards" value={expertProfile?.awards} />
+                <InfoRow label="Certifications" value={expertProfile?.certifications} />
+                {!expertProfile && (
+                  <p style={{ fontSize: "12px", color: "#EF4444", fontStyle: "italic", margin: "8px 0 0" }}>
+                    Expert profile data is incomplete — user may need to re-submit their profile.
+                  </p>
+                )}
               </Section>
             )}
 
@@ -592,19 +614,63 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
             )}
           </div>
 
-          {/* Action Footer */}
-          {isPending && (
-            <div
+          {/* Edit Profile Button — always visible */}
+          <div
+            style={{
+              padding: "12px 28px",
+              borderTop: "1px solid #E2E8F0",
+              background: "#FAFBFC",
+              flexShrink: 0,
+            }}
+          >
+            <button
+              onClick={() => {
+                if (onEditProfile) onEditProfile(user);
+              }}
               style={{
-                padding: "20px 28px",
-                borderTop: "1px solid #E2E8F0",
-                background: "#FAFBFC",
-                flexShrink: 0,
+                width: "100%",
+                padding: "10px 20px",
+                fontSize: "13px",
+                fontWeight: 600,
+                background: "#FFFFFF",
+                color: "#C6A962",
+                border: "1px solid #C6A962",
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                transition: "all 0.25s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "#C6A962";
+                e.currentTarget.style.color = "#FFFFFF";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "#FFFFFF";
+                e.currentTarget.style.color = "#C6A962";
               }}
             >
-              {/* Action Toggles */}
-              {activeAction === null && (
-                <div style={{ display: "flex", gap: "10px" }}>
+              <i className="fas fa-edit" style={{ fontSize: "12px" }} />
+              Edit / Fill Profile
+            </button>
+          </div>
+
+          {/* Action Footer — always visible */}
+          <div
+            style={{
+              padding: "20px 28px",
+              borderTop: "1px solid #E2E8F0",
+              background: "#FAFBFC",
+              flexShrink: 0,
+            }}
+          >
+            {/* Action Toggles */}
+            {activeAction === null && (
+              <div style={{ display: "flex", gap: "10px" }}>
+                {/* Approve — show for pending/revision/rejected */}
+                {user.membershipStatus !== "APPROVED" && (
                   <button
                     onClick={handleApproveClick}
                     disabled={actionLoading}
@@ -638,6 +704,9 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
                     )}
                     Approve
                   </button>
+                )}
+                {/* Reject — show for all except already rejected */}
+                {user.membershipStatus !== "REJECTED" && (
                   <button
                     onClick={() => setActiveAction("reject")}
                     disabled={actionLoading}
@@ -673,6 +742,9 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
                     <i className="fas fa-times" style={{ fontSize: "12px" }} />
                     Reject
                   </button>
+                )}
+                {/* Revision — show for all except revision_requested */}
+                {user.membershipStatus !== "REVISION_REQUESTED" && (
                   <button
                     onClick={() => setActiveAction("revision")}
                     disabled={actionLoading}
@@ -708,8 +780,9 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
                     <i className="fas fa-edit" style={{ fontSize: "12px" }} />
                     Revision
                   </button>
-                </div>
-              )}
+                )}
+              </div>
+            )}
 
               {/* Reject Form */}
               {activeAction === "reject" && (
@@ -905,12 +978,12 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, actionLo
                 </div>
               )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </>
-  );
-};
+      </>,
+    document.body
+    );
+  };
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -927,6 +1000,10 @@ const AdminMembershipRequests = () => {
   // Modal state
   const [selectedUser, setSelectedUser] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+
+  // Counts state – populated from statusCounts in every API response
+  const [allCounts, setAllCounts] = useState({ ALL: 0, PENDING: 0, APPROVED: 0, REJECTED: 0, REVISION_REQUESTED: 0 });
 
   // ─── Fetch ─────────────────────────────────────────────────────────────────
 
@@ -942,6 +1019,9 @@ const AdminMembershipRequests = () => {
       const data = await api.getMembershipRequests(params);
       if (data?.users) {
         setRequests(data.users);
+      }
+      if (data?.statusCounts) {
+        setAllCounts(data.statusCounts);
       }
     } catch (err) {
       // keep existing data on failure
@@ -964,8 +1044,7 @@ const AdminMembershipRequests = () => {
   // ─── Counts ────────────────────────────────────────────────────────────────
 
   const getCount = (status) => {
-    if (status === "ALL") return requests.length;
-    return requests.filter((r) => r.membershipStatus === status).length;
+    return allCounts[status] || 0;
   };
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
@@ -980,7 +1059,7 @@ const AdminMembershipRequests = () => {
     return matchSearch;
   });
 
-  const pendingCount = requests.filter((r) => r.membershipStatus === "PENDING").length;
+  const pendingCount = allCounts.PENDING;
 
   // ─── Modal Actions ─────────────────────────────────────────────────────────
 
@@ -992,15 +1071,17 @@ const AdminMembershipRequests = () => {
     setSelectedUser(null);
   };
 
+  const refreshAfterAction = useCallback(() => {
+    closeModal();
+    fetchRequests(activeFilter);
+  }, [activeFilter, fetchRequests]);
+
   const handleApprove = async (id) => {
     setActionLoading(true);
     try {
       await api.approveMembership(id, { action: "APPROVE" });
-      setRequests((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, membershipStatus: "APPROVED" } : r))
-      );
       setSelectedUser((prev) => (prev && prev.id === id ? { ...prev, membershipStatus: "APPROVED" } : prev));
-      setTimeout(() => closeModal(), 600);
+      setTimeout(() => refreshAfterAction(), 600);
     } catch (err) {
       // silently fail
     } finally {
@@ -1012,11 +1093,8 @@ const AdminMembershipRequests = () => {
     setActionLoading(true);
     try {
       await api.approveMembership(id, { action: "REJECT", reason });
-      setRequests((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, membershipStatus: "REJECTED" } : r))
-      );
       setSelectedUser((prev) => (prev && prev.id === id ? { ...prev, membershipStatus: "REJECTED" } : prev));
-      setTimeout(() => closeModal(), 600);
+      setTimeout(() => refreshAfterAction(), 600);
     } catch (err) {
       // silently fail
     } finally {
@@ -1028,13 +1106,10 @@ const AdminMembershipRequests = () => {
     setActionLoading(true);
     try {
       await api.requestRevision(userId, data);
-      setRequests((prev) =>
-        prev.map((r) => (r.id === userId ? { ...r, membershipStatus: "REVISION_REQUESTED" } : r))
-      );
       setSelectedUser((prev) =>
         prev && prev.id === userId ? { ...prev, membershipStatus: "REVISION_REQUESTED" } : prev
       );
-      setTimeout(() => closeModal(), 600);
+      setTimeout(() => refreshAfterAction(), 600);
     } catch (err) {
       // silently fail
     } finally {
@@ -1580,7 +1655,17 @@ const AdminMembershipRequests = () => {
           onApprove={handleApprove}
           onReject={handleReject}
           onRevision={handleRevision}
+          onEditProfile={(user) => setEditingUser(user)}
           actionLoading={actionLoading}
+        />
+      )}
+
+      {/* Admin Edit Profile Modal */}
+      {editingUser && (
+        <AdminEditProfileModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+          onSaved={() => fetchRequests(activeFilter)}
         />
       )}
     </div>

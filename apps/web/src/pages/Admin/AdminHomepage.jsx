@@ -1,14 +1,190 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../../services/api";
+import api from "../../services/api";
+
+const ToggleSwitch = ({ value, onChange }) => (
+  <button
+    onClick={onChange}
+    style={{
+      width: "44px",
+      height: "24px",
+      borderRadius: "12px",
+      border: "none",
+      background: value ? "#C6A962" : "#CBD5E1",
+      cursor: "pointer",
+      position: "relative",
+      transition: "background 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      flexShrink: 0,
+    }}
+  >
+    <div
+      style={{
+        width: "18px",
+        height: "18px",
+        borderRadius: "50%",
+        background: "#FFFFFF",
+        position: "absolute",
+        top: "3px",
+        left: value ? "23px" : "3px",
+        transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }}
+    ></div>
+  </button>
+);
+
+const CountSelector = ({ value, onChange, min = 1, max = 12 }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+    <button
+      onClick={() => onChange(Math.max(min, value - 1))}
+      style={{
+        width: "32px",
+        height: "32px",
+        borderRadius: "6px",
+        border: "1px solid #E2E8F0",
+        background: "#FFFFFF",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "14px",
+        color: "#64748B",
+        transition: "all 0.2s",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#C6A962"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E2E8F0"; }}
+    >
+      -
+    </button>
+    <span style={{ fontSize: "16px", fontWeight: 600, color: "#0A1628", minWidth: "24px", textAlign: "center" }}>{value}</span>
+    <button
+      onClick={() => onChange(Math.min(max, value + 1))}
+      style={{
+        width: "32px",
+        height: "32px",
+        borderRadius: "6px",
+        border: "1px solid #E2E8F0",
+        background: "#FFFFFF",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: "14px",
+        color: "#64748B",
+        transition: "all 0.2s",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#C6A962"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E2E8F0"; }}
+    >
+      +
+    </button>
+  </div>
+);
+
+const SectionCard = ({ id, icon, title, subtitle, children, toggle, toggleValue, onToggleChange, expanded, onToggleSection, hoveredSection, setHoveredSection }) => {
+  const isHovered = hoveredSection === id;
+  return (
+    <div
+      onMouseEnter={() => setHoveredSection(id)}
+      onMouseLeave={() => setHoveredSection(null)}
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #E2E8F0",
+        borderRadius: "8px",
+        marginBottom: "16px",
+        transition: "all 0.3s ease",
+        boxShadow: isHovered ? "0 4px 16px rgba(10, 22, 40, 0.06)" : "0 1px 3px rgba(0,0,0,0.02)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Section Header */}
+      <div
+        style={{
+          padding: "18px 24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "14px",
+          cursor: "pointer",
+          borderBottom: expanded ? "1px solid #F1F5F9" : "none",
+          transition: "background 0.2s",
+          background: isHovered ? "#FAFBFC" : "transparent",
+        }}
+        onClick={() => onToggleSection(id)}
+      >
+        {/* Drag Handle (Visual Only) */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "2px", cursor: "grab", padding: "4px 2px" }}>
+          <div style={{ display: "flex", gap: "3px" }}>
+            <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
+            <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
+          </div>
+          <div style={{ display: "flex", gap: "3px" }}>
+            <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
+            <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
+          </div>
+          <div style={{ display: "flex", gap: "3px" }}>
+            <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
+            <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "8px",
+            background: "#F8FAFC",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <i className={icon} style={{ fontSize: "14px", color: "#64748B" }}></i>
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "15px", fontWeight: 600, color: "#0A1628" }}>{title}</div>
+          {subtitle && <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>{subtitle}</div>}
+        </div>
+
+        {toggle && (
+          <div onClick={(e) => e.stopPropagation()}>
+            <ToggleSwitch
+              value={toggleValue}
+              onChange={onToggleChange}
+            />
+          </div>
+        )}
+
+        <i
+          className={`fas fa-chevron-${expanded ? "up" : "down"}`}
+          style={{ fontSize: "12px", color: "#94A3B8", transition: "transform 0.3s", marginLeft: "8px" }}
+        ></i>
+      </div>
+
+      {/* Content */}
+      <div
+        style={{
+          maxHeight: expanded ? "1200px" : "0",
+          overflow: "hidden",
+          transition: "max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
+      >
+        <div style={{ padding: "20px 24px" }}>{children}</div>
+      </div>
+    </div>
+  );
+};
 
 const AdminHomepage = () => {
   const [mounted, setMounted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [expandedSections, setExpandedSections] = useState({
     hero: true,
     vendors: true,
     experts: true,
+    expertise: true,
+    leadership: true,
     events: true,
     testimonials: true,
     stats: true,
@@ -16,10 +192,11 @@ const AdminHomepage = () => {
   });
   const [hoveredSection, setHoveredSection] = useState(null);
   const [hoveredBtn, setHoveredBtn] = useState(null);
+  const [newExpertise, setNewExpertise] = useState("");
 
   const [config, setConfig] = useState({
     // Hero
-    heroTitle: "India's Premier Hospitality Leadership Platform",
+    heroTitle: "India's Premier Hotels Owner Platforms",
     heroSubtitle: "Connecting Hotel Owners, Investors, Vendors & Professionals",
     heroCtaText: "Join the Network",
     heroCtaLink: "/register",
@@ -41,10 +218,72 @@ const AdminHomepage = () => {
     ctaTitle: "Ready to Join the Network?",
     ctaDescription: "Connect with India's most trusted hospitality ecosystem.",
     ctaButtonText: "Apply for Membership",
+    expertiseOptions: [
+      "General Management",
+      "Hotel Owners / Ownership",
+      "Asset Management",
+      "Operations",
+      "Sales",
+      "Marketing",
+      "Business Development",
+      "Revenue Management",
+      "Distribution",
+      "Digital Marketing",
+      "Brand Marketing & Communications",
+      "Finance & Accounts",
+      "Human Resources (People & Culture)",
+      "Learning & Development",
+      "Procurement & Supply Chain",
+      "Information Technology",
+      "Information Security (Cybersecurity)",
+      "Artificial Intelligence & Emerging Technologies",
+      "Engineering & Maintenance",
+      "Projects & Development",
+      "Design & Architecture",
+      "Housekeeping",
+      "Front Office",
+      "Reservations",
+      "Food & Beverage",
+      "Culinary",
+      "Banquets & Events",
+      "Spa & Wellness",
+      "Recreation",
+      "Security & Loss Prevention",
+      "Quality Assurance",
+      "Guest Experience",
+      "Customer Relations",
+      "Legal & Compliance",
+      "ESG & Sustainability",
+      "Franchise Development",
+      "Development & Feasibility",
+      "Consulting & Advisory",
+      "Hospitality Technology",
+      "Travel & Tourism",
+      "Academia & Training",
+      "Purchasing",
+      "Public Relations (PR)",
+    ],
+    leadershipTeam: [
+      { name: "Harish Chandra", role: "Chief Executive Officer", photo: "", bio: "" },
+      { name: "Jaikiran Ahluwalia", role: "Chief Business Officer", photo: "", bio: "" },
+      { name: "Narinder Kamra", role: "Chief Operations Officer", photo: "", bio: "" },
+    ],
   });
 
+  // Load saved config on mount
   useEffect(() => {
     setMounted(true);
+    const loadConfig = async () => {
+      try {
+        const data = await api.getHomepageConfig();
+        if (data && Object.keys(data).length > 0) {
+          setConfig((prev) => ({ ...prev, ...data }));
+        }
+      } catch {
+        // Use defaults if no saved config
+      }
+    };
+    loadConfig();
   }, []);
 
   const handleChange = (field, value) => {
@@ -58,15 +297,15 @@ const AdminHomepage = () => {
 
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     try {
-      // Simulated API call
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await api.saveHomepageConfig(config);
+      setSaved(true);
     } catch (err) {
-      // fallback
+      setError(err.message || "Failed to save");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
   };
 
   const inputStyle = {
@@ -90,179 +329,6 @@ const AdminHomepage = () => {
     textTransform: "uppercase",
     letterSpacing: "0.5px",
     marginBottom: "6px",
-  };
-
-  const ToggleSwitch = ({ value, onChange }) => (
-    <button
-      onClick={onChange}
-      style={{
-        width: "44px",
-        height: "24px",
-        borderRadius: "12px",
-        border: "none",
-        background: value ? "#C6A962" : "#CBD5E1",
-        cursor: "pointer",
-        position: "relative",
-        transition: "background 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        flexShrink: 0,
-      }}
-    >
-      <div
-        style={{
-          width: "18px",
-          height: "18px",
-          borderRadius: "50%",
-          background: "#FFFFFF",
-          position: "absolute",
-          top: "3px",
-          left: value ? "23px" : "3px",
-          transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-        }}
-      ></div>
-    </button>
-  );
-
-  const CountSelector = ({ value, onChange, min = 1, max = 12 }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <button
-        onClick={() => onChange(Math.max(min, value - 1))}
-        style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "6px",
-          border: "1px solid #E2E8F0",
-          background: "#FFFFFF",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "14px",
-          color: "#64748B",
-          transition: "all 0.2s",
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#C6A962"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E2E8F0"; }}
-      >
-        -
-      </button>
-      <span style={{ fontSize: "16px", fontWeight: 600, color: "#0A1628", minWidth: "24px", textAlign: "center" }}>{value}</span>
-      <button
-        onClick={() => onChange(Math.min(max, value + 1))}
-        style={{
-          width: "32px",
-          height: "32px",
-          borderRadius: "6px",
-          border: "1px solid #E2E8F0",
-          background: "#FFFFFF",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: "14px",
-          color: "#64748B",
-          transition: "all 0.2s",
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#C6A962"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#E2E8F0"; }}
-      >
-        +
-      </button>
-    </div>
-  );
-
-  const SectionCard = ({ id, icon, title, subtitle, children, toggle, toggleKey, expanded }) => {
-    const isHovered = hoveredSection === id;
-    return (
-      <div
-        onMouseEnter={() => setHoveredSection(id)}
-        onMouseLeave={() => setHoveredSection(null)}
-        style={{
-          background: "#FFFFFF",
-          border: "1px solid #E2E8F0",
-          borderRadius: "8px",
-          marginBottom: "16px",
-          transition: "all 0.3s ease",
-          boxShadow: isHovered ? "0 4px 16px rgba(10, 22, 40, 0.06)" : "0 1px 3px rgba(0,0,0,0.02)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Section Header */}
-        <div
-          style={{
-            padding: "18px 24px",
-            display: "flex",
-            alignItems: "center",
-            gap: "14px",
-            cursor: "pointer",
-            borderBottom: expanded ? "1px solid #F1F5F9" : "none",
-            transition: "background 0.2s",
-            background: isHovered ? "#FAFBFC" : "transparent",
-          }}
-          onClick={() => toggleSection(id)}
-        >
-          {/* Drag Handle (Visual Only) */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px", cursor: "grab", padding: "4px 2px" }}>
-            <div style={{ display: "flex", gap: "3px" }}>
-              <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
-              <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
-            </div>
-            <div style={{ display: "flex", gap: "3px" }}>
-              <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
-              <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
-            </div>
-            <div style={{ display: "flex", gap: "3px" }}>
-              <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
-              <div style={{ width: "4px", height: "4px", borderRadius: "50%", background: "#CBD5E1" }}></div>
-            </div>
-          </div>
-
-          <div
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "8px",
-              background: "#F8FAFC",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-            }}
-          >
-            <i className={icon} style={{ fontSize: "14px", color: "#64748B" }}></i>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "15px", fontWeight: 600, color: "#0A1628" }}>{title}</div>
-            {subtitle && <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "2px" }}>{subtitle}</div>}
-          </div>
-
-          {toggle && (
-            <div onClick={(e) => e.stopPropagation()}>
-              <ToggleSwitch
-                value={config[toggleKey]}
-                onChange={() => handleChange(toggleKey, !config[toggleKey])}
-              />
-            </div>
-          )}
-
-          <i
-            className={`fas fa-chevron-${expanded ? "up" : "down"}`}
-            style={{ fontSize: "12px", color: "#94A3B8", transition: "transform 0.3s", marginLeft: "8px" }}
-          ></i>
-        </div>
-
-        {/* Content */}
-        <div
-          style={{
-            maxHeight: expanded ? "600px" : "0",
-            overflow: "hidden",
-            transition: "max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
-        >
-          <div style={{ padding: "20px 24px" }}>{children}</div>
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -335,6 +401,9 @@ const AdminHomepage = () => {
         title="Hero Section"
         subtitle="Main banner area with headline and call-to-action"
         expanded={expandedSections.hero}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
       >
         {/* Hero Preview */}
         <div
@@ -419,17 +488,21 @@ const AdminHomepage = () => {
       <SectionCard
         id="vendors"
         icon="fas fa-building"
-        title="Featured Vendors"
-        subtitle="Showcase top vendors on the homepage"
+        title="Featured Partners"
+        subtitle="Showcase top partners on the homepage"
         toggle={true}
-        toggleKey="showFeaturedVendors"
+        toggleValue={config.showFeaturedVendors}
+        onToggleChange={() => handleChange("showFeaturedVendors", !config.showFeaturedVendors)}
         expanded={expandedSections.vendors}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <label style={labelStyle}>Number of Vendors to Display</label>
+            <label style={labelStyle}>Number of Partners to Display</label>
             <p style={{ fontSize: "13px", color: "#94A3B8", margin: "4px 0 0 0" }}>
-              Select how many featured vendors to show on the homepage
+              Select how many featured partners to show on the homepage
             </p>
           </div>
           <CountSelector
@@ -447,8 +520,12 @@ const AdminHomepage = () => {
         title="Featured Experts"
         subtitle="Display industry experts on the homepage"
         toggle={true}
-        toggleKey="showFeaturedExperts"
+        toggleValue={config.showFeaturedExperts}
+        onToggleChange={() => handleChange("showFeaturedExperts", !config.showFeaturedExperts)}
         expanded={expandedSections.experts}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -472,8 +549,12 @@ const AdminHomepage = () => {
         title="Events"
         subtitle="Show upcoming events on the homepage"
         toggle={true}
-        toggleKey="showEvents"
+        toggleValue={config.showEvents}
+        onToggleChange={() => handleChange("showEvents", !config.showEvents)}
         expanded={expandedSections.events}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -497,8 +578,12 @@ const AdminHomepage = () => {
         title="Testimonials"
         subtitle="Member testimonials carousel"
         toggle={true}
-        toggleKey="showTestimonials"
+        toggleValue={config.showTestimonials}
+        onToggleChange={() => handleChange("showTestimonials", !config.showTestimonials)}
         expanded={expandedSections.testimonials}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
@@ -522,8 +607,12 @@ const AdminHomepage = () => {
         title="Statistics Bar"
         subtitle="Key numbers displayed in a banner"
         toggle={true}
-        toggleKey="showStats"
+        toggleValue={config.showStats}
+        onToggleChange={() => handleChange("showStats", !config.showStats)}
         expanded={expandedSections.stats}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
       >
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
           <div>
@@ -602,6 +691,238 @@ const AdminHomepage = () => {
         </div>
       </SectionCard>
 
+      {/* Specializations / Expertise */}
+      <SectionCard
+        id="expertise"
+        icon="fas fa-tags"
+        title="Specializations / Expertise"
+        subtitle="Manage expertise filters for experts page and profile forms"
+        expanded={expandedSections.expertise}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
+      >
+        <div style={{ marginBottom: "16px" }}>
+          <label style={labelStyle}>Add New Specialization</label>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="text"
+              value={newExpertise}
+              onChange={(e) => setNewExpertise(e.target.value)}
+              placeholder="e.g. Hospitality Analytics"
+              style={inputStyle}
+              onFocus={(e) => { e.target.style.borderColor = "#C6A962"; e.target.style.boxShadow = "0 0 0 3px rgba(198, 169, 98, 0.1)"; }}
+              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newExpertise.trim()) {
+                  const trimmed = newExpertise.trim();
+                  if (!config.expertiseOptions.includes(trimmed)) {
+                    handleChange("expertiseOptions", [...config.expertiseOptions, trimmed]);
+                  }
+                  setNewExpertise("");
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                const trimmed = newExpertise.trim();
+                if (trimmed && !config.expertiseOptions.includes(trimmed)) {
+                  handleChange("expertiseOptions", [...config.expertiseOptions, trimmed]);
+                }
+                setNewExpertise("");
+              }}
+              style={{
+                padding: "10px 20px",
+                background: "#C6A962",
+                color: "#0A1628",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.2s",
+              }}
+            >
+              <i className="fas fa-plus" style={{ marginRight: "6px" }}></i>
+              Add
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "8px" }}>
+          <span style={{ fontSize: "12px", color: "#64748B" }}>
+            {config.expertiseOptions?.length || 0} specializations — click × to remove
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", maxHeight: "300px", overflowY: "auto", padding: "4px 0" }}>
+          {(config.expertiseOptions || []).map((opt) => (
+            <div
+              key={opt}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "6px 12px",
+                background: "#F1F5F9",
+                border: "1px solid #E2E8F0",
+                borderRadius: "6px",
+                fontSize: "13px",
+                color: "#0A1628",
+                transition: "all 0.2s",
+              }}
+            >
+              <span>{opt}</span>
+              <button
+                onClick={() => {
+                  handleChange(
+                    "expertiseOptions",
+                    config.expertiseOptions.filter((o) => o !== opt)
+                  );
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  padding: "0 2px",
+                  lineHeight: 1,
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "#EF4444"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#94A3B8"; }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* Leadership Team */}
+      <SectionCard
+        id="leadership"
+        icon="fas fa-users-cog"
+        title="Leadership Team"
+        subtitle="Manage founders and leadership shown on the About page"
+        expanded={expandedSections.leadership}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
+      >
+        {(config.leadershipTeam || []).map((member, idx) => (
+          <div
+            key={idx}
+            style={{
+              padding: "20px",
+              background: "#F8FAFC",
+              border: "1px solid #E2E8F0",
+              borderRadius: "8px",
+              marginBottom: "16px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h4 style={{ fontSize: "14px", fontWeight: 700, color: "#0A1628", margin: 0 }}>
+                <i className="fas fa-user-tie" style={{ marginRight: "8px", color: "#C6A962" }}></i>
+                Member {idx + 1}
+              </h4>
+              {config.leadershipTeam.length > 1 && (
+                <button
+                  onClick={() => {
+                    const updated = config.leadershipTeam.filter((_, i) => i !== idx);
+                    handleChange("leadershipTeam", updated);
+                  }}
+                  style={{ background: "none", border: "none", color: "#EF4444", cursor: "pointer", fontSize: "13px", fontWeight: 600 }}
+                >
+                  <i className="fas fa-trash-alt" style={{ marginRight: "4px" }}></i> Remove
+                </button>
+              )}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+              <div>
+                <label style={labelStyle}>Full Name</label>
+                <input
+                  type="text"
+                  value={member.name}
+                  onChange={(e) => {
+                    const updated = [...config.leadershipTeam];
+                    updated[idx] = { ...updated[idx], name: e.target.value };
+                    handleChange("leadershipTeam", updated);
+                  }}
+                  style={inputStyle}
+                  placeholder="e.g. Harish Chandra"
+                />
+              </div>
+              <div>
+                <label style={labelStyle}>Role / Designation</label>
+                <input
+                  type="text"
+                  value={member.role}
+                  onChange={(e) => {
+                    const updated = [...config.leadershipTeam];
+                    updated[idx] = { ...updated[idx], role: e.target.value };
+                    handleChange("leadershipTeam", updated);
+                  }}
+                  style={inputStyle}
+                  placeholder="e.g. Chief Executive Officer"
+                />
+              </div>
+            </div>
+            <div style={{ marginBottom: "12px" }}>
+              <label style={labelStyle}>Photo URL <span style={{ color: "#94A3B8", fontWeight: 400, textTransform: "none" }}>(paste image URL)</span></label>
+              <input
+                type="text"
+                value={member.photo}
+                onChange={(e) => {
+                  const updated = [...config.leadershipTeam];
+                  updated[idx] = { ...updated[idx], photo: e.target.value };
+                  handleChange("leadershipTeam", updated);
+                }}
+                style={inputStyle}
+                placeholder="https://example.com/photo.jpg"
+              />
+            </div>
+            <div>
+              <label style={labelStyle}>Brief Bio</label>
+              <textarea
+                value={member.bio}
+                onChange={(e) => {
+                  const updated = [...config.leadershipTeam];
+                  updated[idx] = { ...updated[idx], bio: e.target.value };
+                  handleChange("leadershipTeam", updated);
+                }}
+                rows={2}
+                style={{ ...inputStyle, resize: "vertical" }}
+                placeholder="Short professional biography..."
+              />
+            </div>
+          </div>
+        ))}
+        <button
+          onClick={() => {
+            const updated = [...(config.leadershipTeam || []), { name: "", role: "", photo: "", bio: "" }];
+            handleChange("leadershipTeam", updated);
+          }}
+          style={{
+            padding: "10px 20px",
+            background: "transparent",
+            color: "#C6A962",
+            border: "1px dashed #C6A962",
+            borderRadius: "8px",
+            fontSize: "13px",
+            fontWeight: 600,
+            cursor: "pointer",
+            width: "100%",
+            transition: "all 0.2s",
+          }}
+        >
+          <i className="fas fa-plus" style={{ marginRight: "6px" }}></i>
+          Add Team Member
+        </button>
+      </SectionCard>
+
       {/* CTA Section */}
       <SectionCard
         id="cta"
@@ -609,8 +930,12 @@ const AdminHomepage = () => {
         title="CTA Section"
         subtitle="Bottom call-to-action area"
         toggle={true}
-        toggleKey="showCta"
+        toggleValue={config.showCta}
+        onToggleChange={() => handleChange("showCta", !config.showCta)}
         expanded={expandedSections.cta}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
       >
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
           <div>

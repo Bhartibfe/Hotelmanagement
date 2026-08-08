@@ -1,6 +1,14 @@
+import path from "path";
+import dotenv from "dotenv";
+// Load .env BEFORE any module that reads process.env (e.g. @hospitality/database)
+dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
+import helmet from "helmet";
+import morgan from "morgan";
+import rateLimit from "express-rate-limit";
+import { prisma } from "@hospitality/database";
 import { errorHandler } from "./middleware/errorHandler";
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/users.routes";
@@ -16,21 +24,26 @@ import adminRoutes from "./routes/admin.routes";
 import testimonialRoutes from "./routes/testimonials.routes";
 import expertRoutes from "./routes/experts.routes";
 import profileRoutes from "./routes/profile.routes";
-
-import path from "path";
-// Load .env from project root — works whether CWD is root or apps/api
-dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+import shareRoutes from "./routes/share.routes";
 
 const app = express();
 const PORT = process.env.API_PORT || 5000;
 
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:3000",
-  credentials: true,
-}));
+app.use(helmet());
+app.use(morgan("combined"));
+
+const globalLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Too many attempts, please try again later" } });
+
+app.use(globalLimiter);
+
+const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+const origins = corsOrigin.split(",").map((o) => o.trim());
+app.use(cors({ origin: origins.length === 1 ? origins[0] : origins, credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 
 // Routes
+app.use("/api/auth", authLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/hotels", hotelRoutes);
@@ -45,18 +58,45 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/experts", expertRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/share", shareRoutes);
+
+// Public homepage config (no auth needed)
+app.get("/api/homepage-config", async (_req, res) => {
+  try {
+    const row = await prisma.homepageConfig.findUnique({ where: { id: "singleton" } });
+    res.json(row?.config || {});
+  } catch {
+    res.status(500).json({ error: "Failed to load config" });
+  }
+});
 
 // Health check
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
+app.get("/api/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  } catch {
+    res.status(503).json({ status: "error", message: "Database connection failed" });
+  }
 });
 
 
 // Error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`API server running on http://localhost:${PORT}`);
 });
+
+const shutdown = async () => {
+  console.log("Shutting down gracefully...");
+  server.close(async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000);
+};
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 export default app;

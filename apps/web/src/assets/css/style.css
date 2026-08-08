@@ -443,69 +443,177 @@ label {
 .custom-container-three {
   max-width: 1800px;
 }
+/* ── Base header (shared) ── */
 .transparent-header {
-  position: absolute;
   left: 0;
-  top: 0px;
+  top: 0;
   width: 100%;
-  z-index: 9;
   height: auto;
 }
-/* White nav links on transparent header (non-sticky) over dark hero */
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap > ul > li > a {
-  color: #FFFFFF;
+
+/* ── Static header (all pages except home) ── */
+.transparent-header.header-static {
+  position: fixed;
+  z-index: 99;
+  background: var(--tg-white);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.active > a,
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap > ul > li:hover > a {
-  color: #C6A962;
+.header-spacer {
+  height: 100px;
 }
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.menu-item-has-children > a::after {
-  color: #FFFFFF;
-}
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.menu-item-has-children:hover > a::after,
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.menu-item-has-children.active > a::after {
-  color: #C6A962;
-}
-/* Keep dropdown sub-menu text dark on white dropdown background */
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap ul li .sub-menu li a {
+/* Static: dark nav links on white bg */
+.header-static .menu-area:not(.sticky-menu) .navbar-wrap > ul > li > a {
   color: var(--tg-secondary-color);
 }
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap ul li .sub-menu li a:hover,
-.transparent-header .menu-area:not(.sticky-menu) .navbar-wrap ul li .sub-menu > li.active > a {
+.header-static .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.active > a,
+.header-static .menu-area:not(.sticky-menu) .navbar-wrap > ul > li:hover > a {
+  color: #C6A962;
+}
+.header-static .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.menu-item-has-children > a::after {
+  color: var(--tg-paragraph-color);
+}
+.header-static .menu-area:not(.sticky-menu) .header-search a,
+.header-static .menu-area:not(.sticky-menu) .mobile-nav-toggler {
+  color: var(--tg-secondary-color);
+}
+.header-static .menu-area:not(.sticky-menu) .header-action .transparent-btn {
+  border-color: var(--tg-accent-color);
+  color: var(--tg-accent-color);
+}
+.header-static .menu-area:not(.sticky-menu) .header-action .transparent-btn:hover {
+  border-color: var(--tg-primary-color);
   color: var(--tg-primary-color);
 }
-.transparent-header .menu-area:not(.sticky-menu) .header-search a,
-.transparent-header .menu-area:not(.sticky-menu) .mobile-nav-toggler {
+/* Static: always dark logo */
+.header-static .logo .logo-dark {
+  display: none !important;
+}
+.header-static .logo .logo-light {
+  display: inline-block !important;
+}
+
+/* ── Overlay header (home page only) — sits over dark hero ── */
+.transparent-header.header-overlay {
+  position: absolute;
+  z-index: 9;
+  background: transparent;
+  box-shadow: none;
+}
+.header-overlay .heder-top-wrap {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.header-static .heder-top-wrap {
+  background: var(--tg-secondary-color);
+}
+/* Overlay: white nav links over dark hero */
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap > ul > li > a {
   color: #FFFFFF;
 }
-.transparent-header .menu-area:not(.sticky-menu) .header-action .transparent-btn {
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.active > a,
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap > ul > li:hover > a {
+  color: #C6A962;
+}
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.menu-item-has-children > a::after {
+  color: #FFFFFF;
+}
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.menu-item-has-children:hover > a::after,
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap > ul > li.menu-item-has-children.active > a::after {
+  color: #C6A962;
+}
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap ul li .sub-menu li a {
+  color: var(--tg-secondary-color);
+}
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap ul li .sub-menu li a:hover,
+.header-overlay .menu-area:not(.sticky-menu) .navbar-wrap ul li .sub-menu > li.active > a {
+  color: var(--tg-primary-color);
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-search a,
+.header-overlay .menu-area:not(.sticky-menu) .mobile-nav-toggler {
+  color: #FFFFFF;
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-action .transparent-btn {
   border-color: rgba(255,255,255,0.4);
   color: #FFFFFF;
 }
-.transparent-header .menu-area:not(.sticky-menu) .header-action .transparent-btn:hover {
+.header-overlay .menu-area:not(.sticky-menu) .header-action .transparent-btn:hover {
   border-color: #C6A962;
   color: #C6A962;
 }
-.transparent-header .menu-area:not(.sticky-menu) .header-action .btn:not(.transparent-btn):hover {
+.header-overlay .menu-area:not(.sticky-menu) .header-action .btn:not(.transparent-btn):hover {
   background: #FFFFFF;
   color: #0A1628;
   border-color: #FFFFFF;
 }
-.transparent-header .menu-area:not(.sticky-menu) .header-action .btn:not(.transparent-btn):hover::before {
+.header-overlay .menu-area:not(.sticky-menu) .header-action .btn:not(.transparent-btn):hover::before {
   background: #FFFFFF;
+}
+/* Overlay: profile name, logout, signin text white on dark hero */
+.header-profile-name {
+  fontSize: 13px;
+  font-weight: 600;
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-profile-name {
+  color: #FFFFFF;
+}
+.header-static .menu-area:not(.sticky-menu) .header-profile-name,
+.sticky-menu .header-profile-name {
+  color: var(--tg-secondary-color);
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-logout-btn {
+  border: 1px solid rgba(255,255,255,0.4) !important;
+  color: #FFFFFF !important;
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-logout-btn:hover {
+  border-color: #C6A962 !important;
+  color: #C6A962 !important;
+}
+.header-static .menu-area:not(.sticky-menu) .header-logout-btn {
+  border: 1px solid var(--tg-border-color) !important;
+  color: var(--tg-body-font-color) !important;
+}
+.sticky-menu .header-logout-btn {
+  border: 1px solid var(--tg-border-color) !important;
+  color: var(--tg-body-font-color) !important;
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-signin-btn {
+  border-color: rgba(255,255,255,0.4) !important;
+  color: #FFFFFF !important;
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-signin-btn:hover {
+  border-color: #C6A962 !important;
+  color: #C6A962 !important;
+}
+
+/* Overlay: light logo (for dark bg) initially, swap on sticky */
+.header-overlay .menu-area:not(.sticky-menu) .logo .logo-dark {
+  display: inline-block !important;
+}
+.header-overlay .menu-area:not(.sticky-menu) .logo .logo-light {
+  display: none !important;
 }
 /* Join Network button visible hover */
 .header-join-btn {
   transition: all 0.3s ease !important;
 }
-.header-join-btn:hover {
+.header-static .header-join-btn:hover {
+  background: var(--tg-primary-color) !important;
+  color: #FFFFFF !important;
+  border-color: var(--tg-primary-color) !important;
+  box-shadow: 0 8px 25px rgba(198,169,98,0.3);
+  transform: translateY(-2px);
+}
+.header-static .header-join-btn:hover::before {
+  background: var(--tg-primary-color) !important;
+}
+.header-overlay .menu-area:not(.sticky-menu) .header-join-btn:hover {
   background: #FFFFFF !important;
   color: #0A1628 !important;
   border-color: #FFFFFF !important;
   box-shadow: 0 8px 25px rgba(198,169,98,0.3);
   transform: translateY(-2px);
 }
-.header-join-btn:hover::before {
+.header-overlay .menu-area:not(.sticky-menu) .header-join-btn:hover::before {
   background: #FFFFFF !important;
 }
 .header-signin-btn:hover {
@@ -541,7 +649,7 @@ label {
   top: 50%;
   transform: translateY(-50%);
   width: 1px;
-  height: 500%;
+  height: 100%;
   background: var(--tg-metallic-blue);
 }
 .header-top-left .list-wrap li:last-child::before {
@@ -615,13 +723,7 @@ label {
 .fw-logo img {
   max-height: 45px;
 }
-/* Logo swap: dark bg logo on transparent header, light bg logo on sticky */
-.transparent-header .menu-area:not(.sticky-menu) .logo .logo-dark {
-  display: inline-block !important;
-}
-.transparent-header .menu-area:not(.sticky-menu) .logo .logo-light {
-  display: none !important;
-}
+/* Sticky menu: always show dark logo on white bg */
 .sticky-menu .logo .logo-dark {
   display: none !important;
 }
@@ -798,8 +900,9 @@ label {
   width: 100%;
   z-index: 99;
   background: var(--tg-white);
-  -webkit-animation: 1000ms ease-in-out 0s normal none 1 running fadeInDown;
-  animation: 1000ms ease-in-out 0s normal none 1 running fadeInDown;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  -webkit-animation: 300ms ease-in-out 0s normal none 1 running fadeInDown;
+  animation: 300ms ease-in-out 0s normal none 1 running fadeInDown;
 }
 /* Hide top bar and fix colors when sticky on white bg */
 .sticky-menu .heder-top-wrap {

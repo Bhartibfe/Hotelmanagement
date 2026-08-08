@@ -1,20 +1,40 @@
 import React, { useRef, useState } from "react";
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
 const MultiPhotoUpload = ({ value = [], onChange, label = "Photos", max = 10 }) => {
   const fileInputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
   const [dragIndex, setDragIndex] = useState(null);
+  const [error, setError] = useState("");
 
   const photos = Array.isArray(value) ? value : [];
 
   const processFiles = (files) => {
+    setError("");
     const remaining = max - photos.length;
-    const toProcess = Array.from(files).slice(0, remaining);
+    const allFiles = Array.from(files).slice(0, remaining);
+
+    const invalidType = allFiles.find((f) => !ALLOWED_TYPES.includes(f.type));
+    if (invalidType) {
+      setError(`"${invalidType.name}" is not a supported image format. Use JPG, PNG, or WebP.`);
+      return;
+    }
+
+    const tooLarge = allFiles.find((f) => f.size > MAX_FILE_SIZE);
+    if (tooLarge) {
+      setError(`"${tooLarge.name}" exceeds the 5MB size limit.`);
+      return;
+    }
+
+    const toProcess = allFiles.filter((f) => ALLOWED_TYPES.includes(f.type) && f.size <= MAX_FILE_SIZE);
+    if (toProcess.length === 0) return;
+
     let processed = 0;
     const newPhotos = [];
 
     toProcess.forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
       const reader = new FileReader();
       reader.onloadend = () => {
         newPhotos.push(reader.result);
@@ -198,9 +218,15 @@ const MultiPhotoUpload = ({ value = [], onChange, label = "Photos", max = 10 }) 
             <strong style={{ color: "#C6A962" }}>Click to upload</strong> or drag & drop
           </p>
           <p style={{ fontSize: "11px", color: "#9CA3AF", margin: 0 }}>
-            JPG, PNG or WebP. Multiple files supported. Max {max} photos.
+            JPG, PNG or WebP. Max 5MB each. Up to {max} photos.
           </p>
         </div>
+      )}
+
+      {error && (
+        <p style={{ fontSize: "12px", color: "#E53E3E", marginTop: "8px", marginBottom: 0, fontWeight: 600 }}>
+          {error}
+        </p>
       )}
 
       <input

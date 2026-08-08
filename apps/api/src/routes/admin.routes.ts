@@ -25,7 +25,8 @@ router.get("/membership-requests", async (req: Request, res: Response) => {
       where.membershipStatus = "PENDING";
     }
 
-    const [users, total] = await Promise.all([
+    // Always fetch per-status counts so the frontend tabs show accurate numbers
+    const [users, total, pendingCount, approvedCount, rejectedCount, revisionCount, allCount] = await Promise.all([
       prisma.user.findMany({
         where,
         select: {
@@ -60,6 +61,11 @@ router.get("/membership-requests", async (req: Request, res: Response) => {
         orderBy: { createdAt: "asc" },
       }),
       prisma.user.count({ where }),
+      prisma.user.count({ where: { membershipStatus: "PENDING" } }),
+      prisma.user.count({ where: { membershipStatus: "APPROVED" } }),
+      prisma.user.count({ where: { membershipStatus: "REJECTED" } }),
+      prisma.user.count({ where: { membershipStatus: "REVISION_REQUESTED" } }),
+      prisma.user.count({ where: { membershipStatus: { in: ["PENDING", "APPROVED", "REJECTED", "REVISION_REQUESTED", "SUSPENDED"] } } }),
     ]);
 
     return res.json({
@@ -67,6 +73,13 @@ router.get("/membership-requests", async (req: Request, res: Response) => {
       total,
       page: parseInt(page as string),
       totalPages: Math.ceil(total / take),
+      statusCounts: {
+        ALL: allCount,
+        PENDING: pendingCount,
+        APPROVED: approvedCount,
+        REJECTED: rejectedCount,
+        REVISION_REQUESTED: revisionCount,
+      },
     });
   } catch (error) {
     console.error("List membership requests error:", error);
@@ -89,14 +102,15 @@ router.put("/membership-requests/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.membershipStatus !== "PENDING") {
-      return res.status(400).json({ error: "User membership is not pending" });
+    if (user.membershipStatus !== "PENDING" && user.membershipStatus !== "REVISION_REQUESTED") {
+      return res.status(400).json({ error: "User membership is not pending or awaiting revision" });
     }
 
     const updated = await prisma.user.update({
       where: { id },
       data: {
         membershipStatus: action === "APPROVE" ? "APPROVED" : "REJECTED",
+        profileStatus: action === "APPROVE" ? "APPROVED" : undefined,
         approvedAt: action === "APPROVE" ? new Date() : undefined,
         approvedBy: action === "APPROVE" ? req.user!.userId : undefined,
         rejectionReason: action === "REJECT" ? reason : undefined,
@@ -112,6 +126,14 @@ router.put("/membership-requests/:id", async (req: Request, res: Response) => {
         rejectionReason: true,
       },
     });
+
+    // Resolve any open profile revisions when approving
+    if (action === "APPROVE") {
+      await prisma.profileRevision.updateMany({
+        where: { userId: id, status: "OPEN" },
+        data: { status: "RESOLVED", resolvedAt: new Date() },
+      });
+    }
 
     // Create a notification for the user
     await prisma.notification.create({
@@ -356,13 +378,14 @@ router.get("/experts", async (req: Request, res: Response) => {
               avatar: true,
               title: true,
               organizationName: true,
+              city: true,
               membershipStatus: true,
             },
           },
         },
         skip,
         take,
-        orderBy: { displayOrder: "asc" },
+        orderBy: [{ isPinned: "desc" }, { isFeatured: "desc" }, { displayOrder: "asc" }],
       }),
       prisma.industryExpert.count(),
     ]);
@@ -379,64 +402,95 @@ router.get("/experts", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/experts - Create expert profile for a user
+// POST /api/admin/experts - Create expert with new user account
 router.post("/experts", async (req: Request, res: Response) => {
   try {
-    const { userId, expertise, bio, isFeatured, displayOrder } = req.body;
+    const {
+      email, password, firstName, lastName, title, phone, city, state,
+      organizationName, organizationRole, bio,
+      expertise, currentOrganization, currentRole, yearsOfExperience,
+      industryInsights, publishedArticles, speakingEngagements, awards, certifications,
+      isFeatured, isPinned,
+    } = req.body;
 
-    if (!userId || !expertise || !Array.isArray(expertise)) {
-      return res.status(400).json({ error: "userId and expertise array are required" });
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({ error: "Email, password, first name, and last name are required" });
+    }
+    if (!expertise || !Array.isArray(expertise) || expertise.length === 0) {
+      return res.status(400).json({ error: "At least one expertise/specialization is required" });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const existing = await prisma.industryExpert.findUnique({ where: { userId } });
+    const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: "Expert profile already exists for this user" });
+      return res.status(409).json({ error: "Email already registered" });
     }
 
-    const expert = await prisma.industryExpert.create({
-      data: {
-        userId,
-        expertise,
-        bio,
-        isFeatured: isFeatured || false,
-        displayOrder: displayOrder || 0,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatar: true,
-            title: true,
+    const bcrypt = require("bcryptjs");
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const result = await prisma.$transaction(async (tx: any) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          role: "MEMBER",
+          memberType: "PROFESSIONAL",
+          membershipStatus: "APPROVED",
+          profileStatus: "APPROVED",
+          title,
+          phone,
+          city,
+          state,
+          organizationName,
+          organizationRole,
+          bio,
+          isFeaturedExpert: isFeatured || false,
+          isActive: true,
+          approvedAt: new Date(),
+          profileCompletedAt: new Date(),
+        },
+      });
+
+      const expert = await tx.industryExpert.create({
+        data: {
+          userId: user.id,
+          expertise,
+          bio,
+          currentOrganization: currentOrganization || organizationName,
+          currentRole: currentRole || title,
+          yearsOfExperience: yearsOfExperience ? parseInt(yearsOfExperience) : null,
+          industryInsights,
+          publishedArticles: publishedArticles ? publishedArticles.split("\n").filter(Boolean) : [],
+          speakingEngagements: speakingEngagements ? speakingEngagements.split("\n").filter(Boolean) : [],
+          awards: awards ? awards.split("\n").filter(Boolean) : [],
+          certifications: certifications ? certifications.split("\n").filter(Boolean) : [],
+          isFeatured: isFeatured || false,
+          isPinned: isPinned || false,
+        },
+        include: {
+          user: {
+            select: {
+              id: true, firstName: true, lastName: true, email: true,
+              avatar: true, title: true, organizationName: true, city: true,
+            },
           },
         },
-      },
+      });
+
+      return expert;
     });
 
-    // Also update the user's isFeaturedExpert flag if applicable
-    if (isFeatured) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { isFeaturedExpert: true },
-      });
-    }
-
-    return res.status(201).json(expert);
+    return res.status(201).json(result);
   } catch (error) {
     console.error("Create expert error:", error);
-    return res.status(500).json({ error: "Failed to create expert profile" });
+    return res.status(500).json({ error: "Failed to create expert" });
   }
 });
 
-// PUT /api/admin/experts/:id/feature - Toggle expert featured status
-router.put("/experts/:id/feature", async (req: Request, res: Response) => {
+// PUT /api/admin/experts/:id - Toggle expert featured status (star)
+router.put("/experts/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -452,7 +506,6 @@ router.put("/experts/:id/feature", async (req: Request, res: Response) => {
       data: { isFeatured: newFeatured },
     });
 
-    // Sync the user's isFeaturedExpert flag
     await prisma.user.update({
       where: { id: expert.userId },
       data: { isFeaturedExpert: newFeatured },
@@ -461,6 +514,28 @@ router.put("/experts/:id/feature", async (req: Request, res: Response) => {
     return res.json(updated);
   } catch (error) {
     console.error("Toggle expert featured error:", error);
+    return res.status(500).json({ error: "Failed to update expert" });
+  }
+});
+
+// PUT /api/admin/experts/:id/pin - Toggle expert pinned status
+router.put("/experts/:id/pin", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const expert = await prisma.industryExpert.findUnique({ where: { id } });
+    if (!expert) {
+      return res.status(404).json({ error: "Expert profile not found" });
+    }
+
+    const updated = await prisma.industryExpert.update({
+      where: { id },
+      data: { isPinned: !expert.isPinned },
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    console.error("Toggle expert pinned error:", error);
     return res.status(500).json({ error: "Failed to update expert" });
   }
 });
@@ -647,9 +722,11 @@ router.delete("/events/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Event not found" });
     }
 
-    // Delete registrations first, then the event
-    await prisma.eventRegistration.deleteMany({ where: { eventId: id } });
-    await prisma.event.delete({ where: { id } });
+    // Delete registrations first, then the event (in a transaction)
+    await prisma.$transaction([
+      prisma.eventRegistration.deleteMany({ where: { eventId: id } }),
+      prisma.event.delete({ where: { id } }),
+    ]);
 
     return res.json({ deleted: true });
   } catch (error) {
@@ -874,10 +951,12 @@ router.put("/feed/:id", async (req: Request, res: Response) => {
 
     // Handle delete action
     if (action === "delete") {
-      await prisma.comment.deleteMany({ where: { postId: id } });
-      await prisma.like.deleteMany({ where: { postId: id } });
-      await prisma.savedPost.deleteMany({ where: { postId: id } });
-      await prisma.feedPost.delete({ where: { id } });
+      await prisma.$transaction([
+        prisma.comment.deleteMany({ where: { postId: id } }),
+        prisma.like.deleteMany({ where: { postId: id } }),
+        prisma.savedPost.deleteMany({ where: { postId: id } }),
+        prisma.feedPost.delete({ where: { id } }),
+      ]);
       return res.json({ deleted: true });
     }
 
@@ -1029,8 +1108,9 @@ router.get("/profile-review/:userId", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Only include hotels with photos for HOTEL_OWNER
-    const response: any = { ...user };
+    // Strip sensitive data
+    const { passwordHash, googleId, ...safeUser } = user as any;
+    const response: any = { ...safeUser };
     if (user.memberType !== "HOTEL_OWNER") {
       response.hotels = [];
     }
@@ -1446,6 +1526,245 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Profile edit review error:", error);
     return res.status(500).json({ error: "Failed to review profile edit draft" });
+  }
+});
+
+// PUT /api/admin/profile/:userId/edit - Admin directly edits/fills user profile
+router.put("/profile/:userId/edit", async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { hotels: true, vendorProfile: { include: { products: true } }, expertProfile: true },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const {
+      bio,
+      phone,
+      avatar,
+      linkedinUrl,
+      city,
+      state,
+      organizationName,
+      organizationRole,
+      achievements,
+      industryContributions,
+      businessOverview,
+      yearsInIndustry,
+      title,
+      hotels,
+      vendorProfile,
+      products,
+      expertProfile,
+    } = req.body;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Update user fields
+      const updatedUser = await tx.user.update({
+        where: { id: userId },
+        data: {
+          ...(bio !== undefined && { bio }),
+          ...(phone !== undefined && { phone }),
+          ...(avatar !== undefined && { avatar }),
+          ...(linkedinUrl !== undefined && { linkedinUrl }),
+          ...(city !== undefined && { city }),
+          ...(state !== undefined && { state }),
+          ...(organizationName !== undefined && { organizationName }),
+          ...(organizationRole !== undefined && { organizationRole }),
+          ...(achievements !== undefined && { achievements }),
+          ...(industryContributions !== undefined && { industryContributions }),
+          ...(businessOverview !== undefined && { businessOverview }),
+          ...(yearsInIndustry !== undefined && { yearsInIndustry: parseInt(yearsInIndustry) || null }),
+          ...(title !== undefined && { title }),
+        },
+      });
+
+      // HOTEL_OWNER: upsert hotels
+      if (user.memberType === "HOTEL_OWNER" && Array.isArray(hotels)) {
+        // Delete existing hotels and recreate
+        await tx.hotel.deleteMany({ where: { ownerId: userId } });
+        for (const hotel of hotels) {
+          const slug = hotel.name
+            ? hotel.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now().toString(36)
+            : "hotel-" + Date.now().toString(36);
+          await tx.hotel.create({
+            data: {
+              name: hotel.name || "",
+              slug,
+              description: hotel.description,
+              city: hotel.city || "",
+              state: hotel.state || "",
+              country: hotel.country || "India",
+              address: hotel.address,
+              pincode: hotel.pincode,
+              rooms: hotel.rooms ? parseInt(hotel.rooms) : undefined,
+              starRating: hotel.starRating ? parseInt(hotel.starRating) : undefined,
+              website: hotel.website,
+              phone: hotel.phone,
+              email: hotel.email,
+              propertyType: hotel.propertyType,
+              photos: hotel.photos || [],
+              logo: hotel.logo,
+              coverImage: hotel.coverImage,
+              ownerId: userId,
+            },
+          });
+        }
+      }
+
+      // VENDOR: upsert vendor profile
+      if (user.memberType === "VENDOR" && vendorProfile) {
+        if (user.vendorProfile) {
+          await tx.vendorProfile.update({
+            where: { userId },
+            data: {
+              companyName: vendorProfile.companyName || user.vendorProfile.companyName,
+              description: vendorProfile.description,
+              category: vendorProfile.category || user.vendorProfile.category,
+              services: vendorProfile.services || user.vendorProfile.services,
+              portfolio: vendorProfile.portfolio || user.vendorProfile.portfolio,
+              logo: vendorProfile.logo,
+              coverImage: vendorProfile.coverImage,
+              city: vendorProfile.city || user.vendorProfile.city,
+              state: vendorProfile.state || user.vendorProfile.state,
+              website: vendorProfile.website,
+              phone: vendorProfile.phone,
+              email: vendorProfile.email,
+              employeeCount: vendorProfile.employeeCount,
+              yearEstablished: vendorProfile.yearEstablished
+                ? parseInt(vendorProfile.yearEstablished)
+                : undefined,
+              previousClients: vendorProfile.previousClients || [],
+              caseStudies: vendorProfile.caseStudies || [],
+              certifications: vendorProfile.certifications || [],
+              gstNumber: vendorProfile.gstNumber,
+              panNumber: vendorProfile.panNumber,
+              msmeRegistration: vendorProfile.msmeRegistration,
+              tradeLicense: vendorProfile.tradeLicense,
+              isoCertification: vendorProfile.isoCertification,
+              dunsNumber: vendorProfile.dunsNumber,
+              annualTurnover: vendorProfile.annualTurnover,
+              hotelClientsServed: vendorProfile.hotelClientsServed
+                ? parseInt(vendorProfile.hotelClientsServed)
+                : undefined,
+              serviceRegions: vendorProfile.serviceRegions || [],
+              insuranceDetails: vendorProfile.insuranceDetails,
+            },
+          });
+        } else {
+          const vendorSlug = (vendorProfile.companyName || "vendor")
+            .toLowerCase().replace(/[^a-z0-9]+/g, "-") + "-" + Date.now().toString(36);
+          await tx.vendorProfile.create({
+            data: {
+              companyName: vendorProfile.companyName || "",
+              slug: vendorSlug,
+              description: vendorProfile.description,
+              category: vendorProfile.category || "TECHNOLOGY",
+              services: vendorProfile.services || [],
+              portfolio: vendorProfile.portfolio || [],
+              city: vendorProfile.city || "",
+              state: vendorProfile.state || "",
+              website: vendorProfile.website,
+              phone: vendorProfile.phone,
+              email: vendorProfile.email,
+              employeeCount: vendorProfile.employeeCount,
+              yearEstablished: vendorProfile.yearEstablished
+                ? parseInt(vendorProfile.yearEstablished)
+                : undefined,
+              previousClients: vendorProfile.previousClients || [],
+              caseStudies: vendorProfile.caseStudies || [],
+              certifications: vendorProfile.certifications || [],
+              gstNumber: vendorProfile.gstNumber,
+              panNumber: vendorProfile.panNumber,
+              userId,
+            },
+          });
+        }
+      }
+
+      // EXPERT: upsert expert profile
+      if (
+        (user.memberType === "CONSULTANT" || user.memberType === "PROFESSIONAL") &&
+        expertProfile
+      ) {
+        if (user.expertProfile) {
+          await tx.industryExpert.update({
+            where: { userId },
+            data: {
+              expertise: expertProfile.expertise || user.expertProfile.expertise,
+              bio: expertProfile.bio,
+              currentOrganization: expertProfile.currentOrganization,
+              currentRole: expertProfile.currentRole,
+              yearsOfExperience: expertProfile.yearsOfExperience
+                ? parseInt(expertProfile.yearsOfExperience)
+                : undefined,
+              industryInsights: expertProfile.industryInsights,
+              publishedArticles: expertProfile.publishedArticles || [],
+              speakingEngagements: expertProfile.speakingEngagements || [],
+              awards: expertProfile.awards || [],
+              certifications: expertProfile.certifications || [],
+            },
+          });
+        } else {
+          await tx.industryExpert.create({
+            data: {
+              expertise: expertProfile.expertise || [],
+              bio: expertProfile.bio,
+              currentOrganization: expertProfile.currentOrganization,
+              currentRole: expertProfile.currentRole,
+              yearsOfExperience: expertProfile.yearsOfExperience
+                ? parseInt(expertProfile.yearsOfExperience)
+                : undefined,
+              industryInsights: expertProfile.industryInsights,
+              publishedArticles: expertProfile.publishedArticles || [],
+              speakingEngagements: expertProfile.speakingEngagements || [],
+              awards: expertProfile.awards || [],
+              certifications: expertProfile.certifications || [],
+              userId,
+            },
+          });
+        }
+      }
+
+      return updatedUser;
+    });
+
+    return res.json({ success: true, user: result });
+  } catch (error) {
+    console.error("Admin profile edit error:", error);
+    return res.status(500).json({ error: "Failed to edit profile" });
+  }
+});
+
+// GET /api/admin/homepage-config — Get homepage config
+router.get("/homepage-config", async (_req: Request, res: Response) => {
+  try {
+    const row = await prisma.homepageConfig.findUnique({ where: { id: "singleton" } });
+    return res.json(row?.config || {});
+  } catch (error) {
+    console.error("Get homepage config error:", error);
+    return res.status(500).json({ error: "Failed to get homepage config" });
+  }
+});
+
+// PUT /api/admin/homepage-config — Save homepage config
+router.put("/homepage-config", async (req: Request, res: Response) => {
+  try {
+    const config = req.body;
+    const row = await prisma.homepageConfig.upsert({
+      where: { id: "singleton" },
+      update: { config },
+      create: { id: "singleton", config },
+    });
+    return res.json({ success: true, config: row.config });
+  } catch (error) {
+    console.error("Save homepage config error:", error);
+    return res.status(500).json({ error: "Failed to save homepage config" });
   }
 });
 

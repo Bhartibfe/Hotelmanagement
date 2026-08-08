@@ -1,12 +1,12 @@
 import React, { useState } from "react";
-import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 const NAV_ITEMS = [
   { path: "/admin", label: "Dashboard", icon: "fas fa-th-large", exact: true },
-  { path: "/admin/membership-requests", label: "Membership Requests", icon: "fas fa-user-clock", badge: "23" },
+  { path: "/admin/membership-requests", label: "Membership Requests", icon: "fas fa-user-clock" },
   { path: "/admin/members", label: "Members", icon: "fas fa-users" },
-  { path: "/admin/vendors", label: "Vendors", icon: "fas fa-building" },
+  { path: "/admin/vendors", label: "Partners", icon: "fas fa-building" },
   { path: "/admin/experts", label: "Experts", icon: "fas fa-user-tie" },
   { path: "/admin/events", label: "Events", icon: "fas fa-calendar-alt" },
   { path: "/admin/testimonials", label: "Testimonials", icon: "fas fa-quote-right" },
@@ -22,6 +22,8 @@ const AdminLayout = () => {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
+
+  if (!user || user.role !== "ADMIN") return <Navigate to="/" replace />;
 
   const handleLogout = () => {
     logout();
@@ -168,15 +170,6 @@ const AdminLayout = () => {
             </div>
           )}
           <div style={{ display: "flex", gap: "8px" }}>
-            <NavLink
-              to="/"
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px", background: "rgba(255,255,255,0.05)", borderRadius: "6px", color: "#7B8FAB", textDecoration: "none", fontSize: "11px", transition: "all 0.2s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(198,169,98,0.1)"; e.currentTarget.style.color = "#C6A962"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#7B8FAB"; }}
-            >
-              <i className="fas fa-external-link-alt" style={{ fontSize: "10px" }}></i>
-              {!sidebarCollapsed && "Site"}
-            </NavLink>
             <button
               onClick={handleLogout}
               style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", padding: "8px", background: "rgba(255,255,255,0.05)", borderRadius: "6px", border: "none", color: "#7B8FAB", cursor: "pointer", fontSize: "11px", transition: "all 0.2s" }}

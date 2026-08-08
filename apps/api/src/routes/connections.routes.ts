@@ -19,8 +19,11 @@ router.post("/", authenticate, async (req: Request, res: Response) => {
     });
 
     return res.status(201).json(connection);
-  } catch {
-    return res.status(409).json({ error: "Connection already exists" });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return res.status(409).json({ error: "Connection already exists" });
+    }
+    return res.status(500).json({ error: "Failed to create connection" });
   }
 });
 

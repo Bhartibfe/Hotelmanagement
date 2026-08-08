@@ -1,11 +1,53 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, Navigate, Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
 import { useAuth } from "../../contexts/AuthContext";
 
 const MembershipPendingPage = () => {
-  const { logout } = useAuth();
+  const { user, loading, logout, checkAuth } = useAuth();
   const navigate = useNavigate();
+  const [checking, setChecking] = useState(false);
+
+  const isRevisionRequested = user?.membershipStatus === "REVISION_REQUESTED";
+  const isIncomplete = user?.profileStatus === "INCOMPLETE";
+
+  // Poll for status changes every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        await checkAuth();
+      } catch {
+        // ignore
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [checkAuth]);
+
+  // Redirect once approved
+  if (!loading && user?.membershipStatus === "APPROVED") {
+    return <Navigate to="/my-profile" replace />;
+  }
+
+  // Redirect if not logged in
+  if (!loading && !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect to complete-profile if incomplete or revision requested
+  if (!loading && (isRevisionRequested || isIncomplete)) {
+    return <Navigate to="/complete-profile" replace />;
+  }
+
+  const handleCheckStatus = async () => {
+    setChecking(true);
+    try {
+      await checkAuth();
+    } catch {
+      // ignore
+    } finally {
+      setChecking(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -225,32 +267,53 @@ const MembershipPendingPage = () => {
                   </p>
                 </div>
 
-                {/* Logout Button */}
-                <button
-                  onClick={handleLogout}
-                  style={{
-                    padding: "14px 40px",
-                    fontSize: "13px",
-                    fontWeight: 600,
-                    letterSpacing: "2px",
-                    textTransform: "uppercase",
-                    background: "transparent",
-                    color: "var(--tg-primary-color)",
-                    border: "2px solid var(--tg-primary-color)",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = "var(--tg-primary-color)";
-                    e.target.style.color = "#FFFFFF";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "transparent";
-                    e.target.style.color = "var(--tg-primary-color)";
-                  }}
-                >
-                  Sign Out
-                </button>
+                {/* Action Buttons */}
+                <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
+                  <button
+                    onClick={handleCheckStatus}
+                    disabled={checking}
+                    style={{
+                      padding: "14px 32px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      letterSpacing: "2px",
+                      textTransform: "uppercase",
+                      background: "#C6A962",
+                      color: "#FFFFFF",
+                      border: "none",
+                      cursor: checking ? "not-allowed" : "pointer",
+                      opacity: checking ? 0.7 : 1,
+                      transition: "all 0.3s ease",
+                    }}
+                  >
+                    {checking ? "Checking..." : "Check Status"}
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      padding: "14px 32px",
+                      fontSize: "13px",
+                      fontWeight: 600,
+                      letterSpacing: "2px",
+                      textTransform: "uppercase",
+                      background: "transparent",
+                      color: "var(--tg-primary-color)",
+                      border: "2px solid var(--tg-primary-color)",
+                      cursor: "pointer",
+                      transition: "all 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = "var(--tg-primary-color)";
+                      e.target.style.color = "#FFFFFF";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = "transparent";
+                      e.target.style.color = "var(--tg-primary-color)";
+                    }}
+                  >
+                    Sign Out
+                  </button>
+                </div>
               </div>
             </div>
           </div>

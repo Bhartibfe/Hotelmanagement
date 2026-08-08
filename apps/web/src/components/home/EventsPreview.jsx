@@ -39,7 +39,7 @@ const EVENTS = [
   },
 ];
 
-export const EventsPreview = () => {
+export const EventsPreview = ({ config }) => {
   const [clickedId, setClickedId] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
 
@@ -49,19 +49,19 @@ export const EventsPreview = () => {
   };
 
   return (
-    <section style={{ padding: "100px 0", background: "#FFFFFF" }}>
+    <section style={{ padding: "clamp(56px, 7vw, 84px) 0", background: "#FFFFFF" }}>
       <div className="container">
-        <div className="row align-items-end mb-50">
+        <div className="row align-items-end" style={{ marginBottom: "36px" }}>
           <div className="col-lg-8">
             <span
               style={{
-                color: "var(--tg-accent-color)",
+                color: "#C6A962",
                 letterSpacing: "3px",
                 fontSize: "12px",
                 fontWeight: 600,
                 textTransform: "uppercase",
                 display: "block",
-                marginBottom: "16px",
+                marginBottom: "14px",
               }}
               data-aos="fade-right"
               data-aos-duration="800"
@@ -75,184 +75,194 @@ export const EventsPreview = () => {
               style={{
                 fontSize: "clamp(28px, 4vw, 44px)",
                 fontFamily: "var(--tg-heading-font-family)",
-                fontWeight: 600,
-                color: "var(--tg-primary-color)",
+                fontWeight: 700,
+                color: "#0A1628",
+                margin: 0,
               }}
             >
               Upcoming Events
             </h2>
           </div>
-          <div className="col-lg-4 text-lg-end">
+          <div className="col-lg-4 text-lg-end mt-3 mt-lg-0">
             <Link
               to="/events"
               className="btn btn-two"
               data-aos="fade-left"
               data-aos-duration="800"
-              style={{ padding: "14px 28px", fontSize: "12px" }}
+              style={{
+                padding: "12px 28px",
+                fontSize: "12px",
+                letterSpacing: "1.5px",
+                borderRadius: "30px",
+                boxShadow: "0 4px 15px rgba(10,22,40,0.12)",
+                transition: "all 0.3s ease",
+              }}
             >
               View All Events
             </Link>
           </div>
         </div>
 
-        {EVENTS.map((item, index) => (
-          <div
-            key={item.id}
-            data-aos="fade-up"
-            data-aos-duration="800"
-            data-aos-delay={index * 150}
-            onClick={() => handleClick(item.id)}
-            onMouseEnter={() => setHoveredId(item.id)}
-            onMouseLeave={() => setHoveredId(null)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "30px",
-              padding: "30px 20px",
-              borderBottom: "1px solid var(--tg-border-color)",
-              transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-              cursor: "pointer",
-              paddingLeft: clickedId === item.id
-                ? "10px"
-                : hoveredId === item.id
-                ? "30px"
-                : "20px",
-              background: clickedId === item.id
-                ? "rgba(198,169,98,0.04)"
-                : hoveredId === item.id
-                ? "rgba(10,22,40,0.015)"
-                : "transparent",
-              transform: clickedId === item.id
-                ? "scale(0.98)"
-                : "scale(1)",
-              borderRadius: "4px",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Left accent bar that animates in */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {EVENTS.slice(0, config?.eventsCount || 3).map((item, index) => (
             <div
+              key={item.id}
+              data-aos="fade-up"
+              data-aos-duration="800"
+              data-aos-delay={index * 150}
+              onClick={() => handleClick(item.id)}
+              onMouseEnter={() => setHoveredId(item.id)}
+              onMouseLeave={() => setHoveredId(null)}
               style={{
-                position: "absolute",
-                left: 0,
-                top: "50%",
-                width: "4px",
-                height: hoveredId === item.id || clickedId === item.id ? "80%" : "0%",
-                background: "var(--tg-accent-color)",
-                transition: "all 0.4s ease",
-                transform: "translateY(-50%)",
-                borderRadius: "2px",
-              }}
-            />
-            <div
-              style={{
-                width: "80px",
-                height: "80px",
-                background: clickedId === item.id
-                  ? "var(--tg-accent-color)"
-                  : "var(--tg-primary-color)",
                 display: "flex",
-                flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
+                gap: "24px",
+                padding: "22px 24px",
+                border: hoveredId === item.id
+                  ? "1px solid rgba(198, 169, 98, 0.4)"
+                  : "1px solid rgba(10, 22, 40, 0.08)",
+                boxShadow: hoveredId === item.id
+                  ? "0 12px 30px rgba(10, 22, 40, 0.08)"
+                  : "0 2px 10px rgba(0, 0, 0, 0.02)",
                 transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                transform: clickedId === item.id
-                  ? "rotate(-5deg) scale(0.9)"
+                cursor: "pointer",
+                background: clickedId === item.id
+                  ? "rgba(198,169,98,0.06)"
                   : hoveredId === item.id
-                  ? "scale(1.08) rotate(2deg)"
-                  : "scale(1)",
-                borderRadius: clickedId === item.id ? "12px" : hoveredId === item.id ? "8px" : "0",
+                  ? "#FDFBF7"
+                  : "#FFFFFF",
+                transform: clickedId === item.id
+                  ? "scale(0.99)"
+                  : hoveredId === item.id
+                  ? "translateX(6px)"
+                  : "translateX(0)",
+                borderRadius: "12px",
+                position: "relative",
+                overflow: "hidden",
               }}
             >
-              <span
+              {/* Left accent bar that animates in */}
+              <div
                 style={{
-                  color: clickedId === item.id ? "#0A1628" : "#C6A962",
-                  fontSize: "24px",
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  fontFamily: "var(--tg-heading-font-family)",
-                  transition: "all 0.3s ease",
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: "4px",
+                  background: "linear-gradient(180deg, #C6A962, #9B7E38)",
+                  opacity: hoveredId === item.id || clickedId === item.id ? 1 : 0,
+                  transition: "opacity 0.3s ease",
                 }}
-              >
-                {item.date.day}
-              </span>
-              <span
+              />
+              <div
                 style={{
-                  color: clickedId === item.id ? "#0A1628" : "#8DA4BE",
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  letterSpacing: "2px",
-                  fontWeight: 600,
-                  transition: "all 0.3s ease",
-                }}
-              >
-                {item.date.month}
-              </span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <h4
-                style={{
-                  fontFamily: "var(--tg-heading-font-family)",
-                  fontSize: "24px",
-                  fontWeight: 600,
-                  color: "var(--tg-primary-color)",
-                  marginBottom: "6px",
-                  transition: "all 0.3s ease",
-                  transform: hoveredId === item.id ? "translateX(5px)" : "translateX(0)",
-                }}
-              >
-                <Link to="/events" style={{ color: "inherit", textDecoration: "none" }}>
-                  {item.title}
-                </Link>
-              </h4>
-              <p
-                style={{
-                  fontSize: "14px",
-                  color: "var(--tg-body-font-color)",
-                  margin: 0,
-                  transition: "all 0.3s ease",
-                  transform: hoveredId === item.id ? "translateX(5px)" : "translateX(0)",
-                  transitionDelay: "0.05s",
-                }}
-              >
-                <i className="flaticon-pin" style={{ marginRight: "6px" }}></i>
-                {item.location}
-              </p>
-            </div>
-            <div>
-              <span
-                style={{
+                  width: "68px",
+                  height: "68px",
                   background: clickedId === item.id
-                    ? "var(--tg-accent-color)"
+                    ? "#C6A962"
+                    : "#0A1628",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                  transform: clickedId === item.id
+                    ? "rotate(-5deg) scale(0.95)"
                     : hoveredId === item.id
-                    ? "var(--tg-primary-color)"
-                    : "#F7F5F0",
-                  padding: "6px 16px",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: clickedId === item.id
-                    ? "#0A1628"
-                    : hoveredId === item.id
-                    ? "#FFFFFF"
-                    : "var(--tg-primary-color)",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  transition: "all 0.3s ease",
-                  display: "inline-block",
-                  transform: hoveredId === item.id ? "scale(1.05)" : "scale(1)",
+                    ? "scale(1.06)"
+                    : "scale(1)",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 15px rgba(10,22,40,0.15)",
                 }}
               >
-                {item.type}
-              </span>
+                <span
+                  style={{
+                    color: clickedId === item.id ? "#0A1628" : "#C6A962",
+                    fontSize: "22px",
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    fontFamily: "var(--tg-heading-font-family)",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  {item.date.day}
+                </span>
+                <span
+                  style={{
+                    color: clickedId === item.id ? "#0A1628" : "#8DA4BE",
+                    fontSize: "11px",
+                    textTransform: "uppercase",
+                    letterSpacing: "2px",
+                    fontWeight: 600,
+                    transition: "all 0.3s ease",
+                    marginTop: "2px",
+                  }}
+                >
+                  {item.date.month}
+                </span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <h4
+                  style={{
+                    fontFamily: "var(--tg-heading-font-family)",
+                    fontSize: "19px",
+                    fontWeight: 700,
+                    color: "#0A1628",
+                    marginBottom: "6px",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <Link to="/events" style={{ color: "inherit", textDecoration: "none" }}>
+                    {item.title}
+                  </Link>
+                </h4>
+                <p
+                  style={{
+                    fontSize: "13px",
+                    color: "#5A6E85",
+                    margin: 0,
+                    fontWeight: 500,
+                  }}
+                >
+                  <i className="flaticon-pin" style={{ marginRight: "6px", color: "#C6A962" }}></i>
+                  {item.location}
+                </p>
+              </div>
+              <div>
+                <span
+                  style={{
+                    background: clickedId === item.id
+                      ? "#C6A962"
+                      : hoveredId === item.id
+                      ? "#0A1628"
+                      : "rgba(198,169,98,0.1)",
+                    padding: "8px 20px",
+                    borderRadius: "20px",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    color: clickedId === item.id
+                      ? "#0A1628"
+                      : hoveredId === item.id
+                      ? "#C6A962"
+                      : "#8C7132",
+                    textTransform: "uppercase",
+                    letterSpacing: "1.5px",
+                    transition: "all 0.3s ease",
+                    display: "inline-block",
+                  }}
+                >
+                  {item.type}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
         {/* View All Events Link */}
         <div
           className="text-center"
-          style={{ marginTop: "40px" }}
+          style={{ marginTop: "32px" }}
           data-aos="fade-up"
           data-aos-duration="800"
           data-aos-delay="300"
@@ -261,8 +271,8 @@ export const EventsPreview = () => {
             to="/events"
             style={{
               color: "#C6A962",
-              fontSize: "14px",
-              fontWeight: 600,
+              fontSize: "13px",
+              fontWeight: 700,
               letterSpacing: "2px",
               textTransform: "uppercase",
               textDecoration: "none",

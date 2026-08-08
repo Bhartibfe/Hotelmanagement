@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 const CATEGORIES = [
-  { id: 1, icon: "flaticon-computer", title: "Technology & PMS", count: "420+ Vendors" },
+  { id: 1, icon: "flaticon-computer", title: "Technology & PMS", count: "420+ Partners" },
   { id: 2, icon: "flaticon-profit", title: "Architecture & Design", count: "280+ Firms" },
   { id: 3, icon: "flaticon-light-bulb", title: "Interior Design", count: "350+ Studios" },
   { id: 4, icon: "flaticon-investment", title: "HVAC & Engineering", count: "190+ Companies" },
@@ -51,7 +51,7 @@ export const VendorDiscovery = () => {
                 marginBottom: "16px",
               }}
             >
-              Discover Verified Vendors & Partners
+              Discover Verified Partners
             </h2>
             <p
               data-aos="fade-up"
@@ -90,10 +90,8 @@ export const VendorDiscovery = () => {
                     alignItems: "center",
                     gap: "20px",
                     transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-                    borderLeft: `3px solid ${hoveredId === item.id || clickedId === item.id ? "var(--tg-accent-color)" : "transparent"}`,
                     border: "1px solid #E2DDD5",
-                    borderLeftWidth: "3px",
-                    borderLeftColor: hoveredId === item.id || clickedId === item.id ? "var(--tg-accent-color)" : "transparent",
+                    borderLeft: `3px solid ${hoveredId === item.id || clickedId === item.id ? "var(--tg-accent-color)" : "transparent"}`,
                     cursor: "pointer",
                     transform: clickedId === item.id
                       ? "scale(0.95) translateX(4px)"

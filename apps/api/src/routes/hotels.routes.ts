@@ -88,10 +88,25 @@ router.put("/:id", authenticate, async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    const updated = await prisma.hotel.update({
-      where: { id: req.params.id },
-      data: req.body,
-    });
+    const { name, description, city, state, country, address, pincode, rooms, starRating, website, phone, email, propertyType, logo, coverImage, photos } = req.body;
+    const data: any = {};
+    if (name !== undefined) data.name = name;
+    if (description !== undefined) data.description = description;
+    if (city !== undefined) data.city = city;
+    if (state !== undefined) data.state = state;
+    if (country !== undefined) data.country = country;
+    if (address !== undefined) data.address = address;
+    if (pincode !== undefined) data.pincode = pincode;
+    if (rooms !== undefined) data.rooms = rooms;
+    if (starRating !== undefined) data.starRating = starRating;
+    if (website !== undefined) data.website = website;
+    if (phone !== undefined) data.phone = phone;
+    if (email !== undefined) data.email = email;
+    if (propertyType !== undefined) data.propertyType = propertyType;
+    if (logo !== undefined) data.logo = logo;
+    if (coverImage !== undefined) data.coverImage = coverImage;
+    if (photos !== undefined) data.photos = photos;
+    const updated = await prisma.hotel.update({ where: { id: req.params.id }, data });
     return res.json(updated);
   } catch (error) {
     return res.status(500).json({ error: "Failed to update hotel" });
@@ -142,9 +157,16 @@ router.put("/:id/members/:memberId", authenticate, async (req: Request, res: Res
       return res.status(403).json({ error: "Not authorized" });
     }
 
+    const { role, isApproved } = req.body;
+    const memberData: any = {};
+    if (role !== undefined) memberData.role = role;
+    if (isApproved !== undefined) {
+      memberData.isApproved = isApproved;
+      if (isApproved) memberData.joinedAt = new Date();
+    }
     const member = await prisma.hotelMember.update({
       where: { id: req.params.memberId },
-      data: { ...req.body, joinedAt: req.body.isApproved ? new Date() : undefined },
+      data: memberData,
     });
     return res.json(member);
   } catch (error) {

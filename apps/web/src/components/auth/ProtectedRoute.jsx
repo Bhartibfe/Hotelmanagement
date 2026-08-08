@@ -1,107 +1,48 @@
-import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+
+const LoadingSpinner = () => (
+  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
+    <div style={{ width: 40, height: 40, border: "3px solid #f3f3f3", borderTop: "3px solid #8B7355", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+    <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+  </div>
+);
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return null;
-  }
+  if (loading) return <LoadingSpinner />;
+  if (!user) return <Navigate to="/login" replace />;
 
-  // Not logged in -> login
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Profile is still incomplete -> complete profile
-  if (user.profileStatus === "INCOMPLETE") {
-    return <Navigate to="/complete-profile" replace />;
-  }
-
-  // Admin requested revisions -> complete profile (handles revision there now)
-  if (user.membershipStatus === "REVISION_REQUESTED") {
-    return <Navigate to="/complete-profile" replace />;
-  }
-
-  // Profile submitted, pending admin review
+  // Pending review
   if (user.membershipStatus === "PENDING" && user.profileStatus === "PENDING_REVIEW") {
     return <Navigate to="/membership-pending" replace />;
   }
 
-  // Membership rejected -> show rejected message
+  // Rejected
   if (user.membershipStatus === "REJECTED") {
     return (
-      <div
-        style={{
-          minHeight: "60vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "40px 20px",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            maxWidth: "500px",
-            border: "1px solid #E2DDD5",
-            padding: "60px 40px",
-            borderTop: "3px solid #EF4444",
-          }}
-        >
-          <div
-            style={{
-              width: "72px",
-              height: "72px",
-              borderRadius: "50%",
-              background: "rgba(239, 68, 68, 0.1)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: "24px",
-            }}
-          >
-            <i
-              className="fas fa-times-circle"
-              style={{ fontSize: "28px", color: "#EF4444" }}
-            ></i>
-          </div>
-          <h2
-            style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: "28px",
-              fontWeight: 600,
-              color: "#0A1628",
-              marginBottom: "12px",
-            }}
-          >
-            Membership Not Approved
-          </h2>
-          <p
-            style={{
-              color: "#6B7280",
-              fontSize: "15px",
-              lineHeight: "1.7",
-              margin: 0,
-            }}
-          >
-            Unfortunately, your membership application was not approved at this
-            time. If you believe this is an error, please contact our support
-            team for assistance.
-          </p>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#FAFAF7", padding: "24px" }}>
+        <div style={{ maxWidth: 480, textAlign: "center", padding: "48px 32px", background: "#fff", borderRadius: 12, boxShadow: "0 2px 12px rgba(0,0,0,0.08)" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>!</div>
+          <h2 style={{ fontSize: 22, fontWeight: 600, color: "#1F2937", marginBottom: 12 }}>Membership Not Approved</h2>
+          {user.rejectionReason && (
+            <p style={{ color: "#6B7280", fontSize: 14, marginBottom: 24, lineHeight: 1.6 }}>
+              Reason: {user.rejectionReason}
+            </p>
+          )}
+          <p style={{ color: "#9CA3AF", fontSize: 13 }}>Please contact support for more information.</p>
         </div>
       </div>
     );
   }
 
-  // Membership pending (legacy / fallback)
-  if (user.membershipStatus === "PENDING") {
+  // Fail-closed: only APPROVED members get through
+  if (user.membershipStatus !== "APPROVED" && user.role !== "ADMIN") {
     return <Navigate to="/membership-pending" replace />;
   }
 
-  // APPROVED or any other passing state -> allow access
-  return children;
+  return children || <Outlet />;
 };
 
 export default ProtectedRoute;

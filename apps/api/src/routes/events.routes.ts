@@ -83,12 +83,22 @@ router.get("/:id", async (req: Request, res: Response) => {
 // POST /api/events/:id/register
 router.post("/:id/register", authenticate, async (req: Request, res: Response) => {
   try {
+    const event = await prisma.event.findUnique({ where: { id: req.params.id }, include: { _count: { select: { registrations: true } } } });
+    if (!event) return res.status(404).json({ error: "Event not found" });
+    if (!event.isPublished) return res.status(400).json({ error: "Event is not published" });
+    if (event.maxAttendees && event._count.registrations >= event.maxAttendees) {
+      return res.status(400).json({ error: "Event is at full capacity" });
+    }
+
     await prisma.eventRegistration.create({
       data: { eventId: req.params.id, userId: req.user!.userId },
     });
     return res.status(201).json({ registered: true });
-  } catch {
-    return res.status(409).json({ error: "Already registered" });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return res.status(409).json({ error: "Already registered" });
+    }
+    return res.status(500).json({ error: "Failed to register for event" });
   }
 });
 

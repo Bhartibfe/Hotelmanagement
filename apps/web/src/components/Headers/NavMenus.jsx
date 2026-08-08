@@ -6,10 +6,9 @@ export const NavMenus = () => {
   const { pathname } = useLocation();
 
   const navLinks = [
-    { to: "/", title: "Home" },
     { to: "/about", title: "About" },
-    { to: "/members", title: "Members" },
-    { to: "/vendors", title: "Vendors" },
+    { to: "/members", title: "Owners" },
+    { to: "/vendors", title: "Partners" },
     { to: "/experts", title: "Experts" },
     { to: "/events", title: "Events" },
     { to: "/feed", title: "Feed" },

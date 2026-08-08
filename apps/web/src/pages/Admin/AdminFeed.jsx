@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../../services/api";
+import api from "../../services/api";
 
 const TYPE_COLORS = {
   ANNOUNCEMENT: { bg: "#FEF9E7", color: "#C6A962" },
@@ -15,6 +15,7 @@ const AdminFeed = () => {
   const [hoveredPost, setHoveredPost] = useState(null);
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -60,18 +61,20 @@ const AdminFeed = () => {
       if (!window.confirm("Are you sure you want to delete this post permanently?")) return;
       try {
         await api.moderatePost(id, { action: "delete" });
+        setPosts((prev) => prev.filter((p) => p.id !== id));
+        setError(null);
       } catch (err) {
-        // fallback
+        setError(err.message || "Operation failed");
       }
-      setPosts((prev) => prev.filter((p) => p.id !== id));
       return;
     }
     try {
       await api.moderatePost(id, { action });
+      setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isHidden: newStatus === "hidden", isPinned: newStatus === "pinned" } : p)));
+      setError(null);
     } catch (err) {
-      // fallback
+      setError(err.message || "Operation failed");
     }
-    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isHidden: newStatus === "hidden", isPinned: newStatus === "pinned" } : p)));
   };
 
   const getInitials = (first, last) => {
@@ -139,6 +142,12 @@ const AdminFeed = () => {
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "24px", color: "#C6A962" }}></i>
           <p style={{ marginTop: "12px", color: "#64748B", fontSize: "14px" }}>Loading...</p>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
+          {error}
         </div>
       )}
 

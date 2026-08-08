@@ -1430,6 +1430,9 @@
   .transparent-header {
     top: 0;
   }
+  .header-spacer {
+    height: 70px !important;
+  }
   .about-area-two::before {
     display: none;
   }

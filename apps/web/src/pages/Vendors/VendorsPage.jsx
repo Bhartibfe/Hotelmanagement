@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
-import { api } from "../../services/api";
+import api from "../../services/api";
 
 const CATEGORIES = [
   "ALL",
@@ -217,7 +217,7 @@ const VendorsPage = () => {
   });
 
   return (
-    <Layout breadcrumb="Vendors" title="Verified Vendors">
+    <Layout breadcrumb="Partners" title="Verified Partners">
       <section style={{ padding: "60px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Search & Filters */}
@@ -252,7 +252,7 @@ const VendorsPage = () => {
               <div className="col-lg-4">
                 <input
                   type="text"
-                  placeholder="Search vendors..."
+                  placeholder="Search partners..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{
@@ -298,7 +298,7 @@ const VendorsPage = () => {
             </div>
 
             <p style={{ fontSize: "14px", color: "var(--tg-gray-three)", margin: 0 }}>
-              {loading ? "Loading vendors..." : `Showing ${filtered.length} verified vendors`}
+              {loading ? "Loading partners..." : `Showing ${filtered.length} verified partners`}
             </p>
           </div>
 
@@ -448,7 +448,7 @@ const VendorsPage = () => {
                   marginBottom: "8px",
                 }}
               >
-                No Vendors Found
+                No Partners Found
               </h4>
               <p style={{ fontSize: "15px", color: "var(--tg-gray-three)" }}>
                 Try adjusting your search or filter criteria.
@@ -487,7 +487,7 @@ const VendorsPage = () => {
                 marginBottom: "12px",
               }}
             >
-              Are You a Hospitality Vendor?
+              Are You a Hospitality Partner?
             </h3>
             <p
               style={{
@@ -498,7 +498,7 @@ const VendorsPage = () => {
                 lineHeight: 1.6,
               }}
             >
-              Join Hotel Sircle to showcase your products to hotel owners across India.
+              Join Hotel Sircle to showcase your services to hotel owners across India.
             </p>
             <Link
               to="/register/vendor"
@@ -524,7 +524,7 @@ const VendorsPage = () => {
                 e.currentTarget.style.color = "#0A1628";
               }}
             >
-              Join as Vendor
+              Join as Partner
             </Link>
           </div>
       </section>

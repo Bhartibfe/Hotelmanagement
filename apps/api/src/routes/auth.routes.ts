@@ -4,18 +4,18 @@ import { prisma } from "@hospitality/database";
 import { AUTH_CONFIG } from "../config/auth";
 import { generateTokens, verifyRefreshToken } from "../utils/jwt";
 import { authenticate } from "../middleware/auth";
+import { validate, registerSchema, loginSchema } from "../utils/validation";
 
 const router = Router();
 
 // POST /api/auth/register
-router.post("/register", async (req: Request, res: Response) => {
+router.post("/register", validate(registerSchema), async (req: Request, res: Response) => {
   try {
     const {
       email,
       password,
       firstName,
       lastName,
-      salutation,
       memberType,
       title,
       phone,
@@ -25,10 +25,6 @@ router.post("/register", async (req: Request, res: Response) => {
       organizationRole,
       businessOverview,
     } = req.body;
-
-    if (!email || !password || !firstName || !lastName) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -43,7 +39,6 @@ router.post("/register", async (req: Request, res: Response) => {
         passwordHash,
         firstName,
         lastName,
-        salutation,
         role: "MEMBER",
         membershipStatus: "PENDING",
         memberType,
@@ -87,13 +82,9 @@ router.post("/register", async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login
-router.post("/login", async (req: Request, res: Response) => {
+router.post("/login", validate(loginSchema), async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password required" });
-    }
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) {
@@ -219,6 +210,11 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
     console.error("Get me error:", error);
     return res.status(500).json({ error: "Failed to fetch profile" });
   }
+});
+
+// POST /api/auth/logout
+router.post("/logout", (_req: Request, res: Response) => {
+  res.json({ success: true, message: "Logged out successfully" });
 });
 
 export default router;

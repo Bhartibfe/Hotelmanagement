@@ -15,8 +15,12 @@ router.post("/complete", authenticate, async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.profileStatus !== "INCOMPLETE" && user.profileStatus !== "REVISION_REQUESTED") {
-      return res.status(400).json({ error: "Profile has already been submitted" });
+    if (
+      user.profileStatus !== "INCOMPLETE" &&
+      user.profileStatus !== "REVISION_REQUESTED" &&
+      user.profileStatus !== "PENDING_REVIEW"
+    ) {
+      return res.status(400).json({ error: "Profile has already been approved and cannot be resubmitted" });
     }
 
     const {
@@ -144,27 +148,29 @@ router.post("/complete", authenticate, async (req: Request, res: Response) => {
         }
       }
 
-      // CONSULTANT / PROFESSIONAL: create IndustryExpert record
+      // CONSULTANT / PROFESSIONAL: upsert IndustryExpert record
       if (
         (user.memberType === "CONSULTANT" || user.memberType === "PROFESSIONAL") &&
         expertProfile
       ) {
-        await tx.industryExpert.create({
-          data: {
-            expertise: expertProfile.expertise || [],
-            bio: expertProfile.bio,
-            currentOrganization: expertProfile.currentOrganization,
-            currentRole: expertProfile.currentRole,
-            yearsOfExperience: expertProfile.yearsOfExperience
-              ? parseInt(expertProfile.yearsOfExperience)
-              : undefined,
-            industryInsights: expertProfile.industryInsights,
-            publishedArticles: expertProfile.publishedArticles || [],
-            speakingEngagements: expertProfile.speakingEngagements || [],
-            awards: expertProfile.awards || [],
-            certifications: expertProfile.certifications || [],
-            userId,
-          },
+        const expertData = {
+          expertise: expertProfile.expertise || [],
+          bio: expertProfile.bio,
+          currentOrganization: expertProfile.currentOrganization,
+          currentRole: expertProfile.currentRole,
+          yearsOfExperience: expertProfile.yearsOfExperience
+            ? parseInt(expertProfile.yearsOfExperience)
+            : undefined,
+          industryInsights: expertProfile.industryInsights,
+          publishedArticles: expertProfile.publishedArticles || [],
+          speakingEngagements: expertProfile.speakingEngagements || [],
+          awards: expertProfile.awards || [],
+          certifications: expertProfile.certifications || [],
+        };
+        await tx.industryExpert.upsert({
+          where: { userId },
+          update: expertData,
+          create: { ...expertData, userId },
         });
       }
 

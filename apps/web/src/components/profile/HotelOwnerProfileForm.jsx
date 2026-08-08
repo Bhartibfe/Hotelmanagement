@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import PhotoUpload from "./PhotoUpload";
 import MultiPhotoUpload from "./MultiPhotoUpload";
+import ShareProfileSection from "./ShareProfileSection";
 
 const PROPERTY_TYPES = [
   "Luxury",
@@ -98,7 +99,7 @@ const requiredStar = {
   marginLeft: "2px",
 };
 
-const HotelOwnerProfileForm = ({ onSubmit, initialData }) => {
+const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
   const [openSections, setOpenSections] = useState({
     personal: true,
     organization: false,
@@ -245,6 +246,8 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData }) => {
   };
 
   return (
+    <>
+    {!isSharedForm && <ShareProfileSection />}
     <form onSubmit={handleSubmit}>
       {/* Validation Error */}
       {validationError && (
@@ -750,6 +753,7 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData }) => {
         </button>
       </div>
     </form>
+    </>
   );
 };
 

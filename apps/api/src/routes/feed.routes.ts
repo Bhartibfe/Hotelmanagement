@@ -86,8 +86,11 @@ router.post("/:id/like", authenticate, async (req: Request, res: Response) => {
       data: { userId: req.user!.userId, postId: req.params.id },
     });
     return res.status(201).json({ liked: true });
-  } catch {
-    return res.status(409).json({ error: "Already liked" });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return res.status(409).json({ error: "Already liked" });
+    }
+    return res.status(500).json({ error: "Failed to like post" });
   }
 });
 
@@ -146,8 +149,11 @@ router.post("/:id/save", authenticate, async (req: Request, res: Response) => {
       data: { userId: req.user!.userId, postId: req.params.id },
     });
     return res.status(201).json({ saved: true });
-  } catch {
-    return res.status(409).json({ error: "Already saved" });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return res.status(409).json({ error: "Already saved" });
+    }
+    return res.status(500).json({ error: "Failed to save post" });
   }
 });
 

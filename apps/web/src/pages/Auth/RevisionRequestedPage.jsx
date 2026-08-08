@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { api } from "../../services/api";
+import api from "../../services/api";
 import { Layout } from "../../layouts/Layout";
 import HotelOwnerProfileForm from "../../components/profile/HotelOwnerProfileForm";
 import VendorProfileForm from "../../components/profile/VendorProfileForm";
@@ -36,8 +36,7 @@ const RevisionRequestedPage = () => {
   }
 
   if (!user) {
-    navigate("/login");
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   const handleSubmit = async (data) => {

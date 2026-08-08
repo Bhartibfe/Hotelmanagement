@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import PhotoUpload from "./PhotoUpload";
 import MultiPhotoUpload from "./MultiPhotoUpload";
+import ShareProfileSection from "./ShareProfileSection";
 
 const VENDOR_CATEGORIES = [
   "TECHNOLOGY",
@@ -124,7 +125,7 @@ const requiredStar = {
   marginLeft: "2px",
 };
 
-const VendorProfileForm = ({ onSubmit, initialData }) => {
+const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
   const [openSections, setOpenSections] = useState({
     personal: true,
     company: false,
@@ -142,6 +143,7 @@ const VendorProfileForm = ({ onSubmit, initialData }) => {
         linkedinUrl: initialData.linkedinUrl || "",
         bio: initialData.bio || "",
         companyName: initialData.companyName || "",
+        logo: initialData.logo || "",
         companyDescription: initialData.companyDescription || "",
         yearEstablished: initialData.yearEstablished || "",
         employeeCount: initialData.employeeCount || "",
@@ -171,6 +173,7 @@ const VendorProfileForm = ({ onSubmit, initialData }) => {
       linkedinUrl: "",
       bio: "",
       companyName: "",
+      logo: "",
       companyDescription: "",
       yearEstablished: "",
       employeeCount: "",
@@ -317,6 +320,8 @@ const VendorProfileForm = ({ onSubmit, initialData }) => {
   };
 
   return (
+    <>
+    {!isSharedForm && <ShareProfileSection />}
     <form onSubmit={handleSubmit}>
       {/* Validation Error */}
       {validationError && (
@@ -472,6 +477,16 @@ const VendorProfileForm = ({ onSubmit, initialData }) => {
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+          <div className="row">
+            <div className="col-lg-12" style={{ marginBottom: "16px" }}>
+              <label style={labelStyle}>Company Logo <span style={{ color: "#94A3B8", fontWeight: 400, textTransform: "none" }}>(Optional)</span></label>
+              <PhotoUpload
+                value={formData.logo}
+                onChange={(url) => setFormData((prev) => ({ ...prev, logo: url }))}
+                label="Upload Logo"
+              />
             </div>
           </div>
           <div className="row">
@@ -961,6 +976,7 @@ const VendorProfileForm = ({ onSubmit, initialData }) => {
         </button>
       </div>
     </form>
+    </>
   );
 };
 

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, Navigate } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
-import { api } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
+import api from "../../services/api";
 
 const ROLE_LABELS = {
   HOTEL_OWNER: "Hotel Owner",
@@ -31,9 +32,13 @@ const TIER_COLORS = {
 
 const MemberProfilePage = () => {
   const { id } = useParams();
+  const { user: currentUser } = useAuth();
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // If viewing own profile, redirect to /my-profile
+  const isOwnProfile = currentUser && currentUser.id === id;
 
   useEffect(() => {
     const fetchMember = async () => {
@@ -54,6 +59,10 @@ const MemberProfilePage = () => {
     };
     fetchMember();
   }, [id]);
+
+  if (isOwnProfile) {
+    return <Navigate to="/my-profile" replace />;
+  }
 
   if (loading) {
     return (

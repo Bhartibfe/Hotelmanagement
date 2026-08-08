@@ -1,7 +1,11 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 const PhotoUpload = ({ value, onChange, label = "Profile Photo" }) => {
   const fileInputRef = useRef(null);
+  const [error, setError] = useState("");
 
   const handleClick = () => {
     fileInputRef.current?.click();
@@ -10,6 +14,19 @@ const PhotoUpload = ({ value, onChange, label = "Profile Photo" }) => {
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError("");
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      setError("Please upload a JPG, PNG, or WebP image.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File size must be under 5MB.");
+      e.target.value = "";
+      return;
+    }
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -142,11 +159,16 @@ const PhotoUpload = ({ value, onChange, label = "Profile Photo" }) => {
               Remove
             </button>
           )}
+          {error && (
+            <p style={{ fontSize: "11px", color: "#E53E3E", marginTop: "8px", marginBottom: 0, fontWeight: 600 }}>
+              {error}
+            </p>
+          )}
           <p
             style={{
               fontSize: "11px",
               color: "#9CA3AF",
-              marginTop: "8px",
+              marginTop: error ? "4px" : "8px",
               marginBottom: 0,
             }}
           >

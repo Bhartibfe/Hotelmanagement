@@ -1,7 +1,11 @@
 import React from "react";
-import { Link } from "react-router-dom";
+// import { Link } from "react-router-dom";
 
 export const Breadcrumb = ({ text, title }) => {
+  // Breadcrumb area commented out across all pages per user request
+  return null;
+
+  /*
   return (
     <section className="breadcrumb-area breadcrumb-bg">
       <div className="container">
@@ -25,4 +29,5 @@ export const Breadcrumb = ({ text, title }) => {
       </div>
     </section>
   );
+  */
 };

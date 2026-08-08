@@ -57,14 +57,14 @@ export const StakeholderSection = () => {
     <section
       className="services-area-two"
       style={{
-        padding: "100px 0",
+        padding: "clamp(48px, 6vw, 72px) 0",
         background: "#FFFFFF",
       }}
     >
       <div className="container">
         <div className="row justify-content-center">
           <div className="col-lg-8 text-center">
-            <div className="section-title-two mb-50">
+            <div className="section-title-two" style={{ marginBottom: "32px" }}>
               <span
                 className="sub-title"
                 data-aos="fade-down"
@@ -123,20 +123,18 @@ export const StakeholderSection = () => {
                 onMouseEnter={() => setHoveredId(item.id)}
                 onMouseLeave={() => setHoveredId(null)}
                 style={{
-                  padding: "40px 30px",
-                  borderBottom: `3px solid ${item.color}`,
+                  padding: "30px 24px",
                   background: "#FFFFFF",
                   border: "1px solid #E2DDD5",
-                  borderBottomWidth: "3px",
-                  borderBottomColor: item.color,
-                  marginBottom: "30px",
+                  borderBottom: `3px solid ${item.color}`,
+                  marginBottom: "20px",
                   transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
                   height: "100%",
                   cursor: "pointer",
                   transform: clickedId === item.id
-                    ? "scale(0.92) rotateY(10deg)"
+                    ? "scale(0.95) rotateY(5deg)"
                     : hoveredId === item.id
-                    ? "translateY(-12px) scale(1.03)"
+                    ? "translateY(-6px) scale(1.02)"
                     : "translateY(0) scale(1)",
                   boxShadow: clickedId === item.id
                     ? `0 5px 15px rgba(10,22,40,0.15), inset 0 0 30px ${item.color}22`

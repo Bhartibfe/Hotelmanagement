@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../../services/api";
+import api from "../../services/api";
 
 const CATEGORY_LABELS = {
   TECHNOLOGY: "Technology",
@@ -39,6 +39,7 @@ const AdminVendors = () => {
   const [starAnimating, setStarAnimating] = useState(null);
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -81,13 +82,15 @@ const AdminVendors = () => {
     setStarAnimating(id);
     try {
       await api.toggleVendorFeatured(id);
+      setTimeout(() => {
+        setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, isFeatured: !v.isFeatured } : v)));
+        setStarAnimating(null);
+      }, 300);
+      setError(null);
     } catch (err) {
-      // fallback
-    }
-    setTimeout(() => {
-      setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, isFeatured: !v.isFeatured } : v)));
       setStarAnimating(null);
-    }, 300);
+      setError(err.message || "Operation failed");
+    }
   };
 
   const thStyle = {
@@ -122,10 +125,10 @@ const AdminVendors = () => {
               marginBottom: "6px",
             }}
           >
-            Vendor Management
+            Partner Management
           </h1>
           <p style={{ fontSize: "14px", color: "#64748B", margin: 0 }}>
-            Manage verified vendors and service providers
+            Manage verified partners and service providers
           </p>
         </div>
         <button
@@ -149,7 +152,7 @@ const AdminVendors = () => {
           }}
         >
           <i className="fas fa-plus" style={{ fontSize: "12px" }}></i>
-          Add Vendor
+          Add Partner
         </button>
       </div>
 
@@ -158,6 +161,12 @@ const AdminVendors = () => {
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "24px", color: "#C6A962" }}></i>
           <p style={{ marginTop: "12px", color: "#64748B", fontSize: "14px" }}>Loading...</p>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
+          {error}
         </div>
       )}
 
@@ -228,7 +237,7 @@ const AdminVendors = () => {
             <i className="fas fa-search" style={{ fontSize: "14px", color: searchFocused ? "#C6A962" : "#94A3B8", transition: "color 0.3s" }}></i>
             <input
               type="text"
-              placeholder="Search vendors by name, contact, category, or city..."
+              placeholder="Search partners by name, contact, category, or city..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => setSearchFocused(true)}
@@ -407,7 +416,7 @@ const AdminVendors = () => {
                 <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <i className="fas fa-building" style={{ fontSize: "24px", color: "#CBD5E1" }}></i>
                 </div>
-                <p style={{ fontSize: "15px", color: "#64748B", fontWeight: 500, margin: 0 }}>No vendors found</p>
+                <p style={{ fontSize: "15px", color: "#64748B", fontWeight: 500, margin: 0 }}>No partners found</p>
                 <p style={{ fontSize: "13px", color: "#94A3B8", margin: 0 }}>Try adjusting your search criteria.</p>
               </div>
             )}

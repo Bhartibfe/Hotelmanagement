@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { api } from "../../services/api";
+import api from "../../services/api";
 import { POST_IMG01, POST_IMG02, POST_IMG03 } from "../../lib/assets";
 
 const POST_IMAGES = [POST_IMG01, POST_IMG02, POST_IMG03];

@@ -102,10 +102,13 @@ router.put("/:id", authenticate, async (req: Request, res: Response) => {
       return res.status(403).json({ error: "Not authorized" });
     }
 
-    const updated = await prisma.vendorProfile.update({
-      where: { id: req.params.id },
-      data: req.body,
-    });
+    const { companyName, category, description, services, portfolio, logo, coverImage, city, state, country, website, phone, email, employeeCount, yearEstablished, previousClients, caseStudies, certifications, gstNumber, panNumber, msmeRegistration, tradeLicense, isoCertification, dunsNumber, annualTurnover, hotelClientsServed, serviceRegions, insuranceDetails } = req.body;
+    const data: any = {};
+    const allowedFields = { companyName, category, description, services, portfolio, logo, coverImage, city, state, country, website, phone, email, employeeCount, yearEstablished, previousClients, caseStudies, certifications, gstNumber, panNumber, msmeRegistration, tradeLicense, isoCertification, dunsNumber, annualTurnover, hotelClientsServed, serviceRegions, insuranceDetails };
+    for (const [key, value] of Object.entries(allowedFields)) {
+      if (value !== undefined) data[key] = value;
+    }
+    const updated = await prisma.vendorProfile.update({ where: { id: req.params.id }, data });
     return res.json(updated);
   } catch (error) {
     return res.status(500).json({ error: "Failed to update vendor" });

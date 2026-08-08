@@ -4,7 +4,15 @@ import * as bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Cannot seed production database!");
+  }
+
   console.log("Cleaning database...");
+  await prisma.profileShareToken.deleteMany();
+  await prisma.profileEditDraft.deleteMany();
+  await prisma.profileRevision.deleteMany();
+  await prisma.product.deleteMany();
   await prisma.testimonial.deleteMany();
   await prisma.industryExpert.deleteMany();
   await prisma.vendorProfile.deleteMany();

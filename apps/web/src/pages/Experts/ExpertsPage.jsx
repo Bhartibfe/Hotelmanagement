@@ -1,20 +1,52 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
-import { api } from "../../services/api";
+import api from "../../services/api";
 
-const EXPERTISE_OPTIONS = [
-  "ALL",
+const DEFAULT_EXPERTISE_OPTIONS = [
+  "General Management",
+  "Hotel Owners / Ownership",
+  "Asset Management",
+  "Operations",
+  "Sales",
+  "Marketing",
+  "Business Development",
   "Revenue Management",
-  "Hotel Operations",
+  "Distribution",
+  "Digital Marketing",
+  "Brand Marketing & Communications",
+  "Finance & Accounts",
+  "Human Resources (People & Culture)",
+  "Learning & Development",
+  "Procurement & Supply Chain",
+  "Information Technology",
+  "Information Security (Cybersecurity)",
+  "Artificial Intelligence & Emerging Technologies",
+  "Engineering & Maintenance",
+  "Projects & Development",
+  "Design & Architecture",
+  "Housekeeping",
+  "Front Office",
+  "Reservations",
   "Food & Beverage",
+  "Culinary",
+  "Banquets & Events",
+  "Spa & Wellness",
+  "Recreation",
+  "Security & Loss Prevention",
+  "Quality Assurance",
+  "Guest Experience",
+  "Customer Relations",
+  "Legal & Compliance",
+  "ESG & Sustainability",
+  "Franchise Development",
+  "Development & Feasibility",
+  "Consulting & Advisory",
   "Hospitality Technology",
-  "Hotel Design",
-  "Sustainability",
-  "Luxury Hospitality",
-  "Hotel Marketing",
-  "Human Resources",
-  "Finance & Investment",
+  "Travel & Tourism",
+  "Academia & Training",
+  "Purchasing",
+  "Public Relations (PR)",
 ];
 
 const MOCK_EXPERTS = [
@@ -128,19 +160,26 @@ const MOCK_EXPERTS = [
   },
 ];
 
+const EXPERT_PHOTOS = ["/expert2.jpg", "/expert.jpg", "/expert2.jpg", "/expert4.jpg", "/expert5.jpg"];
+
 const ExpertsPage = () => {
-  const [experts, setExperts] = useState(MOCK_EXPERTS);
+  const [experts, setExperts] = useState([]);
+  const [expertiseOptions, setExpertiseOptions] = useState(DEFAULT_EXPERTISE_OPTIONS);
   const [activeExpertise, setActiveExpertise] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [hoveredId, setHoveredId] = useState(null);
+  const [showAllFilters, setShowAllFilters] = useState(false);
+
+  const VISIBLE_FILTER_COUNT = 8;
 
   useEffect(() => {
     const fetchExperts = async () => {
       setLoading(true);
       try {
-        const data = await api.getExperts();
-        if (data && data.length > 0) {
-          setExperts(data);
+        const data = await api.getExperts({ limit: 100 });
+        if (data?.experts?.length > 0) {
+          setExperts(data.experts);
         }
       } catch (err) {
         setExperts(MOCK_EXPERTS);
@@ -149,45 +188,43 @@ const ExpertsPage = () => {
       }
     };
     fetchExperts();
+
+    api.getHomepageConfig().then((data) => {
+      if (data?.expertiseOptions?.length > 0) {
+        setExpertiseOptions(data.expertiseOptions);
+      }
+    }).catch(() => {});
   }, []);
+
+  // Helper to get fields from both API and mock format
+  const getName = (e) => e.user ? `${e.user.firstName} ${e.user.lastName}` : (e.name || "");
+  const getTitle = (e) => e.user?.title || e.title || "";
+  const getCompany = (e) => e.user?.organizationName || e.company || "";
+  const getCity = (e) => e.user?.city || e.city || "";
+  const getAvatar = (e) => e.user?.avatar || e.avatar || "";
 
   const filtered = experts.filter((e) => {
     const matchExpertise =
       activeExpertise === "ALL" || (e.expertise && e.expertise.includes(activeExpertise));
     const matchSearch =
       !searchTerm ||
-      e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      e.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getName(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getCompany(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getCity(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
       (e.expertise && e.expertise.some((ex) => ex.toLowerCase().includes(searchTerm.toLowerCase())));
     return matchExpertise && matchSearch;
   });
 
-  const getInitials = (name) => {
-    return name
-      .split(" ")
-      .map((n) => n.charAt(0))
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
-  };
-
-  const getAvatarColor = (name) => {
-    const colors = ["#1A365D", "#276749", "#7C3AED", "#C6A962", "#DC2626", "#0891B2", "#DB2777", "#059669"];
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
+  const visibleFilters = showAllFilters ? expertiseOptions : expertiseOptions.slice(0, VISIBLE_FILTER_COUNT);
+  const hasMoreFilters = expertiseOptions.length > VISIBLE_FILTER_COUNT;
 
   return (
     <Layout breadcrumb="Experts" title="Industry Experts">
-      <section style={{ padding: "60px 0 100px", background: "#FFFFFF" }}>
+      <section style={{ padding: "48px 0 72px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Header & Search */}
-          <div style={{ marginBottom: "48px" }}>
-            <div className="row align-items-center" style={{ marginBottom: "24px" }}>
+          <div style={{ marginBottom: "32px" }}>
+            <div className="row align-items-center" style={{ marginBottom: "16px" }}>
               <div className="col-lg-8">
                 <span
                   style={{
@@ -240,8 +277,8 @@ const ExpertsPage = () => {
             </div>
 
             {/* Expertise Filters */}
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-              {EXPERTISE_OPTIONS.map((exp) => (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", alignItems: "center" }}>
+              {["ALL", ...visibleFilters].map((exp) => (
                 <button
                   key={exp}
                   onClick={() => setActiveExpertise(exp)}
@@ -260,6 +297,24 @@ const ExpertsPage = () => {
                   {exp === "ALL" ? "All Experts" : exp}
                 </button>
               ))}
+              {hasMoreFilters && (
+                <button
+                  onClick={() => setShowAllFilters(!showAllFilters)}
+                  style={{
+                    padding: "9px 16px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    border: "1px solid var(--tg-border-color)",
+                    background: "transparent",
+                    color: "#C6A962",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  {showAllFilters ? "Show Less" : `+${expertiseOptions.length - VISIBLE_FILTER_COUNT} More`}
+                </button>
+              )}
             </div>
 
             <p style={{ fontSize: "14px", color: "var(--tg-gray-three)", margin: 0 }}>
@@ -267,150 +322,188 @@ const ExpertsPage = () => {
             </p>
           </div>
 
+          {/* Loading State */}
+          {loading && (
+            <div style={{ textAlign: "center", padding: "80px 0" }}>
+              <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "28px", color: "#C6A962" }}></i>
+              <p style={{ marginTop: "16px", color: "var(--tg-gray-three)", fontSize: "14px" }}>Loading experts...</p>
+            </div>
+          )}
+
           {/* Experts Grid */}
-          <div className="row">
-            {filtered.map((expert, i) => (
-              <div key={expert.id} className="col-lg-3 col-md-6" data-aos="fade-up" data-aos-delay={i * 50}>
+          {!loading && <div className="row">
+            {filtered.map((expert, index) => {
+              const isHovered = hoveredId === expert.id;
+              const avatar = getAvatar(expert);
+              const hasAvatar = !!avatar;
+              const name = getName(expert);
+              const initials = name.split(" ").map((n) => n[0]).join("").substring(0, 2).toUpperCase();
+              return (
                 <div
-                  style={{
-                    background: "#FFFFFF",
-                    border: "1px solid var(--tg-border-color)",
-                    padding: "32px 24px",
-                    marginBottom: "24px",
-                    textAlign: "center",
-                    transition: "all 0.4s ease",
-                    position: "relative",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = "0 20px 48px rgba(10,22,40,0.1)";
-                    e.currentTarget.style.transform = "translateY(-8px)";
-                    e.currentTarget.style.borderBottomColor = "#C6A962";
-                    e.currentTarget.style.borderBottomWidth = "3px";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "none";
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.borderBottomColor = "var(--tg-border-color)";
-                    e.currentTarget.style.borderBottomWidth = "1px";
-                  }}
+                  key={expert.id}
+                  className="col-lg-3 col-md-6"
+                  data-aos="fade-up"
+                  data-aos-duration="800"
+                  data-aos-delay={index * 50}
+                  style={{ marginBottom: "20px" }}
                 >
-                  {/* Avatar */}
-                  <div
-                    style={{
-                      width: "80px",
-                      height: "80px",
-                      borderRadius: "50%",
-                      background: getAvatarColor(expert.name),
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 20px",
-                      color: "#FFFFFF",
-                      fontWeight: 700,
-                      fontSize: "24px",
-                      fontFamily: "var(--tg-heading-font-family)",
-                      letterSpacing: "1px",
-                    }}
-                  >
-                    {getInitials(expert.name)}
-                  </div>
+                  <Link to={`/experts/${expert.id}`} style={{ textDecoration: "none" }}>
+                    <div
+                      onMouseEnter={() => setHoveredId(expert.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      style={{
+                        position: "relative",
+                        overflow: "hidden",
+                        height: "clamp(280px, 40vw, 380px)",
+                        cursor: "pointer",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      {/* Photo or initials fallback */}
+                      {hasAvatar ? (
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            backgroundImage: `url(${avatar})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                            transition: "transform 0.6s ease",
+                            transform: isHovered ? "scale(1.08)" : "scale(1)",
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background: "linear-gradient(135deg, #0A1628 0%, #1E293B 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <span style={{ fontSize: "64px", fontWeight: 700, color: "#C6A962", fontFamily: "var(--tg-heading-font-family)", letterSpacing: "4px", opacity: 0.6 }}>
+                            {initials}
+                          </span>
+                        </div>
+                      )}
 
-                  {/* Name */}
-                  <h5
-                    style={{
-                      fontFamily: "var(--tg-heading-font-family)",
-                      fontSize: "20px",
-                      fontWeight: 600,
-                      color: "var(--tg-primary-color)",
-                      marginBottom: "4px",
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {expert.name}
-                  </h5>
-
-                  {/* Title */}
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: "var(--tg-accent-color)",
-                      fontWeight: 600,
-                      marginBottom: "2px",
-                    }}
-                  >
-                    {expert.title}
-                  </p>
-
-                  {/* Company */}
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: "var(--tg-gray-three)",
-                      marginBottom: "4px",
-                    }}
-                  >
-                    {expert.company}
-                  </p>
-
-                  {/* City */}
-                  <p
-                    style={{
-                      fontSize: "12px",
-                      color: "var(--tg-gray-three)",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <i className="flaticon-pin" style={{ fontSize: "11px", marginRight: "4px" }}></i>
-                    {expert.city}
-                  </p>
-
-                  {/* Bio */}
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      lineHeight: 1.6,
-                      color: "var(--tg-body-font-color)",
-                      marginBottom: "20px",
-                      minHeight: "84px",
-                      textAlign: "left",
-                    }}
-                  >
-                    {expert.bio.length > 140 ? expert.bio.substring(0, 140) + "..." : expert.bio}
-                  </p>
-
-                  {/* Expertise Tags */}
-                  <div
-                    style={{
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: "6px",
-                      justifyContent: "center",
-                      borderTop: "1px solid var(--tg-border-color)",
-                      paddingTop: "16px",
-                    }}
-                  >
-                    {expert.expertise.map((tag) => (
-                      <span
-                        key={tag}
+                      {/* Bottom gradient fade */}
+                      <div
                         style={{
+                          position: "absolute",
+                          inset: 0,
+                          background: isHovered
+                            ? "linear-gradient(to top, #0A1628 45%, rgba(10,22,40,0.3) 70%, transparent 100%)"
+                            : "linear-gradient(to top, #0A1628 15%, rgba(10,22,40,0.5) 40%, transparent 65%)",
+                          transition: "all 0.5s ease",
+                        }}
+                      />
+
+                      {/* Gold accent line at bottom */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          width: isHovered ? "100%" : "0%",
+                          height: "3px",
+                          background: "#C6A962",
+                          transition: "width 0.4s ease",
+                        }}
+                      />
+
+                      {/* "View Profile" indicator on hover */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "16px",
+                          right: "16px",
+                          padding: "6px 14px",
+                          background: "rgba(198, 169, 98, 0.95)",
+                          color: "#0A1628",
                           fontSize: "10px",
-                          fontWeight: 600,
+                          fontWeight: 700,
+                          letterSpacing: "1.5px",
                           textTransform: "uppercase",
-                          letterSpacing: "0.5px",
-                          padding: "3px 8px",
-                          background: "var(--tg-section-background)",
-                          color: "var(--tg-primary-color)",
-                          border: "1px solid var(--tg-border-color)",
+                          opacity: isHovered ? 1 : 0,
+                          transform: isHovered ? "translateY(0)" : "translateY(-8px)",
+                          transition: "all 0.3s ease 0.1s",
                         }}
                       >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+                        View Profile
+                      </div>
+
+                      {/* Content overlay */}
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          padding: "28px 24px",
+                          transform: isHovered ? "translateY(0)" : "translateY(20px)",
+                          transition: "transform 0.4s ease",
+                        }}
+                      >
+                        <h4
+                          style={{
+                            fontFamily: "var(--tg-heading-font-family)",
+                            fontSize: "24px",
+                            fontWeight: 600,
+                            color: "#FFFFFF",
+                            marginBottom: "4px",
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {name}
+                        </h4>
+
+                        <p
+                          style={{
+                            fontSize: "13px",
+                            color: "#C6A962",
+                            fontWeight: 600,
+                            marginBottom: "2px",
+                            letterSpacing: "0.5px",
+                          }}
+                        >
+                          {getTitle(expert)}
+                        </p>
+
+                        <p
+                          style={{
+                            fontSize: "12px",
+                            color: "#8DA4BE",
+                            marginBottom: isHovered ? "14px" : "0",
+                            transition: "margin 0.4s ease",
+                          }}
+                        >
+                          {getCompany(expert)}
+                        </p>
+
+                        <p
+                          style={{
+                            fontSize: "13px",
+                            lineHeight: 1.6,
+                            color: "rgba(255,255,255,0.8)",
+                            margin: 0,
+                            maxHeight: isHovered ? "60px" : "0",
+                            opacity: isHovered ? 1 : 0,
+                            overflow: "hidden",
+                            transition: "all 0.4s ease 0.1s",
+                          }}
+                        >
+                          {expert.bio}
+                        </p>
+                      </div>
+                    </div>
+                  </Link>
                 </div>
-              </div>
-            ))}
-          </div>
+              );
+            })}
+          </div>}
 
           {/* Empty State */}
           {!loading && filtered.length === 0 && (
@@ -446,8 +539,8 @@ const ExpertsPage = () => {
           <div
             style={{
               background: "#0A1628",
-              padding: "64px 48px",
-              marginTop: "60px",
+              padding: "48px 36px",
+              marginTop: "40px",
               textAlign: "center",
               position: "relative",
               overflow: "hidden",

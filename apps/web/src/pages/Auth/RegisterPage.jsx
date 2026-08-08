@@ -3,11 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../layouts/Layout";
 
-const SALUTATIONS = ["Mr", "Mrs", "Miss", "Ms", "Dr"];
-
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
-    salutation: "",
     firstName: "",
     lastName: "",
     email: "",
@@ -145,29 +142,6 @@ const RegisterPage = () => {
                 )}
 
                 <form onSubmit={handleSubmit}>
-                  {/* Salutation */}
-                  <div className="row">
-                    <div className="col-md-4" style={{ marginBottom: "20px" }}>
-                      <label style={labelStyle}>
-                        Salutation<span style={requiredStar}>*</span>
-                      </label>
-                      <select
-                        name="salutation"
-                        value={formData.salutation}
-                        onChange={handleChange}
-                        required
-                        style={inputStyle}
-                      >
-                        <option value="">Select</option>
-                        {SALUTATIONS.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
                   {/* Personal Info */}
                   <div className="row">
                     <div className="col-md-6" style={{ marginBottom: "20px" }}>
@@ -271,20 +245,12 @@ const RegisterPage = () => {
                   }}
                 >
                   <p style={{ fontSize: "14px", color: "#6B7280", margin: 0 }}>
-                    Are you a Vendor?{" "}
+                    Not a Hotel Owner?{" "}
                     <Link
-                      to="/register/vendor"
+                      to="/register"
                       style={{ color: "#C6A962", fontWeight: 600, textDecoration: "none" }}
                     >
-                      Register here
-                    </Link>
-                    .{" "}
-                    Are you an Industry Expert?{" "}
-                    <Link
-                      to="/register/expert"
-                      style={{ color: "#C6A962", fontWeight: 600, textDecoration: "none" }}
-                    >
-                      Register here
+                      Choose a different role
                     </Link>
                     .
                   </p>

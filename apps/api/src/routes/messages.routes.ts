@@ -65,6 +65,9 @@ router.get("/conversations", authenticate, async (req: Request, res: Response) =
 // GET /api/messages/:userId - Get thread with user
 router.get("/:userId", authenticate, async (req: Request, res: Response) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+
     const messages = await prisma.message.findMany({
       where: {
         OR: [
@@ -73,6 +76,8 @@ router.get("/:userId", authenticate, async (req: Request, res: Response) => {
         ],
       },
       orderBy: { createdAt: "asc" },
+      take: limit,
+      skip: (page - 1) * limit,
     });
 
     // Mark received messages as read

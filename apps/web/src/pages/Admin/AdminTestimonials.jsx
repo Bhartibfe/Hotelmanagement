@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../../services/api";
+import api from "../../services/api";
 
 const AdminTestimonials = () => {
   const [testimonials, setTestimonials] = useState([]);
@@ -10,6 +10,7 @@ const AdminTestimonials = () => {
   const [starAnimating, setStarAnimating] = useState(null);
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -40,34 +41,38 @@ const AdminTestimonials = () => {
     setStarAnimating(id);
     try {
       const t = testimonials.find((x) => x.id === id);
-      await api.updateTestimonial(id, { featured: !t.isFeatured });
+      await api.updateTestimonial(id, { isFeatured: !t.isFeatured });
+      setTimeout(() => {
+        setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, isFeatured: !t.isFeatured } : t)));
+        setStarAnimating(null);
+      }, 300);
+      setError(null);
     } catch (err) {
-      // fallback
-    }
-    setTimeout(() => {
-      setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, featured: !t.isFeatured } : t)));
       setStarAnimating(null);
-    }, 300);
+      setError(err.message || "Operation failed");
+    }
   };
 
   const handleTogglePublished = async (id) => {
     try {
       const t = testimonials.find((x) => x.id === id);
-      await api.updateTestimonial(id, { published: !t.isPublished });
+      await api.updateTestimonial(id, { isPublished: !t.isPublished });
+      setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, isPublished: !t.isPublished } : t)));
+      setError(null);
     } catch (err) {
-      // fallback
+      setError(err.message || "Operation failed");
     }
-    setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, published: !t.isPublished } : t)));
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this testimonial?")) return;
     try {
       await api.deleteTestimonial(id);
+      setTestimonials((prev) => prev.filter((t) => t.id !== id));
+      setError(null);
     } catch (err) {
-      // fallback
+      setError(err.message || "Operation failed");
     }
-    setTestimonials((prev) => prev.filter((t) => t.id !== id));
   };
 
   const getInitials = (name) => {
@@ -122,6 +127,12 @@ const AdminTestimonials = () => {
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "24px", color: "#C6A962" }}></i>
           <p style={{ marginTop: "12px", color: "#64748B", fontSize: "14px" }}>Loading...</p>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
+          {error}
         </div>
       )}
 
@@ -248,7 +259,7 @@ const AdminTestimonials = () => {
                     {/* Featured Star */}
                     <button
                       onClick={() => handleToggleFeatured(testimonial.id)}
-                      title={testimonial.featured ? "Remove from featured" : "Add to featured"}
+                      title={testimonial.isFeatured ? "Remove from featured" : "Add to featured"}
                       style={{
                         background: "none",
                         border: "none",
@@ -259,21 +270,21 @@ const AdminTestimonials = () => {
                       }}
                     >
                       <i
-                        className={testimonial.featured ? "fas fa-star" : "far fa-star"}
-                        style={{ fontSize: "16px", color: testimonial.featured ? "#C6A962" : "#CBD5E1", transition: "color 0.3s" }}
+                        className={testimonial.isFeatured ? "fas fa-star" : "far fa-star"}
+                        style={{ fontSize: "16px", color: testimonial.isFeatured ? "#C6A962" : "#CBD5E1", transition: "color 0.3s" }}
                       ></i>
                     </button>
 
                     {/* Published Toggle */}
                     <button
                       onClick={() => handleTogglePublished(testimonial.id)}
-                      title={testimonial.published ? "Unpublish" : "Publish"}
+                      title={testimonial.isPublished ? "Unpublish" : "Publish"}
                       style={{
                         width: "40px",
                         height: "22px",
                         borderRadius: "11px",
                         border: "none",
-                        background: testimonial.published ? "#C6A962" : "#CBD5E1",
+                        background: testimonial.isPublished ? "#C6A962" : "#CBD5E1",
                         cursor: "pointer",
                         position: "relative",
                         transition: "background 0.3s",
@@ -288,14 +299,14 @@ const AdminTestimonials = () => {
                           background: "#FFFFFF",
                           position: "absolute",
                           top: "3px",
-                          left: testimonial.published ? "21px" : "3px",
+                          left: testimonial.isPublished ? "21px" : "3px",
                           transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                           boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                         }}
                       ></div>
                     </button>
-                    <span style={{ fontSize: "11px", color: testimonial.published ? "#10B981" : "#94A3B8", fontWeight: 500 }}>
-                      {testimonial.published ? "Published" : "Draft"}
+                    <span style={{ fontSize: "11px", color: testimonial.isPublished ? "#10B981" : "#94A3B8", fontWeight: 500 }}>
+                      {testimonial.isPublished ? "Published" : "Draft"}
                     </span>
 
                     {/* Delete Button */}

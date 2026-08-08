@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../../services/api";
+import api from "../../services/api";
 
 const ROLE_LABELS = {
   HOTEL_OWNER: "Hotel Owner",
@@ -33,6 +33,7 @@ const AdminMembers = () => {
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [hoveredStat, setHoveredStat] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -84,10 +85,11 @@ const AdminMembers = () => {
     const newStatus = member.membershipStatus === "SUSPENDED" ? "APPROVED" : "SUSPENDED";
     try {
       await api.updateMember(id, { membershipStatus: newStatus });
+      setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, membershipStatus: newStatus } : m)));
+      setError(null);
     } catch (err) {
-      // fallback
+      setError(err.message || "Operation failed");
     }
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, membershipStatus: newStatus } : m)));
   };
 
   const thStyle = {
@@ -176,6 +178,12 @@ const AdminMembers = () => {
         <div style={{ textAlign: "center", padding: "60px 0" }}>
           <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "24px", color: "#C6A962" }}></i>
           <p style={{ marginTop: "12px", color: "#64748B", fontSize: "14px" }}>Loading...</p>
+        </div>
+      )}
+
+      {error && (
+        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
+          {error}
         </div>
       )}
 
@@ -408,6 +416,7 @@ const AdminMembers = () => {
                       <td style={{ padding: "14px 20px", textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                           <button
+                            onClick={() => window.open(`/members/${member.id}`, "_blank")}
                             onMouseEnter={() => setHoveredBtn(`view-${member.id}`)}
                             onMouseLeave={() => setHoveredBtn(null)}
                             style={{

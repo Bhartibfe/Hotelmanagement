@@ -41,30 +41,47 @@ router.get("/", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/experts/featured - Featured experts for homepage
+// GET /api/experts/featured - Featured experts for homepage (pinned first, then random starred)
 router.get("/featured", async (_req: Request, res: Response) => {
   try {
-    const experts = await prisma.industryExpert.findMany({
-      where: { isFeatured: true },
+    // Get pinned experts (always shown)
+    const pinned = await prisma.industryExpert.findMany({
+      where: { isPinned: true },
       include: {
         user: {
           select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            avatar: true,
-            title: true,
-            memberType: true,
-            organizationName: true,
-            organizationRole: true,
-            city: true,
-            state: true,
-            linkedinUrl: true,
+            id: true, firstName: true, lastName: true, avatar: true,
+            title: true, memberType: true, organizationName: true,
+            organizationRole: true, city: true, state: true, linkedinUrl: true,
           },
         },
       },
       orderBy: { displayOrder: "asc" },
     });
+
+    // Get starred (featured) experts excluding pinned ones
+    const pinnedIds = pinned.map((p) => p.id);
+    const starred = await prisma.industryExpert.findMany({
+      where: { isFeatured: true, id: { notIn: pinnedIds } },
+      include: {
+        user: {
+          select: {
+            id: true, firstName: true, lastName: true, avatar: true,
+            title: true, memberType: true, organizationName: true,
+            organizationRole: true, city: true, state: true, linkedinUrl: true,
+          },
+        },
+      },
+    });
+
+    // Shuffle starred experts for random display
+    for (let i = starred.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [starred[i], starred[j]] = [starred[j], starred[i]];
+    }
+
+    // Pinned first, then random starred
+    const experts = [...pinned, ...starred];
 
     return res.json(experts);
   } catch (error) {

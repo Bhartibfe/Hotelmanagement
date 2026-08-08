@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
-export const JoinNetworkCTA = () => {
+export const JoinNetworkCTA = ({ config }) => {
   const [hoveredBtn, setHoveredBtn] = useState(null);
 
   return (
     <section
       style={{
-        padding: "100px 0",
+        padding: "clamp(48px, 6vw, 72px) 0",
         background: "linear-gradient(135deg, #0A1628 0%, #1C2A3A 100%)",
         position: "relative",
         overflow: "hidden",
@@ -69,12 +69,10 @@ export const JoinNetworkCTA = () => {
                 fontFamily: "var(--tg-heading-font-family)",
                 fontWeight: 600,
                 lineHeight: 1.15,
-                marginBottom: "24px",
+                marginBottom: "18px",
               }}
             >
-              Join India's Premier
-              <br />
-              <span style={{ color: "#C6A962" }}>Hospitality Leadership Platform</span>
+              {config?.ctaTitle || "Join India's Premier"}{!config?.ctaTitle && <><br /><span style={{ color: "#C6A962" }}>Hospitality Leadership Platform</span></>}
             </h2>
             <p
               data-aos="fade-up"
@@ -82,15 +80,13 @@ export const JoinNetworkCTA = () => {
               data-aos-delay="400"
               style={{
                 color: "#8DA4BE",
-                fontSize: "17px",
-                lineHeight: 1.8,
+                fontSize: "16px",
+                lineHeight: 1.7,
                 maxWidth: "520px",
-                margin: "0 auto 40px",
+                margin: "0 auto 28px",
               }}
             >
-              Apply for membership and connect with verified hotel owners,
-              vendors, and industry experts. Our curated application process
-              ensures a trusted community of hospitality professionals.
+              {config?.ctaDescription || "Apply for membership and connect with verified hotel owners, partners, and industry experts. Our curated application process ensures a trusted community of hospitality professionals."}
             </p>
             <div
               data-aos="fade-up"
@@ -100,14 +96,14 @@ export const JoinNetworkCTA = () => {
             >
               <Link
                 to="/register"
-                className="btn"
+                className="btn cta-btn-gold"
                 onMouseEnter={() => setHoveredBtn("apply")}
                 onMouseLeave={() => setHoveredBtn(null)}
                 style={{
-                  background: "#C6A962",
-                  color: "#0A1628",
+                  background: hoveredBtn === "apply" ? "#0A1628" : "#C6A962",
+                  color: hoveredBtn === "apply" ? "#C6A962" : "#0A1628",
                   border: "2px solid #C6A962",
-                  padding: "18px 40px",
+                  padding: "14px 34px",
                   fontSize: "13px",
                   letterSpacing: "2px",
                   transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
@@ -115,17 +111,17 @@ export const JoinNetworkCTA = () => {
                   boxShadow: hoveredBtn === "apply" ? "0 15px 40px rgba(198,169,98,0.3)" : "none",
                 }}
               >
-                Apply for Membership
+                {config?.ctaButtonText || "Apply for Membership"}
               </Link>
               <Link
                 to="/contact"
-                className="btn transparent-btn"
+                className="btn cta-btn-gold"
                 onMouseEnter={() => setHoveredBtn("contact")}
                 onMouseLeave={() => setHoveredBtn(null)}
                 style={{
                   border: "2px solid rgba(198,169,98,0.4)",
                   color: "#C6A962",
-                  padding: "18px 40px",
+                  padding: "14px 34px",
                   fontSize: "13px",
                   letterSpacing: "2px",
                   background: hoveredBtn === "contact" ? "rgba(198,169,98,0.1)" : "transparent",
@@ -146,6 +142,12 @@ export const JoinNetworkCTA = () => {
           0%, 100% { transform: translate(0, 0) scale(1); }
           33% { transform: translate(20px, -20px) scale(1.1); }
           66% { transform: translate(-15px, 10px) scale(0.95); }
+        }
+        .cta-btn-gold::before {
+          display: none !important;
+        }
+        .cta-btn-gold:hover {
+          color: inherit !important;
         }
       `}</style>
     </section>

@@ -122,47 +122,59 @@ enum NotificationType {
   SYSTEM
 }
 
+enum RevisionStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum DraftStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ─── MODELS ───
 
 model User {
-  id                    String            @id @default(cuid())
-  email                 String            @unique
+  id                    String           @id @default(cuid())
+  email                 String           @unique
   passwordHash          String?
-  googleId              String?           @unique
-  role                  Role              @default(MEMBER)
+  googleId              String?          @unique
+  role                  Role             @default(MEMBER)
   memberType            MemberType?
-  membershipStatus      MembershipStatus  @default(PENDING)
-  profileStatus         ProfileStatus     @default(INCOMPLETE)
+  membershipStatus      MembershipStatus @default(PENDING)
+  profileStatus         ProfileStatus    @default(INCOMPLETE)
   salutation            String?
   firstName             String
   lastName              String
   title                 String?
   phone                 String?
   avatar                String?
-  bio                   String?           @db.Text
+  bio                   String?          @db.Text
   city                  String?
   state                 String?
-  country               String?           @default("India")
+  country               String?          @default("India")
   linkedinUrl           String?
   websiteUrl            String?
   organizationName      String?
   organizationRole      String?
-  achievements          String?           @db.Text
-  industryContributions String?           @db.Text
-  businessOverview      String?           @db.Text
+  achievements          String?          @db.Text
+  industryContributions String?          @db.Text
+  businessOverview      String?          @db.Text
   yearsInIndustry       Int?
-  isFeaturedExpert      Boolean           @default(false)
-  isFeaturedVendor      Boolean           @default(false)
-  isActive              Boolean           @default(true)
+  isFeaturedExpert      Boolean          @default(false)
+  isFeaturedVendor      Boolean          @default(false)
+  isActive              Boolean          @default(true)
   approvedAt            DateTime?
   approvedBy            String?
   rejectionReason       String?
   profileCompletedAt    DateTime?
   lastLoginAt           DateTime?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
 
-  hotels              Hotel[]                 @relation("HotelOwner")
+  hotels              Hotel[]             @relation("HotelOwner")
   hotelMemberships    HotelMember[]
   vendorProfile       VendorProfile?
   expertProfile       IndustryExpert?
@@ -174,12 +186,13 @@ model User {
   comments            Comment[]
   likes               Like[]
   saves               SavedPost[]
-  sentConnections     Connection[]            @relation("ConnectionSender")
-  receivedConnections Connection[]            @relation("ConnectionReceiver")
+  sentConnections     Connection[]        @relation("ConnectionSender")
+  receivedConnections Connection[]        @relation("ConnectionReceiver")
   eventRegistrations  EventRegistration[]
-  sentMessages        Message[]               @relation("MessageSender")
-  receivedMessages    Message[]               @relation("MessageReceiver")
+  sentMessages        Message[]           @relation("MessageSender")
+  receivedMessages    Message[]           @relation("MessageReceiver")
   notifications       Notification[]
+  shareTokens         ProfileShareToken[]
 
   @@index([role])
   @@index([memberType])
@@ -270,9 +283,9 @@ model FeedPost {
   updatedAt DateTime @updatedAt
 
   authorId String
-  author   User       @relation(fields: [authorId], references: [id])
+  author   User        @relation(fields: [authorId], references: [id])
   hotelId  String?
-  hotel    Hotel?     @relation(fields: [hotelId], references: [id])
+  hotel    Hotel?      @relation(fields: [hotelId], references: [id])
   comments Comment[]
   likes    Like[]
   saves    SavedPost[]
@@ -324,43 +337,44 @@ model SavedPost {
   post   FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
+  @@index([postId])
 }
 
 model VendorProfile {
-  id              String              @id @default(cuid())
-  companyName     String
-  slug            String              @unique
-  description     String?             @db.Text
-  category        MarketplaceCategory
-  services        String[]
-  portfolio       String[]
-  logo            String?
-  coverImage      String?
-  city            String
-  state           String
-  country         String              @default("India")
-  website         String?
-  phone           String?
-  email           String?
-  employeeCount   String?
-  yearEstablished Int?
-  previousClients   String[]
-  caseStudies       String[]
-  certifications    String[]
-  gstNumber         String?
-  panNumber         String?
-  msmeRegistration  String?
-  tradeLicense      String?
-  isoCertification  String?
-  dunsNumber        String?
-  annualTurnover    String?
+  id                 String              @id @default(cuid())
+  companyName        String
+  slug               String              @unique
+  description        String?             @db.Text
+  category           MarketplaceCategory
+  services           String[]
+  portfolio          String[]
+  logo               String?
+  coverImage         String?
+  city               String
+  state              String
+  country            String              @default("India")
+  website            String?
+  phone              String?
+  email              String?
+  employeeCount      String?
+  yearEstablished    Int?
+  previousClients    String[]
+  caseStudies        String[]
+  certifications     String[]
+  gstNumber          String?
+  panNumber          String?
+  msmeRegistration   String?
+  tradeLicense       String?
+  isoCertification   String?
+  dunsNumber         String?
+  annualTurnover     String?
   hotelClientsServed Int?
-  serviceRegions    String[]
-  insuranceDetails  String?
-  isFeatured      Boolean             @default(false)
-  displayOrder    Int                 @default(0)
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  serviceRegions     String[]
+  insuranceDetails   String?
+  isFeatured         Boolean             @default(false)
+  displayOrder       Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
 
   userId   String    @unique
   user     User      @relation(fields: [userId], references: [id])
@@ -409,6 +423,7 @@ model IndustryExpert {
   awards              String[]
   certifications      String[]
   isFeatured          Boolean  @default(false)
+  isPinned            Boolean  @default(false)
   displayOrder        Int      @default(0)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -424,7 +439,7 @@ model ProfileRevision {
   flaggedFields String[]
   adminNote     String    @db.Text
   userResponse  String?   @db.Text
-  status        String    @default("OPEN")
+  status        RevisionStatus @default(OPEN)
   createdAt     DateTime  @default(now())
   resolvedAt    DateTime?
 
@@ -438,7 +453,7 @@ model ProfileRevision {
 model ProfileEditDraft {
   id         String    @id @default(cuid())
   draftData  Json
-  status     String    @default("PENDING")
+  status     DraftStatus @default(PENDING)
   adminNote  String?
   createdAt  DateTime  @default(now())
   reviewedAt DateTime?
@@ -507,6 +522,7 @@ model EventRegistration {
   user    User   @relation(fields: [userId], references: [id])
 
   @@unique([eventId, userId])
+  @@index([userId])
 }
 
 model Message {
@@ -539,4 +555,25 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([createdAt])
+}
+
+model HomepageConfig {
+  id        String   @id @default("singleton")
+  config    Json
+  updatedAt DateTime @updatedAt
+}
+
+model ProfileShareToken {
+  id         String     @id @default(cuid())
+  token      String     @unique @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id])
+  memberType MemberType
+  email      String?
+  isUsed     Boolean    @default(false)
+  usedAt     DateTime?
+  expiresAt  DateTime
+  createdAt  DateTime   @default(now())
+
+  @@index([userId])
 }

@@ -1,0 +1,1076 @@
+import React, { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Layout } from "../../layouts/Layout";
+import api from "../../services/api";
+
+const MOCK_EXPERTS = [
+  {
+    id: 1,
+    name: "Dr. Arvind Krishnan",
+    title: "Chief Revenue Strategist",
+    company: "RevMax Hospitality Advisors",
+    expertise: ["Revenue Management", "Hotel Operations", "Finance & Investment"],
+    city: "Mumbai",
+    state: "Maharashtra",
+    yearsOfExperience: 25,
+    bio: "25+ years in hospitality revenue optimization. Former VP Revenue at Oberoi Hotels. Published author on dynamic pricing strategies for Indian hotel markets. Has helped over 150 properties across India increase their RevPAR through data-driven pricing strategies and distribution channel optimization.",
+    insights: "The Indian hospitality market is at an inflection point. Hotels that invest in AI-driven dynamic pricing and personalized guest experiences will outperform their peers by a significant margin in the coming decade.",
+    awards: ["Hospitality Leader of the Year 2022", "Revenue Innovation Award - FHRAI"],
+    certifications: ["CHRM - Certified Hotel Revenue Manager", "Cornell Revenue Management Certification"],
+    speakingEngagements: ["HICSA 2024 Keynote Speaker", "FHRAI Annual Convention 2023"],
+    publishedArticles: ["Dynamic Pricing Dynamics in Indian Markets", "The Death of Static Rate Cards"],
+    recognition: "Featured in Hotelier India Magazine as top 10 revenue strategists in Asia.",
+    phone: "+91 98200 12345",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 2,
+    name: "Sunita Chawla",
+    title: "Director of Operations",
+    company: "The Leela Palaces",
+    expertise: ["Hotel Operations", "Luxury Hospitality", "Human Resources"],
+    city: "Delhi",
+    state: "Delhi",
+    yearsOfExperience: 20,
+    bio: "Seasoned operations leader with experience managing flagship luxury properties. Known for driving service excellence and operational efficiency across multi-property portfolios. Pioneered the digital concierge program at The Leela, improving guest satisfaction scores by 28%.",
+    insights: "Luxury hospitality is about creating moments that guests remember forever. Technology should enhance, not replace, the human touch that defines true luxury service.",
+    awards: ["Women in Hospitality Leadership Award 2023"],
+    certifications: ["Six Sigma Black Belt", "Certified Hospitality Administrator"],
+    speakingEngagements: ["Women Leaders in Hospitality Summit 2023", "Luxury Service Excellence Workshop"],
+    publishedArticles: ["Crafting Unforgettable Micro-Moments in Luxury Hotels"],
+    recognition: "Awarded operational excellence medal by Luxury Hotelier Guild.",
+    phone: "+91 98110 54321",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 3,
+    name: "Chef Rajan Malhotra",
+    title: "Executive Culinary Director",
+    company: "Epicure Hospitality Group",
+    expertise: ["Food & Beverage", "Hotel Operations"],
+    city: "Bengaluru",
+    state: "Karnataka",
+    yearsOfExperience: 18,
+    bio: "Award-winning chef with experience across Michelin-starred restaurants and luxury hotels. Specialist in modern Indian cuisine and F&B concept development. Has launched 15 successful restaurant concepts across hotel properties in India.",
+    insights: "The future of hotel F&B is hyperlocal. Guests want authentic, seasonal menus that tell a story about the destination they're visiting.",
+    awards: ["Times Food Award - Best Hotel Restaurant 2023", "Chef of the Year - Indian Culinary Forum"],
+    certifications: ["Le Cordon Bleu Paris", "WSET Level 3"],
+    speakingEngagements: ["Indian Restaurant & Hotel F&B Conclave 2023"],
+    publishedArticles: ["Engineering Profitable Hotel Menus"],
+    recognition: "Featured on National TV for culinary innovations in Indian hotels.",
+    phone: "+91 98450 98765",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 4,
+    name: "Priya Venkatesh",
+    title: "Hospitality Tech Advisor",
+    company: "HotelTech India",
+    expertise: ["Hospitality Technology", "Revenue Management"],
+    city: "Hyderabad",
+    state: "Telangana",
+    yearsOfExperience: 15,
+    bio: "Technology evangelist bridging the gap between hospitality and innovation. Expert in PMS implementations, AI-driven guest personalization, and cloud migration for hotels. Has overseen technology transformations for 80+ hotel properties.",
+    insights: "Indian hotels are still in the early stages of digital transformation. The opportunity to leverage AI for revenue optimization and guest personalization is massive.",
+    awards: ["Top 40 Under 40 - Hospitality Technology"],
+    certifications: ["AWS Solutions Architect", "Google Cloud Professional"],
+    speakingEngagements: ["Tech in Hospitality Expo 2024"],
+    publishedArticles: ["AI in Front Desk Operations"],
+    recognition: "Recognized as leading cloud architect for hotel PMS implementations.",
+    phone: "+91 98490 11223",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 5,
+    name: "Arjun Deshmukh",
+    title: "Principal Architect",
+    company: "Deshmukh & Associates",
+    expertise: ["Hotel Design", "Sustainability"],
+    city: "Pune",
+    state: "Maharashtra",
+    yearsOfExperience: 22,
+    bio: "Award-winning hospitality architect with 50+ hotel projects across India. Pioneer in biophilic hotel design and LEED-certified sustainable hospitality properties. His designs have been featured in Architectural Digest and Dezeen.",
+    insights: "Sustainable design is no longer optional — it's a competitive advantage. Hotels that embrace biophilic design see measurable improvements in guest wellbeing and operational costs.",
+    awards: ["Indian Architecture Award - Best Hospitality Project", "Green Building Leadership Award"],
+    certifications: ["LEED AP BD+C", "WELL AP"],
+    speakingEngagements: ["Sustainable Hospitality Architecture Forum"],
+    publishedArticles: ["Biophilic Architecture in Resort Design"],
+    recognition: "Featured in Architectural Digest for Eco-Resort Projects.",
+    phone: "+91 98220 33445",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 6,
+    name: "Meera Iyer",
+    title: "Sustainability Consultant",
+    company: "Green Hospitality India",
+    expertise: ["Sustainability", "Hotel Operations"],
+    city: "Chennai",
+    state: "Tamil Nadu",
+    yearsOfExperience: 16,
+    bio: "Leading voice in sustainable hospitality practices. Helped 200+ properties reduce carbon footprint by 40%. UN Sustainable Development Goals hospitality advisor. Regularly consults with state governments on eco-tourism policies.",
+    insights: "Sustainability in hospitality is a journey, not a destination. Start with energy and water audits — the ROI is immediate and measurable.",
+    awards: ["UN SDG Hospitality Champion", "CII Sustainability Award"],
+    certifications: ["LEED Green Associate", "ISO 14001 Lead Auditor"],
+    speakingEngagements: ["UN Eco-Tourism Summit", "CII Green Hotel Conclave"],
+    publishedArticles: ["Zero-Waste Hotel Operations Guide"],
+    recognition: "UN Advisory Board Member for Sustainable Tourism.",
+    phone: "+91 98400 55667",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 7,
+    name: "Vikram Rathore",
+    title: "Luxury Brand Strategist",
+    company: "Rathore Luxury Consulting",
+    expertise: ["Luxury Hospitality", "Hotel Marketing"],
+    city: "Jaipur",
+    state: "Rajasthan",
+    yearsOfExperience: 19,
+    bio: "Former marketing head at Aman Resorts. Specialist in positioning heritage and palace hotels for ultra-luxury international markets and UHNW traveler acquisition. Has positioned 30+ heritage properties for the global luxury market.",
+    insights: "India's heritage hotels are sitting on an untapped goldmine. With the right brand positioning, these properties can command rates comparable to the world's best luxury hotels.",
+    awards: ["Luxury Travel Advisor Award", "Brand Excellence - Hotelier India"],
+    certifications: ["Cornell Luxury Hospitality Management"],
+    speakingEngagements: ["Heritage Tourism Conclave Jaipur"],
+    publishedArticles: ["Positioning Heritage Hotels for UHNW Travelers"],
+    recognition: "Named Top Heritage Hospitality Strategist in Rajasthan.",
+    phone: "+91 98290 77889",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 8,
+    name: "Deepa Menon",
+    title: "Digital Marketing Director",
+    company: "HospDigital Agency",
+    expertise: ["Hotel Marketing", "Hospitality Technology"],
+    city: "Kochi",
+    state: "Kerala",
+    yearsOfExperience: 12,
+    bio: "Digital marketing strategist helping independent hotels compete with chains. Expert in direct booking optimization, SEO, and OTA channel management. Has generated over ₹500 Cr in direct bookings for hotel clients.",
+    insights: "Independent hotels can reduce OTA commissions by 15-20% with the right direct booking strategy. It starts with a great website and smart metasearch investment.",
+    awards: ["Digital Marketer of the Year - Hotelier India"],
+    certifications: ["Google Analytics Certified", "HubSpot Inbound Marketing"],
+    speakingEngagements: ["Kerala Tourism Digital Summit"],
+    publishedArticles: ["Direct Booking Strategies for Boutique Hotels"],
+    recognition: "Direct Booking Innovator Award 2022.",
+    phone: "+91 98470 99001",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 9,
+    name: "Sanjay Kapoor",
+    title: "HR & Training Head",
+    company: "Taj Hotels (Retired)",
+    expertise: ["Human Resources", "Hotel Operations", "Luxury Hospitality"],
+    city: "Mumbai",
+    state: "Maharashtra",
+    yearsOfExperience: 30,
+    bio: "30-year career in hospitality HR at India's top hotel chains. Expert in talent acquisition, employee retention strategies, and hospitality training programs. Developed the acclaimed Taj Management Training Programme.",
+    insights: "The biggest challenge in Indian hospitality today is talent retention. Hotels that invest in employee development and create clear career pathways will win the talent war.",
+    awards: ["Lifetime Achievement - FHRAI HR Forum", "Best HR Leader - People Matters"],
+    certifications: ["SHRM-SCP"],
+    speakingEngagements: ["FHRAI HR Forum Keynote"],
+    publishedArticles: ["Talent Retention in Indian Hospitality"],
+    recognition: "Lifetime Achievement Award by Indian HR Congress.",
+    phone: "+91 98200 44332",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 10,
+    name: "Nandini Sharma",
+    title: "Investment Advisor",
+    company: "HotelVest Capital",
+    expertise: ["Finance & Investment", "Revenue Management"],
+    city: "Gurgaon",
+    state: "Haryana",
+    yearsOfExperience: 17,
+    bio: "Former investment banker turned hospitality finance expert. Has structured over INR 2,000 crore in hotel deals across acquisition, development, and refinancing. Trusted advisor to institutional investors entering the Indian hospitality market.",
+    insights: "Tier 2 and Tier 3 cities represent the biggest opportunity in Indian hospitality investment. The demand-supply gap is significant and the returns are compelling.",
+    awards: ["Deal Maker of the Year - Hospitality Finance Forum"],
+    certifications: ["CFA Charterholder", "CAIA"],
+    speakingEngagements: ["HICSA Investment Panelist"],
+    publishedArticles: ["Hospitality Real Estate Valuation Trends"],
+    recognition: "Top Female Dealmaker in Indian Hospitality.",
+    phone: "+91 98100 88776",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 11,
+    name: "Rajesh Pillai",
+    title: "F&B Concept Developer",
+    company: "Pillar Restaurant Group",
+    expertise: ["Food & Beverage", "Hotel Marketing"],
+    city: "Goa",
+    state: "Goa",
+    yearsOfExperience: 20,
+    bio: "Serial restaurateur and F&B consultant who has launched 30+ successful restaurant concepts in hotels. Expert in bar programs, banquet optimization, and pop-up dining experiences.",
+    insights: "The best hotel restaurants are the ones that locals love. If you can get the local crowd in, hotel guests will follow.",
+    awards: ["Best F&B Concept - Times Hospitality Icons"],
+    certifications: ["Certified Sommelier - Court of Master Sommeliers"],
+    speakingEngagements: ["Goa Hospitality Expo"],
+    publishedArticles: ["Building Destination Restaurants in Hotels"],
+    recognition: "Recognized as Top F&B Consultant in Western India.",
+    phone: "+91 98230 66554",
+    linkedinUrl: "https://linkedin.com",
+  },
+  {
+    id: 12,
+    name: "Anita Bhatia",
+    title: "Hotel Technology CTO",
+    company: "CloudHotel Solutions",
+    expertise: ["Hospitality Technology", "Finance & Investment"],
+    city: "Bengaluru",
+    state: "Karnataka",
+    yearsOfExperience: 14,
+    bio: "Former CTO at a leading PMS company. Now advises hotel groups on digital transformation, contactless operations, and data-driven revenue strategies. Has implemented tech solutions across 200+ properties.",
+    insights: "Contactless operations aren't just a post-pandemic trend — they're the new baseline. Hotels need integrated tech stacks, not siloed point solutions.",
+    awards: ["CTO of the Year - Hotel Tech Awards India"],
+    certifications: ["AWS Solutions Architect Professional", "ITIL v4"],
+    speakingEngagements: ["Cloud Hospitality Tech Summit"],
+    publishedArticles: ["The Modern Hotel Technology Architecture"],
+    recognition: "Top Women in Tech Leader 2023.",
+    phone: "+91 98450 22334",
+    linkedinUrl: "https://linkedin.com",
+  },
+];
+
+const EXPERT_PHOTOS = ["/expert2.jpg", "/expert.jpg", "/expert2.jpg", "/expert4.jpg", "/expert5.jpg"];
+
+const ExpertProfilePage = () => {
+  const { id } = useParams();
+  const [expert, setExpert] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Message Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalSubmitted, setModalSubmitted] = useState(false);
+  const [messageForm, setMessageForm] = useState({
+    senderName: "",
+    senderEmail: "",
+    senderPhone: "",
+    organization: "",
+    subject: "",
+    message: "",
+  });
+
+  useEffect(() => {
+    const fetchExpert = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await api.getExpert(id);
+        if (data) {
+          setExpert(data);
+        } else {
+          const mock = MOCK_EXPERTS.find((e) => String(e.id) === String(id));
+          if (mock) setExpert(mock);
+          else setError("Expert profile not found.");
+        }
+      } catch {
+        const mock = MOCK_EXPERTS.find((e) => String(e.id) === String(id));
+        if (mock) setExpert(mock);
+        else setError("Expert profile not found.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExpert();
+  }, [id]);
+
+  const handleMessageSubmit = (e) => {
+    e.preventDefault();
+    setModalSubmitted(true);
+    setTimeout(() => {
+      setIsModalOpen(false);
+      setModalSubmitted(false);
+      setMessageForm({
+        senderName: "",
+        senderEmail: "",
+        senderPhone: "",
+        organization: "",
+        subject: "",
+        message: "",
+      });
+    }, 2500);
+  };
+
+  if (loading) {
+    return (
+      <Layout breadcrumb="Experts" title="Expert Profile">
+        <section style={{ padding: "120px 0", background: "#0A1628", textAlign: "center", minHeight: "60vh", display: "flex", alignItems: "center" }}>
+          <div className="container">
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                border: "3px solid rgba(198,169,98,0.3)",
+                borderTopColor: "#C6A962",
+                borderRadius: "50%",
+                margin: "0 auto 20px",
+                animation: "expertSpin 0.8s linear infinite",
+              }}
+            />
+            <p style={{ fontSize: "16px", color: "#8DA4BE", fontFamily: "'Cormorant Garamond', serif" }}>
+              Loading expert profile...
+            </p>
+            <style>{`@keyframes expertSpin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
+
+  if (error || !expert) {
+    return (
+      <Layout breadcrumb="Experts" title="Expert Profile">
+        <section style={{ padding: "100px 0", textAlign: "center", background: "#FFFFFF" }}>
+          <div className="container">
+            <div
+              style={{
+                width: "72px",
+                height: "72px",
+                borderRadius: "50%",
+                background: "#FEF2F2",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: "20px",
+                border: "1px solid #FCA5A5",
+              }}
+            >
+              <i className="fas fa-exclamation-triangle" style={{ fontSize: "28px", color: "#EF4444" }}></i>
+            </div>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "30px", fontWeight: 600, color: "#0A1628", marginBottom: "12px" }}>
+              Expert Not Found
+            </h3>
+            <p style={{ color: "#6B7280", fontSize: "15px", marginBottom: "24px" }}>
+              {error || "The expert profile you are looking for does not exist in our directory."}
+            </p>
+            <Link
+              to="/experts"
+              style={{
+                fontSize: "12px",
+                fontWeight: 700,
+                color: "#C6A962",
+                textDecoration: "none",
+                textTransform: "uppercase",
+                letterSpacing: "1.5px",
+                padding: "12px 28px",
+                border: "1px solid #C6A962",
+                display: "inline-block",
+              }}
+            >
+              <i className="fas fa-arrow-left" style={{ marginRight: "8px" }}></i>
+              Back to Experts Directory
+            </Link>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
+
+  // Normalize API data vs Mock format
+  const isApiData = !!expert.user;
+  const ep = isApiData ? (expert.expertProfile || expert) : expert;
+
+  const salutation = isApiData ? (expert.user.salutation || "") : (expert.salutation || "");
+  const firstName = isApiData ? (expert.user.firstName || "") : (expert.name ? expert.name.split(" ")[0] : "");
+  const lastName = isApiData ? (expert.user.lastName || "") : (expert.name ? expert.name.split(" ").slice(1).join(" ") : "");
+  const fullName = isApiData
+    ? `${salutation ? salutation + " " : ""}${firstName} ${lastName}`.trim()
+    : expert.name || "Industry Expert";
+
+  const currentRole = isApiData ? (ep.currentRole || expert.user.title || expert.user.designation || "") : expert.title || "";
+  const currentOrganization = isApiData ? (ep.currentOrganization || expert.user.organizationName || "") : expert.company || "";
+  const designation = isApiData ? (expert.user.designation || currentRole) : currentRole;
+  const city = isApiData ? (expert.user.city || "") : expert.city || "";
+  const state = isApiData ? (expert.user.state || "") : expert.state || "";
+  const location = [city, state].filter(Boolean).join(", ");
+
+  const bio = isApiData ? (ep.bio || expert.user.bio || "") : expert.bio || "";
+  const yearsOfExperience = isApiData ? (ep.yearsOfExperience || expert.user.yearsInIndustry) : expert.yearsOfExperience;
+  
+  // Array normalized fields
+  const specializations = isApiData
+    ? (Array.isArray(ep.specializations) ? ep.specializations : (ep.specializations ? [ep.specializations] : (expert.expertise || [])))
+    : (expert.expertise || []);
+
+  const industryInsights = isApiData
+    ? (ep.industryInsights || ep.insights || "")
+    : (expert.insights || "");
+
+  const speakingEngagements = isApiData
+    ? (Array.isArray(ep.speakingEngagements) ? ep.speakingEngagements : (ep.speakingEngagements ? ep.speakingEngagements.split("\n") : []))
+    : (expert.speakingEngagements || []);
+
+  const publishedArticles = isApiData
+    ? (Array.isArray(ep.publishedArticles) ? ep.publishedArticles : (ep.publishedArticles ? ep.publishedArticles.split("\n") : []))
+    : (expert.publishedArticles || []);
+
+  const awards = isApiData
+    ? (Array.isArray(ep.awards) ? ep.awards : (ep.awards ? ep.awards.split("\n") : []))
+    : (expert.awards || []);
+
+  const certifications = isApiData
+    ? (Array.isArray(ep.certifications) ? ep.certifications : (ep.certifications ? ep.certifications.split("\n") : []))
+    : (expert.certifications || []);
+
+  const recognition = isApiData
+    ? (ep.recognition || "")
+    : (expert.recognition || "");
+
+  const phone = isApiData ? (expert.user.phone || ep.phone || "") : (expert.phone || "");
+  const linkedinUrl = isApiData ? (expert.user.linkedinUrl || ep.linkedinUrl || "") : (expert.linkedinUrl || "");
+  const avatar = isApiData ? (expert.user.avatar || ep.avatar || "") : "";
+
+  const hasAvatar = avatar && avatar.trim() !== "";
+  const photoIndex = isApiData ? 0 : (Math.abs((expert.id || 1) - 1) % EXPERT_PHOTOS.length);
+  const photo = hasAvatar ? avatar : EXPERT_PHOTOS[photoIndex];
+
+  return (
+    <Layout breadcrumb="Experts" title={fullName}>
+      {/* Styles */}
+      <style>{`
+        .expert-hero-badge {
+          background: rgba(198, 169, 98, 0.12);
+          border: 1px solid rgba(198, 169, 98, 0.3);
+          color: #C6A962;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          padding: 5px 14px;
+          display: inline-block;
+          margin-bottom: 14px;
+        }
+        .expert-card {
+          background: #FFFFFF;
+          border: 1px solid #E2DDD5;
+          border-left: 3px solid #C6A962;
+          padding: 32px;
+          margin-bottom: 28px;
+          box-shadow: 0 4px 18px rgba(10,22,40,0.02);
+        }
+        .expert-sidebar-card {
+          background: #FFFFFF;
+          border: 1px solid #E2DDD5;
+          padding: 28px;
+          margin-bottom: 24px;
+        }
+        .expert-spec-tag {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 16px;
+          background: #F8FAFC;
+          border: 1px solid #E2DDD5;
+          color: #0A1628;
+          font-size: 13px;
+          font-weight: 600;
+          margin-right: 8px;
+          margin-bottom: 8px;
+          transition: all 0.2s ease;
+        }
+        .expert-spec-tag:hover {
+          border-color: #C6A962;
+          color: #C6A962;
+        }
+        .expert-btn-gold {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 14px 28px;
+          background: #C6A962;
+          color: #0A1628;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          text-decoration: none;
+          border: 2px solid #C6A962;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        .expert-btn-gold:hover {
+          background: #0A1628;
+          color: #C6A962;
+          border-color: #0A1628;
+        }
+        .expert-btn-outline {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px 24px;
+          background: transparent;
+          color: #FFFFFF;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          text-decoration: none;
+          border: 1px solid rgba(198, 169, 98, 0.4);
+          transition: all 0.3s ease;
+        }
+        .expert-btn-outline:hover {
+          background: #C6A962;
+          color: #0A1628;
+          border-color: #C6A962;
+        }
+        .expert-modal-bg {
+          position: fixed;
+          inset: 0;
+          background: rgba(10, 22, 40, 0.8);
+          backdrop-filter: blur(4px);
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
+        }
+        .expert-modal-box {
+          background: #FFFFFF;
+          width: 100%;
+          max-width: 580px;
+          border-top: 4px solid #C6A962;
+          border-radius: 4px;
+          box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+          overflow: hidden;
+        }
+      `}</style>
+
+      {/* HERO HEADER */}
+      <section style={{ position: "relative", background: "#0A1628", overflow: "hidden", color: "#FFFFFF", padding: "70px 0 60px" }}>
+        {/* Backdrop photo */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${photo})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            opacity: 0.1,
+            filter: "blur(2px)",
+          }}
+        />
+        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #0A1628 0%, rgba(10,22,40,0.96) 100%)" }} />
+
+        <div className="container" style={{ position: "relative", zIndex: 2 }}>
+          <div style={{ marginBottom: "20px" }}>
+            <Link to="/experts" style={{ color: "#8DA4BE", textDecoration: "none", fontSize: "13px", fontWeight: 600 }}>
+              <i className="fas fa-arrow-left" style={{ marginRight: "8px" }}></i> Back to Experts Directory
+            </Link>
+          </div>
+
+          <div className="row align-items-center">
+            <div className="col-lg-8" data-aos="fade-right">
+              <div style={{ display: "flex", gap: "28px", alignItems: "center", flexWrap: "wrap" }}>
+                {/* Photo / Initial Avatar */}
+                <div style={{ flexShrink: 0 }}>
+                  <div
+                    style={{
+                      width: "130px",
+                      height: "130px",
+                      borderRadius: "50%",
+                      backgroundImage: `url(${photo})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "center",
+                      border: "4px solid rgba(198,169,98,0.4)",
+                      boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <span className="expert-hero-badge">Verified Industry Expert</span>
+
+                  <h1
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontSize: "clamp(30px, 4vw, 42px)",
+                      fontWeight: 600,
+                      color: "#FFFFFF",
+                      margin: "0 0 6px",
+                      lineHeight: 1.15,
+                    }}
+                  >
+                    {fullName}
+                  </h1>
+
+                  {currentRole && (
+                    <p style={{ color: "#C6A962", fontSize: "18px", fontWeight: 500, margin: "0 0 4px" }}>
+                      {currentRole}
+                    </p>
+                  )}
+
+                  <p style={{ color: "#8DA4BE", fontSize: "15px", margin: 0 }}>
+                    {[currentOrganization, location].filter(Boolean).join(" \u2022 ")}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="col-lg-4 text-lg-end mt-4 mt-lg-0" data-aos="fade-left">
+              <div style={{ display: "inline-flex", gap: "12px", flexWrap: "wrap", justifyContent: "flex-end" }}>
+                {yearsOfExperience && (
+                  <span
+                    style={{
+                      padding: "10px 20px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "1.5px",
+                      border: "1px solid rgba(198,169,98,0.3)",
+                      color: "#C6A962",
+                      display: "block",
+                      width: "100%",
+                      textAlign: "center",
+                      marginBottom: "10px"
+                    }}
+                  >
+                    {yearsOfExperience}+ Years Experience
+                  </span>
+                )}
+
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="expert-btn-gold"
+                  style={{ width: "100%" }}
+                >
+                  <i className="far fa-paper-plane"></i> Contact Expert
+                </button>
+
+                {linkedinUrl && linkedinUrl !== "#" && (
+                  <a
+                    href={linkedinUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="expert-btn-outline"
+                    style={{ width: "100%", marginTop: "8px" }}
+                  >
+                    <i className="fab fa-linkedin-in"></i> LinkedIn Profile
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* GOLD SEPARATOR */}
+      <div style={{ height: "2px", background: "linear-gradient(90deg, transparent, #C6A962, transparent)" }} />
+
+      {/* MAIN CONTENT AREA */}
+      <section style={{ padding: "60px 0 80px", background: "#F9FAFB" }}>
+        <div className="container">
+          {/* ROW 1: BIO & SPECIALIZATIONS (7-COL) + OVERVIEW & CONTACT (5-COL) */}
+          <div className="row g-4 mb-4 align-items-stretch">
+            <div className="col-lg-7 d-flex flex-column">
+              {/* Bio & Specializations Combined Card */}
+              <div className="expert-card flex-grow-1" data-aos="fade-up" style={{ marginBottom: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <span style={{ color: "#C6A962", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", display: "block", marginBottom: "10px" }}>
+                    Personal Bio & Experience
+                  </span>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "26px", fontWeight: 600, color: "#0A1628", marginBottom: "16px" }}>
+                    About {firstName || fullName}
+                  </h3>
+                  <p style={{ fontSize: "16px", lineHeight: 1.85, color: "#4B5563", marginBottom: "24px" }}>
+                    {bio}
+                  </p>
+                </div>
+
+                {specializations.length > 0 && (
+                  <div style={{ borderTop: "1px solid #E2DDD5", paddingTop: "18px" }}>
+                    <span style={{ color: "#0A1628", fontSize: "12px", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase", display: "block", marginBottom: "12px" }}>
+                      Practice Areas & Specializations
+                    </span>
+                    <div>
+                      {specializations.map((spec, i) => (
+                        <span key={i} className="expert-spec-tag">
+                          <i className="fas fa-check" style={{ color: "#C6A962", fontSize: "11px" }}></i>
+                          {spec}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT 5-COL: OVERVIEW & QUICK CONTACT */}
+            <div className="col-lg-5 d-flex flex-column">
+              <div className="expert-sidebar-card flex-grow-1" data-aos="fade-up" style={{ marginBottom: 0, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                <div>
+                  <span style={{ color: "#C6A962", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", display: "block", marginBottom: "12px" }}>
+                    Overview & Contact
+                  </span>
+                  <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 600, color: "#0A1628", marginBottom: "18px" }}>
+                    Professional Details
+                  </h4>
+
+                  {[
+                    { label: "Organization", value: currentOrganization },
+                    { label: "Current Role", value: currentRole || designation },
+                    { label: "Experience", value: yearsOfExperience ? `${yearsOfExperience} Years` : null },
+                    { label: "Location", value: location },
+                    { label: "Phone", value: phone },
+                  ]
+                    .filter((item) => item.value)
+                    .map((item, idx, arr) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          padding: "10px 0",
+                          borderBottom: idx < arr.length - 1 ? "1px solid #E2DDD5" : "none",
+                        }}
+                      >
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          {item.label}
+                        </span>
+                        <span style={{ fontSize: "14px", color: "#4B5563", textAlign: "right", maxWidth: "60%" }}>
+                          {item.value}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="expert-btn-gold"
+                  style={{ width: "100%", marginTop: "20px" }}
+                >
+                  <i className="far fa-envelope"></i> Send Direct Message
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* ROW 2: EQUAL HEIGHT FLEX CARDS FOR SPEAKING, ARTICLES, AWARDS, RECOGNITION */}
+          <div className="row g-4 align-items-stretch">
+            {/* LEFT 6-COL */}
+            <div className="col-lg-6 d-flex flex-column gap-4">
+              {/* Speaking Engagements */}
+              {speakingEngagements.length > 0 && (
+                <div className="expert-card flex-grow-1" data-aos="fade-up" style={{ marginBottom: 0 }}>
+                  <span style={{ color: "#C6A962", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", display: "block", marginBottom: "10px" }}>
+                    Engagements
+                  </span>
+                  <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "#0A1628", marginBottom: "20px" }}>
+                    Speaking Engagements
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {speakingEngagements.map((item, i) => (
+                      <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#0A1628", color: "#C6A962", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <i className="fas fa-microphone" style={{ fontSize: "14px" }}></i>
+                        </div>
+                        <span style={{ fontSize: "15px", color: "#0A1628", fontWeight: 500 }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Awards & Certifications */}
+              {(awards.length > 0 || certifications.length > 0) && (
+                <div className="expert-card flex-grow-1" data-aos="fade-up" style={{ marginBottom: 0 }}>
+                  <span style={{ color: "#C6A962", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", display: "block", marginBottom: "10px" }}>
+                    Achievements
+                  </span>
+                  <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "#0A1628", marginBottom: "20px" }}>
+                    Awards & Certifications
+                  </h4>
+
+                  <div className="row g-4">
+                    {awards.length > 0 && (
+                      <div className={certifications.length > 0 ? "col-md-6" : "col-12"}>
+                        <h6 style={{ fontSize: "13px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>
+                          Awards
+                        </h6>
+                        {awards.map((award, i) => (
+                          <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start", marginBottom: "10px" }}>
+                            <i className="fas fa-trophy" style={{ color: "#C6A962", marginTop: "4px", fontSize: "14px" }}></i>
+                            <span style={{ fontSize: "14px", color: "#4B5563" }}>{award}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {certifications.length > 0 && (
+                      <div className={awards.length > 0 ? "col-md-6" : "col-12"}>
+                        <h6 style={{ fontSize: "13px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>
+                          Certifications
+                        </h6>
+                        {certifications.map((cert, i) => (
+                          <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start", marginBottom: "10px" }}>
+                            <i className="fas fa-certificate" style={{ color: "#C6A962", marginTop: "4px", fontSize: "14px" }}></i>
+                            <span style={{ fontSize: "14px", color: "#4B5563" }}>{cert}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT 6-COL */}
+            <div className="col-lg-6 d-flex flex-column gap-4">
+              {/* Published Articles */}
+              {publishedArticles.length > 0 && (
+                <div className="expert-card flex-grow-1" data-aos="fade-up" style={{ marginBottom: 0 }}>
+                  <span style={{ color: "#C6A962", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", display: "block", marginBottom: "10px" }}>
+                    Publications
+                  </span>
+                  <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "#0A1628", marginBottom: "20px" }}>
+                    Published Articles
+                  </h4>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {publishedArticles.map((article, i) => (
+                      <div key={i} style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#F8FAFC", border: "1px solid #E2DDD5", color: "#C6A962", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <i className="far fa-newspaper" style={{ fontSize: "14px" }}></i>
+                        </div>
+                        {article.startsWith("http") ? (
+                          <a href={article} target="_blank" rel="noopener noreferrer" style={{ fontSize: "15px", color: "#C6A962", fontWeight: 600, textDecoration: "underline" }}>
+                            {article}
+                          </a>
+                        ) : (
+                          <span style={{ fontSize: "15px", color: "#0A1628", fontWeight: 500 }}>{article}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Recognition */}
+              {recognition && (
+                <div className="expert-card flex-grow-1" data-aos="fade-up" style={{ marginBottom: 0 }}>
+                  <span style={{ color: "#C6A962", fontSize: "11px", fontWeight: 700, letterSpacing: "2px", textTransform: "uppercase", display: "block", marginBottom: "10px" }}>
+                    Recognition
+                  </span>
+                  <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", fontWeight: 600, color: "#0A1628", marginBottom: "14px" }}>
+                    Industry Recognition
+                  </h4>
+                  <p style={{ fontSize: "15px", lineHeight: 1.8, color: "#4B5563", margin: 0 }}>
+                    {recognition}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* THOUGHTS & VISION - WIDER & COMPACT LUXURY QUOTE SECTION */}
+      {industryInsights && (
+        <section style={{ padding: "45px 0", background: "#FAF9F6", position: "relative" }}>
+          <div className="container" data-aos="fade-up">
+            <div
+              style={{
+                maxWidth: "1140px",
+                margin: "0 auto",
+                background: "#FFFFFF",
+                border: "1px solid #E2DDD5",
+                borderTop: "3px solid #C6A962",
+                padding: "24px 40px",
+                borderRadius: "4px",
+                boxShadow: "0 10px 30px rgba(10, 22, 40, 0.04)",
+                textAlign: "center",
+                position: "relative"
+              }}
+            >
+              {/* Header with Fancy Gold Lines */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "20px", marginBottom: "14px" }}>
+                <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, #C6A962)" }} />
+                <span style={{ color: "#C6A962", fontSize: "11px", fontWeight: 700, letterSpacing: "3px", textTransform: "uppercase" }}>
+                  Thoughts & Vision
+                </span>
+                <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, #C6A962, transparent)" }} />
+              </div>
+
+              {/* Quote Text */}
+              <p
+                style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontSize: "clamp(19px, 2.5vw, 23px)",
+                  lineHeight: 1.6,
+                  fontStyle: "italic",
+                  color: "#0A1628",
+                  margin: "0 0 16px",
+                  padding: "0 10px"
+                }}
+              >
+                <i className="fas fa-quote-left" style={{ fontSize: "20px", color: "#C6A962", marginRight: "10px", verticalAlign: "baseline" }}></i>
+                &ldquo;{industryInsights}&rdquo;
+              </p>
+
+              {/* Compact Signature with Avatar */}
+              <div style={{ display: "inline-flex", alignItems: "center", gap: "12px", borderTop: "1px solid #F3F4F6", paddingTop: "12px" }}>
+                <div
+                  style={{
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "50%",
+                    backgroundImage: `url(${photo})`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    border: "2px solid #C6A962",
+                    flexShrink: 0
+                  }}
+                />
+                <div style={{ textAlign: "left" }}>
+                  <span style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "17px", fontWeight: 700, color: "#0A1628", marginRight: "8px" }}>
+                    {fullName}
+                  </span>
+                  <span style={{ fontSize: "12px", color: "#C6A962", fontWeight: 600 }}>
+                    &bull; {currentRole} {currentOrganization ? `(${currentOrganization})` : ""}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* BOTTOM CTA */}
+      <section style={{ padding: "60px 0", background: "#0A1628", textAlign: "center", color: "#FFFFFF" }}>
+        <div className="container" data-aos="fade-up">
+          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "30px", fontWeight: 600, color: "#FFFFFF", marginBottom: "12px" }}>
+            Want to connect with {fullName}?
+          </h3>
+          <p style={{ fontSize: "15px", color: "rgba(255,255,255,0.7)", marginBottom: "28px", maxWidth: "500px", margin: "0 auto 28px" }}>
+            Join our hospitality network to connect with verified industry experts and consultants.
+          </p>
+          <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+            <Link
+              to="/register/expert"
+              className="expert-btn-gold"
+            >
+              Join as Expert
+            </Link>
+            <Link
+              to="/experts"
+              className="expert-btn-outline"
+            >
+              <i className="fas fa-arrow-left" style={{ marginRight: "6px" }}></i> All Experts
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* DIRECT MESSAGE MODAL */}
+      {isModalOpen && (
+        <div className="expert-modal-bg" onClick={() => setIsModalOpen(false)}>
+          <div className="expert-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div style={{ background: "#0A1628", color: "#FFFFFF", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", color: "#FFFFFF", margin: 0 }}>
+                Message {fullName}
+              </h4>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: "transparent", border: "none", color: "#8DA4BE", fontSize: "22px", cursor: "pointer" }}>
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: "28px" }}>
+              {modalSubmitted ? (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#D1FAE5", color: "#10B981", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: "24px" }}>
+                    <i className="fas fa-check"></i>
+                  </div>
+                  <h4 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", color: "#0A1628", marginBottom: "8px" }}>
+                    Message Delivered!
+                  </h4>
+                  <p style={{ color: "#6B7280", fontSize: "14px" }}>
+                    Your inquiry has been sent to {fullName}.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleMessageSubmit}>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Your Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Full Name"
+                        value={messageForm.senderName}
+                        onChange={(e) => setMessageForm({ ...messageForm, senderName: e.target.value })}
+                        style={{ width: "100%", padding: "10px", border: "1px solid #E2DDD5", fontSize: "14px" }}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Your Email *</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="Email Address"
+                        value={messageForm.senderEmail}
+                        onChange={(e) => setMessageForm({ ...messageForm, senderEmail: e.target.value })}
+                        style={{ width: "100%", padding: "10px", border: "1px solid #E2DDD5", fontSize: "14px" }}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Phone</label>
+                      <input
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={messageForm.senderPhone}
+                        onChange={(e) => setMessageForm({ ...messageForm, senderPhone: e.target.value })}
+                        style={{ width: "100%", padding: "10px", border: "1px solid #E2DDD5", fontSize: "14px" }}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Organization</label>
+                      <input
+                        type="text"
+                        placeholder="Hotel / Company Name"
+                        value={messageForm.organization}
+                        onChange={(e) => setMessageForm({ ...messageForm, organization: e.target.value })}
+                        style={{ width: "100%", padding: "10px", border: "1px solid #E2DDD5", fontSize: "14px" }}
+                      />
+                    </div>
+                    <div className="col-12">
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Subject</label>
+                      <input
+                        type="text"
+                        placeholder="Subject of inquiry"
+                        value={messageForm.subject}
+                        onChange={(e) => setMessageForm({ ...messageForm, subject: e.target.value })}
+                        style={{ width: "100%", padding: "10px", border: "1px solid #E2DDD5", fontSize: "14px" }}
+                      />
+                    </div>
+                    <div className="col-12">
+                      <label style={{ fontSize: "12px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Message *</label>
+                      <textarea
+                        rows={4}
+                        required
+                        placeholder="Write your message..."
+                        value={messageForm.message}
+                        onChange={(e) => setMessageForm({ ...messageForm, message: e.target.value })}
+                        style={{ width: "100%", padding: "10px", border: "1px solid #E2DDD5", fontSize: "14px" }}
+                      />
+                    </div>
+                    <div className="col-12 mt-3">
+                      <button type="submit" className="expert-btn-gold" style={{ width: "100%" }}>
+                        Send Message
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+};
+
+export default ExpertProfilePage;

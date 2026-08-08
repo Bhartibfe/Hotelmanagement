@@ -8,33 +8,36 @@ import { HeaderFour } from "../components/Headers/HeaderFour";
 import { FooterOne } from "../components/Footers/FooterOne";
 import { HeaderFive } from "../components/Headers/HeaderFive";
 import { HeaderOne } from "../components/Headers/HeaderOne";
-import { Breadcrumb } from "../components/Breadcrumb/Breadcrumb";
 import { HeaderSix } from "../components/Headers/HeaderSix";
+import ErrorBoundary from "../components/ErrorBoundary";
 
-export const Layout = ({ children, header, footer, breadcrumb, title }) => {
+export const Layout = ({ children, header, footer, transparentHeader }) => {
+  const h = Number(header);
+  const f = Number(footer);
+
   return (
     <>
-      {/* Scroll-top  */}
       <ScrollToTopButton />
 
-      {/* header */}
-      {header == 1 && <HeaderOne />}
-      {header == 2 && <HeaderTwo />}
-      {header == 3 && <HeaderThree />}
-      {header == 4 && <HeaderFour />}
-      {header == 5 && <HeaderFive />}
-      {(!header || header == 6) && <HeaderSix />}
+      {h === 2 && <HeaderTwo />}
+      {h === 3 && <HeaderThree />}
+      {h === 4 && <HeaderFour />}
+      {h === 5 && <HeaderFive />}
+      {h === 6 && <HeaderSix />}
+      {(!header || h === 1) && <HeaderOne transparent={transparentHeader} />}
 
-      {/* breadcrumb */}
-      {breadcrumb && <Breadcrumb text={breadcrumb} title={title} />}
+      {/* Spacer to push content below the fixed header (not needed for transparent overlay) */}
+      {!transparentHeader && <div className="header-spacer" />}
 
-      {/* children */}
-      <main className="fix">{children}</main>
+      <main className="fix">
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
+      </main>
 
-      {/* footer */}
-      {(!footer || footer == 1) && <FooterOne />}
-      {footer == 2 && <FooterTwo />}
-      {footer == 3 && <FooterThree />}
+      {(!footer || f === 1) && <FooterOne />}
+      {f === 2 && <FooterTwo />}
+      {f === 3 && <FooterThree />}
     </>
   );
 };
