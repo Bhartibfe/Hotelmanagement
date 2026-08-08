@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
+import PhotoUpload from "../../components/profile/PhotoUpload";
 
 const ToggleSwitch = ({ value, onChange }) => (
   <button
@@ -871,17 +872,14 @@ const AdminHomepage = () => {
               </div>
             </div>
             <div style={{ marginBottom: "12px" }}>
-              <label style={labelStyle}>Photo URL <span style={{ color: "#94A3B8", fontWeight: 400, textTransform: "none" }}>(paste image URL)</span></label>
-              <input
-                type="text"
+              <PhotoUpload
                 value={member.photo}
-                onChange={(e) => {
+                onChange={(url) => {
                   const updated = [...config.leadershipTeam];
-                  updated[idx] = { ...updated[idx], photo: e.target.value };
+                  updated[idx] = { ...updated[idx], photo: url };
                   handleChange("leadershipTeam", updated);
                 }}
-                style={inputStyle}
-                placeholder="https://example.com/photo.jpg"
+                label="Photo"
               />
             </div>
             <div>
