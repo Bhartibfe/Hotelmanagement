@@ -1164,9 +1164,9 @@ router.put("/profile-review/:userId", async (req: Request, res: Response) => {
         await prisma.product.updateMany({
           where: {
             vendorId: user.vendorProfile.id,
-            status: "PENDING_REVIEW",
+            status: "PENDING_REVIEW" as const,
           },
-          data: { status: "APPROVED" },
+          data: { status: "APPROVED" as const },
         });
       }
 
@@ -1378,7 +1378,7 @@ router.get("/profile-edits", async (req: Request, res: Response) => {
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const take = parseInt(limit as string);
 
-    const where = { status: "PENDING" };
+    const where = { status: "PENDING" as const };
 
     const [drafts, total] = await Promise.all([
       prisma.profileEditDraft.findMany({
@@ -1466,7 +1466,7 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
       await prisma.profileEditDraft.update({
         where: { id: draftId },
         data: {
-          status: "APPROVED",
+          status: "APPROVED" as const,
           reviewedAt: new Date(),
         },
       });
@@ -1484,7 +1484,7 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
       await prisma.profileEditDraft.update({
         where: { id: draftId },
         data: {
-          status: "REJECTED",
+          status: "REJECTED" as const,
           adminNote: note || null,
           reviewedAt: new Date(),
         },
