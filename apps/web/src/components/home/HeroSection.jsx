@@ -118,6 +118,21 @@ export const HeroSection = ({ config }) => {
                 >
                   It Needs A Trusted Network.
                 </span>
+                <br />
+                <span
+                  style={{
+                    fontSize: "clamp(16px, 2vw, 22px)",
+                    color: "#9DB3C8",
+                    fontWeight: 400,
+                    display: "inline-block",
+                    marginTop: "12px",
+                    opacity: loaded ? 1 : 0,
+                    transform: loaded ? "translateX(0)" : "translateX(-20px)",
+                    transition: "all 0.8s ease 1.2s",
+                  }}
+                >
+                  Built by hotel owners, for hotel owners.
+                </span>
               </h1>
               <p
                 style={{
