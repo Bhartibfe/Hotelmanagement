@@ -759,7 +759,7 @@ label {
 }
 .navbar-wrap > ul > li.active > a,
 .navbar-wrap > ul > li:hover > a {
-  color: var(--tg-primary-color);
+  color: #C6A962;
 }
 .navbar-wrap > ul > li.menu-item-has-children > a::after {
   content: "\f107";
@@ -913,7 +913,7 @@ label {
 }
 .sticky-menu .navbar-wrap > ul > li.active > a,
 .sticky-menu .navbar-wrap > ul > li:hover > a {
-  color: var(--tg-primary-color);
+  color: #C6A962;
 }
 .sticky-menu .navbar-wrap > ul > li.menu-item-has-children > a::after {
   color: var(--tg-paragraph-color);
