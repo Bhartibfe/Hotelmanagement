@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import ReactDOM from "react-dom";
 import api from "../../services/api";
+import PhotoUpload from "../../components/profile/PhotoUpload";
 
 const CATEGORY_LABELS = {
   TECHNOLOGY: "Technology",
@@ -29,6 +31,34 @@ const CATEGORY_COLORS = {
   FINANCE: { bg: "#ECFDF5", color: "#10B981" },
 };
 
+const inputStyle = {
+  width: "100%",
+  padding: "10px 14px",
+  border: "1px solid #E2E8F0",
+  borderRadius: "8px",
+  fontSize: "14px",
+  outline: "none",
+  background: "#FFFFFF",
+  color: "#0A1628",
+  boxSizing: "border-box",
+};
+
+const labelStyle = {
+  display: "block",
+  fontSize: "12px",
+  fontWeight: 600,
+  color: "#475569",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+  marginBottom: "6px",
+};
+
+const EMPTY_FORM = {
+  email: "", password: "", firstName: "", lastName: "",
+  companyName: "", category: "", description: "", logo: "",
+  city: "", state: "", employeeCount: "", yearEstablished: "", isFeatured: false,
+};
+
 const AdminVendors = () => {
   const [vendors, setVendors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,6 +70,11 @@ const AdminVendors = () => {
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     setMounted(true);
@@ -57,6 +92,16 @@ const AdminVendors = () => {
     };
     fetchVendors();
   }, []);
+
+  // Lock body scroll when dialog is open
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [showForm]);
 
   const filtered = vendors.filter(
     (v) => {
@@ -77,6 +122,71 @@ const AdminVendors = () => {
     { label: "Categories", value: new Set(vendors.map((v) => v.category).filter(Boolean)).size, icon: "fas fa-th-large", color: "#10B981" },
     { label: "Cities", value: new Set(vendors.map((v) => v.city).filter(Boolean)).size, icon: "fas fa-map-marker-alt", color: "#8B5CF6" },
   ];
+
+  const handleCreateVendor = async (e) => {
+    e.preventDefault();
+    setFormError(null);
+    if (!form.companyName || !form.category) {
+      setFormError("Company name and category are required.");
+      return;
+    }
+    if (!editingId && (!form.email || !form.password || !form.firstName || !form.lastName)) {
+      setFormError("Email, password, first name, and last name are required for new partners.");
+      return;
+    }
+    setFormLoading(true);
+    try {
+      if (editingId) {
+        const res = await api.updateVendor(editingId, {
+          companyName: form.companyName, category: form.category, description: form.description,
+          city: form.city, state: form.state, employeeCount: form.employeeCount,
+          yearEstablished: form.yearEstablished, logo: form.logo, isFeatured: form.isFeatured,
+        });
+        setVendors((prev) => prev.map((v) => (v.id === editingId ? { ...v, ...res } : v)));
+      } else {
+        const res = await api.createVendor(form);
+        setVendors((prev) => [{ ...res, user: { firstName: form.firstName, lastName: form.lastName, email: form.email } }, ...prev]);
+      }
+      setForm(EMPTY_FORM);
+      setEditingId(null);
+      setShowForm(false);
+    } catch (err) {
+      setFormError(err.message || "Failed to save partner");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleEditVendor = (vendor) => {
+    setForm({
+      email: vendor.user?.email || "",
+      password: "",
+      firstName: vendor.user?.firstName || "",
+      lastName: vendor.user?.lastName || "",
+      companyName: vendor.companyName || "",
+      category: vendor.category || "",
+      description: vendor.description || "",
+      logo: vendor.logo || "",
+      city: vendor.city || "",
+      state: vendor.state || "",
+      employeeCount: vendor.employeeCount || "",
+      yearEstablished: vendor.yearEstablished || "",
+      isFeatured: vendor.isFeatured || false,
+    });
+    setEditingId(vendor.id);
+    setShowForm(true);
+  };
+
+  const handleDeleteVendor = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to remove "${name}"? This will also delete all their products.`)) return;
+    try {
+      await api.deleteVendor(id);
+      setVendors((prev) => prev.filter((v) => v.id !== id));
+      setError(null);
+    } catch (err) {
+      setError(err.message || "Failed to remove partner");
+    }
+  };
 
   const handleToggleFeatured = async (id) => {
     setStarAnimating(id);
@@ -132,6 +242,7 @@ const AdminVendors = () => {
           </p>
         </div>
         <button
+          onClick={() => { setShowForm(!showForm); if (showForm) { setForm(EMPTY_FORM); setEditingId(null); } }}
           onMouseEnter={() => setHoveredBtn("add")}
           onMouseLeave={() => setHoveredBtn(null)}
           style={{
@@ -151,10 +262,89 @@ const AdminVendors = () => {
             transform: hoveredBtn === "add" ? "translateY(-1px)" : "translateY(0)",
           }}
         >
-          <i className="fas fa-plus" style={{ fontSize: "12px" }}></i>
-          Add Partner
+          <i className={`fas fa-${showForm ? "times" : "plus"}`} style={{ fontSize: "12px" }}></i>
+          {showForm ? "Cancel" : "Add Partner"}
         </button>
       </div>
+
+      {/* Create Partner Dialog */}
+      {showForm && ReactDOM.createPortal(
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }} onClick={() => { setShowForm(false); setForm(EMPTY_FORM); }}>
+        <div onClick={(e) => e.stopPropagation()} style={{ background: "#FFFFFF", borderRadius: "12px", padding: "28px", width: "100%", maxWidth: "720px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+            <h3 style={{ fontSize: "18px", fontWeight: 600, color: "#0A1628", margin: 0 }}>{editingId ? "Edit Partner" : "Add New Partner"}</h3>
+            <button onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setEditingId(null); }} style={{ background: "none", border: "none", fontSize: "20px", color: "#94A3B8", cursor: "pointer" }}><i className="fas fa-times"></i></button>
+          </div>
+          {formError && (
+            <div style={{ padding: "10px 16px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "13px" }}>
+              {formError}
+            </div>
+          )}
+          <form onSubmit={handleCreateVendor}>
+            {!editingId && (<>
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#0A1628", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "1px" }}>Account Credentials</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+              <div><label style={labelStyle}>Email *</label><input style={inputStyle} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required /></div>
+              <div><label style={labelStyle}>Password *</label><input style={inputStyle} type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required /></div>
+              <div><label style={labelStyle}>First Name *</label><input style={inputStyle} value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} required /></div>
+              <div><label style={labelStyle}>Last Name *</label><input style={inputStyle} value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} required /></div>
+            </div>
+            </>)}
+
+            <p style={{ fontSize: "13px", fontWeight: 600, color: "#0A1628", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "1px" }}>Company Details</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div><label style={labelStyle}>Company Name *</label><input style={inputStyle} value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} required /></div>
+              <div>
+                <label style={labelStyle}>Category *</label>
+                <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required>
+                  <option value="">Select Category</option>
+                  {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={labelStyle}>Description</label>
+              <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Enterprise property management systems, POS solutions, and integrated hotel technology platforms..." />
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
+              <div><label style={labelStyle}>City *</label><input style={inputStyle} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Bengaluru" /></div>
+              <div><label style={labelStyle}>State *</label><input style={inputStyle} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="Karnataka" /></div>
+              <div><label style={labelStyle}>Employees</label><input style={inputStyle} value={form.employeeCount} onChange={(e) => setForm({ ...form, employeeCount: e.target.value })} placeholder="120" /></div>
+              <div><label style={labelStyle}>Est. Year</label><input style={inputStyle} type="number" value={form.yearEstablished} onChange={(e) => setForm({ ...form, yearEstablished: e.target.value })} placeholder="2015" /></div>
+            </div>
+
+            <PhotoUpload value={form.logo} onChange={(val) => setForm({ ...form, logo: val })} label="Company Logo" />
+
+            <div style={{ display: "flex", alignItems: "center", gap: "20px", marginTop: "20px" }}>
+              <label style={{ ...labelStyle, marginBottom: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}>
+                <input type="checkbox" checked={form.isFeatured} onChange={(e) => setForm({ ...form, isFeatured: e.target.checked })} />
+                Featured on Homepage
+              </label>
+              <button
+                type="submit"
+                disabled={formLoading}
+                style={{
+                  padding: "12px 32px",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  background: formLoading ? "#94A3B8" : "#C6A962",
+                  color: "#0A1628",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: formLoading ? "not-allowed" : "pointer",
+                  marginLeft: "auto",
+                }}
+              >
+                {formLoading ? "Saving..." : editingId ? "Save Changes" : "Create Partner"}
+              </button>
+            </div>
+          </form>
+        </div>
+        </div>,
+        document.body
+      )}
 
       {/* Loading Spinner */}
       {loading && (
@@ -370,6 +560,7 @@ const AdminVendors = () => {
                       <td style={{ padding: "14px 20px", textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                           <button
+                            onClick={() => handleEditVendor(vendor)}
                             onMouseEnter={() => setHoveredBtn(`edit-${vendor.id}`)}
                             onMouseLeave={() => setHoveredBtn(null)}
                             style={{
@@ -387,6 +578,7 @@ const AdminVendors = () => {
                             Edit
                           </button>
                           <button
+                            onClick={() => handleDeleteVendor(vendor.id, vendor.companyName)}
                             onMouseEnter={() => setHoveredBtn(`del-${vendor.id}`)}
                             onMouseLeave={() => setHoveredBtn(null)}
                             style={{

@@ -189,6 +189,7 @@ model User {
   sentConnections     Connection[]        @relation("ConnectionSender")
   receivedConnections Connection[]        @relation("ConnectionReceiver")
   eventRegistrations  EventRegistration[]
+  createdEvents       Event[]             @relation("EventCreator")
   sentMessages        Message[]           @relation("MessageSender")
   receivedMessages    Message[]           @relation("MessageReceiver")
   notifications       Notification[]
@@ -272,11 +273,15 @@ model Connection {
 }
 
 model FeedPost {
-  id        String   @id @default(cuid())
-  type      PostType @default(GENERAL)
-  content   String   @db.Text
-  mediaUrls String[]
-  isPublic  Boolean  @default(true)
+  id           String   @id @default(cuid())
+  type         PostType @default(GENERAL)
+  title        String?
+  brief        String?
+  content      String   @db.Text
+  mediaUrls    String[]
+  thumbnailUrl String?
+  youtubeUrl   String?
+  isPublic     Boolean  @default(true)
   isPinned  Boolean  @default(false)
   isHidden  Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -501,15 +506,22 @@ model Event {
   isFeatured      Boolean   @default(false)
   isPublished     Boolean   @default(true)
   displayOrder    Int       @default(0)
+  organizerName   String?
+  organizerAvatar String?
+  agenda          String?   @db.Text
+  highlights      String[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  createdById String?
+  createdBy   User?   @relation("EventCreator", fields: [createdById], references: [id])
   registrations EventRegistration[]
 
   @@index([startDate])
   @@index([type])
   @@index([city, state])
   @@index([isFeatured])
+  @@index([createdById])
 }
 
 model EventRegistration {

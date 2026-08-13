@@ -26,6 +26,7 @@ const ExpertProfilePage = React.lazy(() => import("./pages/Experts/ExpertProfile
 const TestimonialsPage = React.lazy(() => import("./pages/Testimonials/TestimonialsPage"));
 const MemberProfilePage = React.lazy(() => import("./pages/Members/MemberProfilePage"));
 const EventsPage = React.lazy(() => import("./pages/Events/EventsPage"));
+const EventDetailPage = React.lazy(() => import("./pages/Events/EventDetailPage"));
 const InsightsPage = React.lazy(() => import("./pages/Insights/InsightsPage"));
 const BlogDetailsPage = React.lazy(() => import("./pages/BlogPages/BlogDetailsPage"));
 const ContactPage = React.lazy(() => import("./pages/Contact/ContactPage"));
@@ -107,6 +108,7 @@ function App() {
             <Route path="/experts/:id" element={<ExpertProfilePage />} />
             <Route path="/testimonials" element={<TestimonialsPage />} />
             <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/:slug" element={<EventDetailPage />} />
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/insights/:slug" element={<BlogDetailsPage />} />
             <Route path="/contact" element={<ContactPage />} />

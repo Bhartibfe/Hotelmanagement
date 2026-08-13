@@ -70,6 +70,26 @@ app.get("/api/homepage-config", async (_req, res) => {
   }
 });
 
+// Public stats (real counts from database)
+app.get("/api/public-stats", async (_req, res) => {
+  try {
+    const [members, hotels, vendors, events, cities] = await Promise.all([
+      prisma.user.count({ where: { role: "MEMBER", membershipStatus: "APPROVED" } }),
+      prisma.hotel.count(),
+      prisma.vendorProfile.count(),
+      prisma.event.count({ where: { isPublished: true } }),
+      prisma.user.findMany({
+        where: { role: "MEMBER", membershipStatus: "APPROVED", city: { not: null } },
+        select: { city: true },
+        distinct: ["city"],
+      }),
+    ]);
+    res.json({ members, hotels, vendors, events, cities: cities.length });
+  } catch {
+    res.status(500).json({ error: "Failed to load stats" });
+  }
+});
+
 // Health check
 app.get("/api/health", async (_req, res) => {
   try {

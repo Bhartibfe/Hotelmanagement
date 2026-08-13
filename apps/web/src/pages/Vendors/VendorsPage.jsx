@@ -47,146 +47,12 @@ const CATEGORY_COLORS = {
   FINANCE: "#276749",
 };
 
-const MOCK_VENDORS = [
-  {
-    id: 1,
-    company: "TechHotel Solutions",
-    category: "TECHNOLOGY",
-    city: "Bengaluru",
-    state: "Karnataka",
-    description: "Enterprise property management systems, POS solutions, and integrated hotel technology platforms for mid-scale to luxury properties.",
-    employees: 120,
-    yearEstablished: 2015,
-    verified: true,
-  },
-  {
-    id: 2,
-    company: "Nair Design Studio",
-    category: "ARCHITECTURE",
-    city: "Kochi",
-    state: "Kerala",
-    description: "Award-winning hospitality architecture firm specializing in luxury resorts, heritage hotel restorations, and sustainable eco-lodges.",
-    employees: 45,
-    yearEstablished: 2008,
-    verified: true,
-  },
-  {
-    id: 3,
-    company: "Luxe Interiors India",
-    category: "INTERIOR_DESIGN",
-    city: "Mumbai",
-    state: "Maharashtra",
-    description: "Premium hotel interior design firm creating bespoke spaces for five-star hotels, boutique properties, and luxury resorts across India.",
-    employees: 60,
-    yearEstablished: 2012,
-    verified: true,
-  },
-  {
-    id: 4,
-    company: "CoolTech HVAC Systems",
-    category: "HVAC",
-    city: "Delhi",
-    state: "Delhi",
-    description: "Industrial HVAC solutions engineered specifically for large-scale hospitality environments with energy-efficient climate control systems.",
-    employees: 200,
-    yearEstablished: 2005,
-    verified: true,
-  },
-  {
-    id: 5,
-    company: "HotelProcure India",
-    category: "PROCUREMENT",
-    city: "Pune",
-    state: "Maharashtra",
-    description: "End-to-end hospitality procurement covering linens, furniture, kitchen equipment, and guest amenities at competitive wholesale pricing.",
-    employees: 85,
-    yearEstablished: 2016,
-    verified: true,
-  },
-  {
-    id: 6,
-    company: "SecureStay Technologies",
-    category: "SECURITY",
-    city: "Hyderabad",
-    state: "Telangana",
-    description: "Integrated security solutions including smart surveillance, access control, and cybersecurity systems designed for hotel environments.",
-    employees: 75,
-    yearEstablished: 2017,
-    verified: true,
-  },
-  {
-    id: 7,
-    company: "Hospitality Marketers Co.",
-    category: "MARKETING",
-    city: "Gurgaon",
-    state: "Haryana",
-    description: "Full-service digital marketing agency for hotels offering SEO, social media management, OTA optimization, and brand strategy.",
-    employees: 40,
-    yearEstablished: 2018,
-    verified: false,
-  },
-  {
-    id: 8,
-    company: "TalentBridge Hospitality",
-    category: "RECRUITMENT",
-    city: "Mumbai",
-    state: "Maharashtra",
-    description: "Specialized hospitality recruitment firm placing GMs, Executive Chefs, Revenue Managers, and senior leadership across India.",
-    employees: 30,
-    yearEstablished: 2014,
-    verified: true,
-  },
-  {
-    id: 9,
-    company: "HospConsult Partners",
-    category: "CONSULTING",
-    city: "Chennai",
-    state: "Tamil Nadu",
-    description: "Strategic hospitality consulting covering feasibility studies, operational audits, brand positioning, and pre-opening management.",
-    employees: 25,
-    yearEstablished: 2010,
-    verified: true,
-  },
-  {
-    id: 10,
-    company: "LegalEase Hospitality",
-    category: "LEGAL",
-    city: "Delhi",
-    state: "Delhi",
-    description: "Hospitality-specialized legal advisory covering licensing, regulatory compliance, franchise agreements, and dispute resolution.",
-    employees: 18,
-    yearEstablished: 2013,
-    verified: true,
-  },
-  {
-    id: 11,
-    company: "HotelFinServ India",
-    category: "FINANCE",
-    city: "Mumbai",
-    state: "Maharashtra",
-    description: "Financial advisory and accounting services tailored for hotel businesses including tax planning, audit, and investment structuring.",
-    employees: 35,
-    yearEstablished: 2011,
-    verified: true,
-  },
-  {
-    id: 12,
-    company: "SmartRoom Technologies",
-    category: "TECHNOLOGY",
-    city: "Bengaluru",
-    state: "Karnataka",
-    description: "IoT-powered smart room solutions including automated lighting, climate control, guest engagement tablets, and energy management.",
-    employees: 55,
-    yearEstablished: 2019,
-    verified: false,
-  },
-];
 
 const VendorsPage = () => {
-  const [vendors, setVendors] = useState(MOCK_VENDORS);
+  const [vendors, setVendors] = useState([]);
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchVendors = async () => {
@@ -197,8 +63,7 @@ const VendorsPage = () => {
           setVendors(data);
         }
       } catch (err) {
-        // Fallback to mock data on error
-        setVendors(MOCK_VENDORS);
+        setVendors([]);
       } finally {
         setLoading(false);
       }
@@ -210,9 +75,9 @@ const VendorsPage = () => {
     const matchCategory = activeCategory === "ALL" || v.category === activeCategory;
     const matchSearch =
       !searchTerm ||
-      v.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.description.toLowerCase().includes(searchTerm.toLowerCase());
+      (v.company || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (v.city || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (v.description || "").toLowerCase().includes(searchTerm.toLowerCase());
     return matchCategory && matchSearch;
   });
 

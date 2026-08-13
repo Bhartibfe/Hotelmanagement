@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { prisma } from "@hospitality/database";
 import { authenticate, requireAdmin } from "../middleware/auth";
 import { slugify } from "../utils/slugify";
+import { sendEmail } from "../services/email.service";
+import * as emailTemplates from "../templates/email.templates";
 
 const router = Router();
 
@@ -102,8 +104,8 @@ router.put("/membership-requests/:id", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.membershipStatus !== "PENDING" && user.membershipStatus !== "REVISION_REQUESTED") {
-      return res.status(400).json({ error: "User membership is not pending or awaiting revision" });
+    if (user.membershipStatus === "SUSPENDED") {
+      return res.status(400).json({ error: "User is suspended. Use the members page to unsuspend." });
     }
 
     const updated = await prisma.user.update({
@@ -147,6 +149,13 @@ router.put("/membership-requests/:id", async (req: Request, res: Response) => {
             : `Your membership request was rejected.${reason ? ` Reason: ${reason}` : ""}`,
       },
     });
+
+    // Fire-and-forget email (don't block the response)
+    if (action === "APPROVE") {
+      sendEmail(updated.email, "Membership Approved - Hotel Sircle", emailTemplates.membershipApproved(updated.firstName));
+    } else {
+      sendEmail(updated.email, "Membership Update - Hotel Sircle", emailTemplates.membershipRejected(updated.firstName, reason));
+    }
 
     return res.json(updated);
   } catch (error) {
@@ -354,6 +363,161 @@ router.put("/vendors/:id/feature", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Toggle vendor featured error:", error);
     return res.status(500).json({ error: "Failed to update vendor" });
+  }
+});
+
+// POST /api/admin/vendors - Create vendor/partner with new user account
+router.post("/vendors", async (req: Request, res: Response) => {
+  try {
+    const {
+      email, password, firstName, lastName, title, phone, city, state,
+      companyName, category, description, services, logo, coverImage,
+      website, companyPhone, companyEmail,
+      employeeCount, yearEstablished, isFeatured,
+    } = req.body;
+
+    if (!email || !password || !firstName || !lastName) {
+      return res.status(400).json({ error: "Email, password, first name, and last name are required" });
+    }
+    if (!companyName) {
+      return res.status(400).json({ error: "Company name is required" });
+    }
+    if (!category) {
+      return res.status(400).json({ error: "Category is required" });
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(409).json({ error: "Email already registered" });
+    }
+
+    const bcrypt = require("bcryptjs");
+    const passwordHash = await bcrypt.hash(password, 12);
+    const vendorSlug = slugify(companyName) + "-" + Date.now().toString(36);
+
+    const result = await prisma.$transaction(async (tx: any) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          role: "MEMBER",
+          memberType: "VENDOR",
+          membershipStatus: "APPROVED",
+          profileStatus: "APPROVED",
+          title,
+          phone,
+          city,
+          state,
+          organizationName: companyName,
+          isFeaturedVendor: isFeatured || false,
+          isActive: true,
+          approvedAt: new Date(),
+          profileCompletedAt: new Date(),
+        },
+      });
+
+      const vendor = await tx.vendorProfile.create({
+        data: {
+          userId: user.id,
+          companyName,
+          slug: vendorSlug,
+          category,
+          description: description || null,
+          services: services ? (Array.isArray(services) ? services : services.split(",").map((s: string) => s.trim()).filter(Boolean)) : [],
+          logo: logo || null,
+          coverImage: coverImage || null,
+          website: website || null,
+          phone: companyPhone || phone || null,
+          email: companyEmail || email,
+          city: city || null,
+          state: state || null,
+          country: "India",
+          employeeCount: employeeCount || null,
+          yearEstablished: yearEstablished ? parseInt(yearEstablished) : null,
+          isFeatured: isFeatured || false,
+        },
+        include: {
+          user: {
+            select: {
+              id: true, firstName: true, lastName: true, email: true,
+              avatar: true, title: true, organizationName: true, city: true,
+            },
+          },
+        },
+      });
+
+      return vendor;
+    });
+
+    return res.status(201).json(result);
+  } catch (error) {
+    console.error("Create vendor error:", error);
+    return res.status(500).json({ error: "Failed to create vendor" });
+  }
+});
+
+// PUT /api/admin/vendors/:id - Update vendor profile
+router.put("/vendors/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { companyName, category, description, city, state, employeeCount, yearEstablished, logo, isFeatured } = req.body;
+
+    const vendor = await prisma.vendorProfile.findUnique({ where: { id } });
+    if (!vendor) {
+      return res.status(404).json({ error: "Vendor profile not found" });
+    }
+
+    const updated = await prisma.vendorProfile.update({
+      where: { id },
+      data: {
+        ...(companyName !== undefined && { companyName }),
+        ...(category !== undefined && { category }),
+        ...(description !== undefined && { description }),
+        ...(city !== undefined && { city }),
+        ...(state !== undefined && { state }),
+        ...(employeeCount !== undefined && { employeeCount }),
+        ...(yearEstablished !== undefined && { yearEstablished: yearEstablished ? parseInt(yearEstablished) : null }),
+        ...(logo !== undefined && { logo }),
+        ...(isFeatured !== undefined && { isFeatured }),
+      },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    console.error("Update vendor error:", error);
+    return res.status(500).json({ error: "Failed to update vendor" });
+  }
+});
+
+// DELETE /api/admin/vendors/:id - Remove vendor profile
+router.delete("/vendors/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const vendor = await prisma.vendorProfile.findUnique({ where: { id } });
+    if (!vendor) {
+      return res.status(404).json({ error: "Vendor profile not found" });
+    }
+
+    // Delete products first, then vendor profile
+    await prisma.product.deleteMany({ where: { vendorId: id } });
+    await prisma.vendorProfile.delete({ where: { id } });
+
+    // Reset the user's featured vendor flag
+    await prisma.user.update({
+      where: { id: vendor.userId },
+      data: { isFeaturedVendor: false },
+    });
+
+    return res.json({ deleted: true });
+  } catch (error) {
+    console.error("Delete vendor error:", error);
+    return res.status(500).json({ error: "Failed to delete vendor" });
   }
 });
 
@@ -600,25 +764,100 @@ router.get("/events", async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/admin/events/:id/registrations - List registered users for an event
+router.get("/events/:id/registrations", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { id: true, title: true },
+    });
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
+    const registrations = await prisma.eventRegistration.findMany({
+      where: { eventId: id },
+      include: {
+        user: {
+          select: {
+            id: true, firstName: true, lastName: true, email: true,
+            memberType: true, avatar: true, organizationName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json({ event, registrations });
+  } catch (error) {
+    console.error("List event registrations error:", error);
+    return res.status(500).json({ error: "Failed to fetch registrations" });
+  }
+});
+
+// POST /api/admin/events/:id/notify-registrant - Send email to registrant(s)
+router.post("/events/:id/notify-registrant", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { userId, subject, message } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ error: "Subject and message are required" });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { title: true },
+    });
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+
+    // If userId is provided, send to one user. Otherwise, send to all registrants.
+    let recipients: { email: string; firstName: string }[] = [];
+
+    if (userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, firstName: true },
+      });
+      if (user) recipients = [user];
+    } else {
+      const registrations = await prisma.eventRegistration.findMany({
+        where: { eventId: id },
+        include: { user: { select: { email: true, firstName: true } } },
+      });
+      recipients = registrations.map((r) => r.user);
+    }
+
+    const { adminEventMessage } = await import("../templates/email.templates");
+    let sentCount = 0;
+    for (const recipient of recipients) {
+      sendEmail(
+        recipient.email,
+        subject,
+        adminEventMessage(recipient.firstName, event.title, message)
+      );
+      sentCount++;
+    }
+
+    return res.json({ sent: sentCount, total: recipients.length });
+  } catch (error) {
+    console.error("Notify registrant error:", error);
+    return res.status(500).json({ error: "Failed to send notification" });
+  }
+});
+
 // POST /api/admin/events - Create event
 router.post("/events", async (req: Request, res: Response) => {
   try {
     const {
-      title,
-      type,
-      description,
-      venue,
-      city,
-      state,
-      country,
-      startDate,
-      endDate,
-      registrationUrl,
-      coverImage,
-      maxAttendees,
-      isFeatured,
-      isPublished,
-      displayOrder,
+      title, type, description, venue, city, state, country,
+      startDate, endDate, registrationUrl, coverImage,
+      maxAttendees, isFeatured, isPublished, displayOrder,
+      organizerName, organizerAvatar, agenda, highlights,
     } = req.body;
 
     if (!title || !type || !description || !city || !state || !startDate || !endDate) {
@@ -629,22 +868,21 @@ router.post("/events", async (req: Request, res: Response) => {
 
     const event = await prisma.event.create({
       data: {
-        title,
-        slug,
-        type,
-        description,
-        venue,
-        city,
-        state,
-        country,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        registrationUrl,
-        coverImage,
-        maxAttendees,
+        title, slug, type, description, venue, city, state, country,
+        startDate: new Date(startDate), endDate: new Date(endDate),
+        registrationUrl, coverImage, maxAttendees,
         isFeatured: isFeatured || false,
         isPublished: isPublished !== false,
         displayOrder: displayOrder || 0,
+        organizerName: organizerName || null,
+        organizerAvatar: organizerAvatar || null,
+        agenda: agenda || null,
+        highlights: highlights || [],
+        createdById: req.user!.userId,
+      },
+      include: {
+        createdBy: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+        _count: { select: { registrations: true } },
       },
     });
 
@@ -666,28 +904,14 @@ router.put("/events/:id", async (req: Request, res: Response) => {
     }
 
     const {
-      title,
-      type,
-      description,
-      venue,
-      city,
-      state,
-      country,
-      startDate,
-      endDate,
-      registrationUrl,
-      coverImage,
-      maxAttendees,
-      isFeatured,
-      isPublished,
-      displayOrder,
+      title, type, description, venue, city, state, country,
+      startDate, endDate, registrationUrl, coverImage,
+      maxAttendees, isFeatured, isPublished, displayOrder,
+      organizerName, organizerAvatar, agenda, highlights,
     } = req.body;
 
     const data: any = {};
-    if (title !== undefined) {
-      data.title = title;
-      data.slug = slugify(title) + "-" + Date.now().toString(36);
-    }
+    if (title !== undefined) { data.title = title; data.slug = slugify(title) + "-" + Date.now().toString(36); }
     if (type !== undefined) data.type = type;
     if (description !== undefined) data.description = description;
     if (venue !== undefined) data.venue = venue;
@@ -702,8 +926,19 @@ router.put("/events/:id", async (req: Request, res: Response) => {
     if (isFeatured !== undefined) data.isFeatured = isFeatured;
     if (isPublished !== undefined) data.isPublished = isPublished;
     if (displayOrder !== undefined) data.displayOrder = displayOrder;
+    if (organizerName !== undefined) data.organizerName = organizerName || null;
+    if (organizerAvatar !== undefined) data.organizerAvatar = organizerAvatar || null;
+    if (agenda !== undefined) data.agenda = agenda || null;
+    if (highlights !== undefined) data.highlights = highlights;
 
-    const updated = await prisma.event.update({ where: { id }, data });
+    const updated = await prisma.event.update({
+      where: { id },
+      data,
+      include: {
+        createdBy: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+        _count: { select: { registrations: true } },
+      },
+    });
 
     return res.json(updated);
   } catch (error) {
@@ -935,6 +1170,39 @@ router.get("/feed", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("List feed error:", error);
     return res.status(500).json({ error: "Failed to fetch posts" });
+  }
+});
+
+// POST /api/admin/feed - Admin creates a post
+router.post("/feed", async (req: Request, res: Response) => {
+  try {
+    const { title, brief, content, type, mediaUrls, youtubeUrl, thumbnailUrl, isPublic } = req.body;
+    if (!title?.trim()) return res.status(400).json({ error: "Title is required" });
+    if (!brief?.trim()) return res.status(400).json({ error: "Brief is required" });
+    if (!content?.trim()) return res.status(400).json({ error: "Content is required" });
+
+    const post = await prisma.feedPost.create({
+      data: {
+        title: title.trim(),
+        brief: brief.trim(),
+        content,
+        type: type || "GENERAL",
+        mediaUrls: mediaUrls || [],
+        youtubeUrl: youtubeUrl || null,
+        thumbnailUrl: thumbnailUrl || null,
+        isPublic: isPublic !== false,
+        authorId: req.user!.userId,
+      },
+      include: {
+        author: { select: { id: true, firstName: true, lastName: true, avatar: true, title: true, role: true, memberType: true } },
+        _count: { select: { likes: true, comments: true } },
+      },
+    });
+
+    return res.status(201).json(post);
+  } catch (error) {
+    console.error("Admin create post error:", error);
+    return res.status(500).json({ error: "Failed to create post" });
   }
 });
 
@@ -1178,6 +1446,9 @@ router.put("/profile-review/:userId", async (req: Request, res: Response) => {
           message: "Your profile has been reviewed and approved. Welcome to the network!",
         },
       });
+
+      // Fire-and-forget email
+      sendEmail(user.email, "Profile Approved - Hotel Sircle", emailTemplates.profileApproved(user.firstName));
     } else {
       // REJECT
       if (!reason) {
@@ -1200,6 +1471,9 @@ router.put("/profile-review/:userId", async (req: Request, res: Response) => {
           message: `Your profile has been rejected. Reason: ${reason}`,
         },
       });
+
+      // Fire-and-forget email
+      sendEmail(user.email, "Profile Review Update - Hotel Sircle", emailTemplates.profileRejected(user.firstName, reason));
     }
 
     const updated = await prisma.user.findUnique({
@@ -1268,6 +1542,9 @@ router.post("/profile-review/:userId/revision", async (req: Request, res: Respon
       },
     });
 
+    // Fire-and-forget email
+    sendEmail(user.email, "Profile Revision Requested - Hotel Sircle", emailTemplates.revisionRequested(user.firstName, flaggedFields, adminNote));
+
     return res.status(201).json(revision);
   } catch (error) {
     console.error("Profile revision request error:", error);
@@ -1335,7 +1612,7 @@ router.put("/product-approvals/:productId", async (req: Request, res: Response) 
 
     const product = await prisma.product.findUnique({
       where: { id: productId },
-      include: { user: { select: { id: true } } },
+      include: { user: { select: { id: true, email: true, firstName: true } } },
     });
 
     if (!product) {
@@ -1361,6 +1638,13 @@ router.put("/product-approvals/:productId", async (req: Request, res: Response) 
             : `Your product "${product.name}" has been rejected.${note ? ` Note: ${note}` : ""}`,
       },
     });
+
+    // Fire-and-forget email
+    if (action === "APPROVE") {
+      sendEmail(product.user.email, "Product Approved - Hotel Sircle", emailTemplates.productApproved(product.user.firstName, product.name));
+    } else {
+      sendEmail(product.user.email, "Product Review Update - Hotel Sircle", emailTemplates.productRejected(product.user.firstName, product.name, note));
+    }
 
     return res.json(updated);
   } catch (error) {
@@ -1426,7 +1710,7 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
 
     const draft = await prisma.profileEditDraft.findUnique({
       where: { id: draftId },
-      include: { user: { select: { id: true } } },
+      include: { user: { select: { id: true, email: true, firstName: true } } },
     });
 
     if (!draft) {
@@ -1479,6 +1763,9 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
           message: "Your profile changes have been reviewed and approved.",
         },
       });
+
+      // Fire-and-forget email
+      sendEmail(draft.user.email, "Profile Edit Approved - Hotel Sircle", emailTemplates.profileEditApproved(draft.user.firstName));
     } else {
       // REJECT
       await prisma.profileEditDraft.update({
@@ -1505,6 +1792,9 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
           message: `Your profile edit request was rejected.${note ? ` Note: ${note}` : ""} Your current profile remains unchanged.`,
         },
       });
+
+      // Fire-and-forget email
+      sendEmail(draft.user.email, "Profile Edit Update - Hotel Sircle", emailTemplates.profileEditRejected(draft.user.firstName, note));
     }
 
     const updatedDraft = await prisma.profileEditDraft.findUnique({

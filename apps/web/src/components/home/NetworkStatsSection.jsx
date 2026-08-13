@@ -1,25 +1,24 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Odometer } from "../Odometer/Odometer";
+import api from "../../services/api";
 
 const DEFAULT_STATS = [
-  { id: 1, count: 2500, suffix: "+", title: "Members", icon: "flaticon-piggy-bank", configKey: "statMembers" },
-  { id: 2, count: 850, suffix: "+", title: "Verified Partners", icon: "flaticon-profit", configKey: "statHotels" },
-  { id: 3, count: 320, suffix: "+", title: "Industry Experts", icon: "flaticon-light-bulb", configKey: "statProviders" },
-  { id: 4, count: 120, suffix: "+", title: "Cities Across India", icon: "flaticon-pin", configKey: "statCities" },
+  { id: 1, count: 0, suffix: "+", title: "Members", icon: "flaticon-piggy-bank", key: "members" },
+  { id: 2, count: 0, suffix: "+", title: "Verified Partners", icon: "flaticon-profit", key: "vendors" },
+  { id: 3, count: 0, suffix: "+", title: "Hotels", icon: "flaticon-light-bulb", key: "hotels" },
+  { id: 4, count: 0, suffix: "+", title: "Cities Across India", icon: "flaticon-pin", key: "cities" },
 ];
 
-const parseStatValue = (val) => {
-  if (!val) return null;
-  const num = parseInt(String(val).replace(/[^0-9]/g, ""), 10);
-  const suffix = String(val).replace(/[0-9,]/g, "").trim() || "+";
-  return { num, suffix };
-};
-
 export const NetworkStatsSection = ({ config }) => {
+  const [realStats, setRealStats] = useState(null);
+
+  useEffect(() => {
+    api.getPublicStats().then((data) => setRealStats(data)).catch(() => {});
+  }, []);
+
   const STATS = DEFAULT_STATS.map((stat) => {
-    if (config && config[stat.configKey]) {
-      const parsed = parseStatValue(config[stat.configKey]);
-      if (parsed) return { ...stat, count: parsed.num, suffix: parsed.suffix };
+    if (realStats && realStats[stat.key] !== undefined) {
+      return { ...stat, count: realStats[stat.key] };
     }
     return stat;
   });

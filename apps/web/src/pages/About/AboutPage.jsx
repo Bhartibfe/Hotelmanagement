@@ -6,7 +6,7 @@ import api from "../../services/api";
 
 const CIRCLE_BENEFITS = [
   { icon: "fas fa-search-plus", title: "Deeper Reference Checks", desc: "Validate vendors, partners, and opportunities through a trusted network of fellow hotel owners who have first-hand experience." },
-  { icon: "fas fa-handshake", title: "Stronger Collective Negotiating Power", desc: "Leverage the buying power of 245+ hotel owners to secure better rates on procurement, technology, and services." },
+  { icon: "fas fa-handshake", title: "Stronger Collective Negotiating Power", desc: "Leverage the buying power of our hotel owners network to secure better rates on procurement, technology, and services." },
   { icon: "fas fa-exchange-alt", title: "Wider Deal Flow", desc: "Access investment opportunities, management contracts, and partnerships that only surface within an owners-only network." },
   { icon: "fas fa-chart-bar", title: "Broader Benchmarks", desc: "Compare your property's performance against real data shared confidentially by fellow owners — not industry averages." },
   { icon: "fas fa-bullhorn", title: "Louder Industry Voice", desc: "When owners speak together, policymakers and industry bodies listen. Shape the future of Indian hospitality as a collective." },
@@ -22,11 +22,13 @@ const AboutPage = () => {
   const [leadershipTeam, setLeadershipTeam] = useState(DEFAULT_LEADERSHIP);
   const [hoveredLeader, setHoveredLeader] = useState(null);
   const [hoveredBenefit, setHoveredBenefit] = useState(null);
+  const [stats, setStats] = useState({ members: 0, hotels: 0, vendors: 0, cities: 0 });
 
   useEffect(() => {
     api.getHomepageConfig().then((data) => {
       if (data?.leadershipTeam?.length > 0) setLeadershipTeam(data.leadershipTeam);
     }).catch(() => {});
+    api.getPublicStats().then((data) => setStats(data)).catch(() => {});
   }, []);
 
   return (
@@ -49,7 +51,7 @@ const AboutPage = () => {
                 Hotel Sircle is a closed, owners-only network — built exclusively for promoters, founders, and chairmen of hotel businesses. No GMs, no brand executives, no vendors.
               </p>
               <p style={{ fontSize: "16px", lineHeight: 1.8, color: "var(--tg-body-font-color)", marginBottom: "12px" }}>
-                245+ hotel owners from domestic chains, international brands, and independent properties — connected by trust, transparency, and a shared commitment to better business.
+                Hotel owners from domestic chains, international brands, and independent properties — connected by trust, transparency, and a shared commitment to better business.
               </p>
               <p style={{ fontSize: "14px", lineHeight: 1.7, color: "#64748B", marginBottom: "32px", fontStyle: "italic" }}>
                 Entry is possible only when the business card of the owner is received and validated — ensuring the group has only hotel owners.
@@ -87,10 +89,10 @@ const AboutPage = () => {
         <div className="container">
           <div className="row text-center">
             {[
-              { count: 245, suffix: "+", label: "Hotel Owners" },
-              { count: 850, suffix: "+", label: "Properties" },
-              { count: 50, suffix: "+", label: "Cities" },
-              { count: 100, suffix: "%", label: "Verified Members" },
+              { count: stats.members, suffix: "+", label: "Members" },
+              { count: stats.hotels, suffix: "+", label: "Hotels" },
+              { count: stats.cities, suffix: "+", label: "Cities" },
+              { count: stats.vendors, suffix: "+", label: "Partners" },
             ].map((stat, i) => (
               <div key={i} className="col-lg-3 col-md-6 col-6" data-aos="zoom-in" data-aos-delay={i * 100}>
                 <h3 style={{ color: "#C6A962", fontFamily: "var(--tg-heading-font-family)", fontSize: "40px", fontWeight: 600, marginBottom: "4px" }}>
@@ -286,7 +288,7 @@ const AboutPage = () => {
             Better Business.
           </h3>
           <p data-aos="fade-up" data-aos-delay="200" style={{ color: "#8DA4BE", fontSize: "16px", marginBottom: "32px", maxWidth: "480px", margin: "0 auto 32px" }}>
-            Join 245+ verified hotel owners who are growing their business through the power of a trusted network.
+            Join verified hotel owners who are growing their business through the power of a trusted network.
           </p>
           <Link to="/register" className="btn cta-btn-gold" data-aos="fade-up" data-aos-delay="300" style={{ background: "#C6A962", color: "#0A1628", border: "2px solid #C6A962", padding: "16px 40px", fontSize: "13px", letterSpacing: "2px" }}>
             Apply for Membership

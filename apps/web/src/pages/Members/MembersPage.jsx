@@ -3,16 +3,10 @@ import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 
-const MOCK_OWNERS = [
-  { id: "1", firstName: "Rajesh", lastName: "Sharma", memberType: "HOTEL_OWNER", title: "Managing Director", organizationName: "Sharma Hotels Group", city: "Mumbai", state: "Maharashtra" },
-  { id: "5", firstName: "Sunita", lastName: "Reddy", memberType: "HOTEL_OWNER", title: "Founder & CEO", organizationName: "Heritage Haveli Hotels", city: "Jaipur", state: "Rajasthan" },
-  { id: "9", firstName: "Meera", lastName: "Joshi", memberType: "HOTEL_OWNER", title: "Director", organizationName: "Joshi Resort Chain", city: "Goa", state: "Goa" },
-];
-
 const MembersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [members, setMembers] = useState(MOCK_OWNERS);
+  const [members, setMembers] = useState([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);

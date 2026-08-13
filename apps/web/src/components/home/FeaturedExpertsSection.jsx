@@ -2,14 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 
-const EXPERT_PHOTOS = ["/expert2.jpg", "/expert.jpg", "/expert2.jpg", "/expert4.jpg", "/expert5.jpg"];
-
-const MOCK_EXPERTS = [
-  { id: 1, user: { firstName: "Rajesh", lastName: "Sharma", title: "Hotel Management Consultant", organizationName: "HospitalityFirst" }, bio: "25+ years transforming hotel operations across India. Specialist in luxury hospitality." },
-  { id: 2, user: { firstName: "Priya", lastName: "Mehta", title: "Revenue Management Expert", organizationName: "RevMax Advisory" }, bio: "Data-driven revenue optimization for 200+ hotel properties across India." },
-  { id: 3, user: { firstName: "Arjun", lastName: "Kapoor", title: "F&B Operations Specialist", organizationName: "CulinaryEdge" }, bio: "Revolutionizing hotel dining with farm-to-table concepts and sustainability." },
-  { id: 4, user: { firstName: "Sneha", lastName: "Reddy", title: "Hospitality Design Architect", organizationName: "SpaceBlend Studio" }, bio: "Award-winning architect specializing in boutique hotels and heritage conversions." },
-];
 
 export const FeaturedExpertsSection = ({ config }) => {
   const [hoveredId, setHoveredId] = useState(null);
@@ -20,11 +12,12 @@ export const FeaturedExpertsSection = ({ config }) => {
     api.getFeaturedExperts?.()
       .then((data) => {
         if (data && data.length > 0) setExperts(data);
-        else setExperts(MOCK_EXPERTS);
       })
-      .catch(() => setExperts(MOCK_EXPERTS))
+      .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
+
+  if (!loaded || experts.length === 0) return null;
 
   return (
     <section style={{ padding: "clamp(48px, 6vw, 72px) 0", background: "#FFFFFF" }}>
@@ -78,7 +71,6 @@ export const FeaturedExpertsSection = ({ config }) => {
         {loaded && <div className="row">
           {experts.slice(0, config?.featuredExpertsCount || 4).map((expert, index) => {
             const isHovered = hoveredId === expert.id;
-            const photo = expert.user?.avatar || EXPERT_PHOTOS[index % EXPERT_PHOTOS.length];
             const hasPhoto = !!expert.user?.avatar;
             const initials = ((expert.user?.firstName?.[0] || "") + (expert.user?.lastName?.[0] || "")).toUpperCase();
             return (
@@ -108,7 +100,7 @@ export const FeaturedExpertsSection = ({ config }) => {
                         style={{
                           position: "absolute",
                           inset: 0,
-                          backgroundImage: `url(${photo})`,
+                          backgroundImage: `url(${expert.user?.avatar})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                           transition: "transform 0.6s ease",

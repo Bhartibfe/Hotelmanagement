@@ -5,7 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 const NAV_ITEMS = [
   { path: "/admin", label: "Dashboard", icon: "fas fa-th-large", exact: true },
   { path: "/admin/membership-requests", label: "Membership Requests", icon: "fas fa-user-clock" },
-  { path: "/admin/members", label: "Members", icon: "fas fa-users" },
+  { path: "/admin/members", label: "Owners", icon: "fas fa-hotel" },
   { path: "/admin/vendors", label: "Partners", icon: "fas fa-building" },
   { path: "/admin/experts", label: "Experts", icon: "fas fa-user-tie" },
   { path: "/admin/events", label: "Events", icon: "fas fa-calendar-alt" },

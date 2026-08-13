@@ -3,18 +3,7 @@ import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
-import { POST_IMG01, POST_IMG02, POST_IMG03 } from "../../lib/assets";
-
-const POST_IMAGES = [POST_IMG01, POST_IMG02, POST_IMG03];
-
-const MOCK_FEED = [
-  { id: 1, author: { firstName: "Rajesh", lastName: "Sharma", memberType: "HOTEL_OWNER", title: "MD, Sharma Hotels Group" }, time: "2 hours ago", type: "HOTEL_UPDATE", content: "Excited to announce the grand opening of our 120-room luxury property in Jaipur. Three years of careful planning and execution. Grateful to our entire team and partners who made this vision a reality.", likes: 148, comments: 32 },
-  { id: 2, author: { firstName: "Arun", lastName: "Kumar", memberType: "VENDOR", title: "CEO, TechHotel Solutions" }, time: "5 hours ago", type: "TECHNOLOGY_IMPLEMENTATION", content: "Just launched our AI-powered revenue management system designed specifically for Indian hospitality. Early results: 23% average RevPAR improvement across our client portfolio of 85 hotels.", likes: 267, comments: 45 },
-  { id: 3, author: { firstName: "Ankit", lastName: "Patel", memberType: "PROFESSIONAL", title: "VP Operations, Taj Hotels" }, time: "1 day ago", type: "INDUSTRY_INSIGHT", content: "The biggest operational challenge for Indian hotels in 2026 isn't technology adoption — it's finding and retaining skilled talent. We need to rethink our approach to hospitality education and career pathways.", likes: 312, comments: 67 },
-  { id: 4, author: { firstName: "Sunita", lastName: "Reddy", memberType: "HOTEL_OWNER", title: "CEO, Heritage Haveli Hotels" }, time: "2 days ago", type: "BUSINESS_ANNOUNCEMENT", content: "Completed the restoration of a 200-year-old haveli in Jodhpur. Converting it into a 24-key heritage hotel. Preserving architecture while adding modern amenities is a delicate balance, but the result is stunning.", likes: 189, comments: 28 },
-  { id: 5, author: { firstName: "Deepa", lastName: "Nair", memberType: "VENDOR", title: "Principal, Nair Design Studio" }, time: "3 days ago", type: "HOSPITALITY_INNOVATION", content: "Just completed interior design for a 60-room wellness resort in Kerala. Biophilic design elements throughout — living walls, natural materials, water features. The property opens next month.", likes: 156, comments: 23 },
-  { id: 6, author: { firstName: "Vikram", lastName: "Singh", memberType: "CONSULTANT", title: "Managing Partner, Singh Advisory" }, time: "3 days ago", type: "EVENT_UPDATE", content: "Looking forward to speaking at the India Hospitality Investment Summit next month in Mumbai. Will be sharing insights on the emerging tier-2 city hospitality market and opportunities for mid-scale brands.", likes: 98, comments: 15 },
-];
+import PostDetailModal from "../../components/profile/PostDetailModal";
 
 const TYPE_FILTERS = [
   { key: "All", label: "All" },
@@ -44,29 +33,192 @@ const TYPE_DISPLAY = {
   GENERAL: "General",
 };
 
+const getTimeAgo = (dateStr) => {
+  if (!dateStr) return "";
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return "just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHrs = Math.floor(diffMins / 60);
+  if (diffHrs < 24) return `${diffHrs}h ago`;
+  const diffDays = Math.floor(diffHrs / 24);
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+};
+
+const PLACEHOLDER_GRADIENTS = [
+  "linear-gradient(135deg, #0A1628 0%, #1E3A5F 100%)",
+  "linear-gradient(135deg, #1A365D 0%, #2D5F8A 100%)",
+  "linear-gradient(135deg, #276749 0%, #3D8B6E 100%)",
+  "linear-gradient(135deg, #553C9A 0%, #7C5FC9 100%)",
+  "linear-gradient(135deg, #8B7355 0%, #C6A962 100%)",
+];
+
+const FeedCard = ({ post, index, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  const authorName = post.author ? `${post.author.firstName} ${post.author.lastName}` : "Unknown";
+  const authorType = post.author?.memberType || "OTHER";
+  const color = TYPE_COLORS[authorType] || "#8B8178";
+  const postTitle = post.title || (post.content ? post.content.replace(/<[^>]*>/g, "").substring(0, 60) : "Untitled");
+  const postBrief = post.brief || (post.content ? post.content.replace(/<[^>]*>/g, "").substring(0, 150) : "");
+
+  // Generate YouTube thumbnail if not stored
+  const getYouTubeThumbnail = (url) => {
+    if (!url) return null;
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+    return match ? `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg` : null;
+  };
+  const imageUrl = post.mediaUrls?.[0] || post.thumbnailUrl || getYouTubeThumbnail(post.youtubeUrl);
+  const isYouTube = !post.mediaUrls?.[0] && post.youtubeUrl;
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      data-aos="fade-up"
+      data-aos-delay={index * 60}
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid var(--tg-border-color, #E2E8F0)",
+        cursor: "pointer",
+        transition: "all 0.3s ease",
+        transform: hovered ? "translateY(-4px)" : "translateY(0)",
+        boxShadow: hovered ? "0 8px 24px rgba(10, 22, 40, 0.1)" : "0 1px 3px rgba(0,0,0,0.04)",
+        overflow: "hidden",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Image Area (16:9) */}
+      <div style={{ position: "relative", paddingBottom: "56.25%", overflow: "hidden", background: "#F1F0ED" }}>
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={postTitle}
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        ) : (
+          <div style={{
+            position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+            background: PLACEHOLDER_GRADIENTS[index % PLACEHOLDER_GRADIENTS.length],
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <i className="far fa-newspaper" style={{ fontSize: "36px", color: "rgba(255,255,255,0.3)" }}></i>
+          </div>
+        )}
+
+        {/* YouTube Play Overlay */}
+        {isYouTube && imageUrl && (
+          <div style={{
+            position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
+            width: "48px", height: "48px", borderRadius: "50%", background: "rgba(0,0,0,0.6)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <i className="fas fa-play" style={{ color: "#FFFFFF", fontSize: "16px", marginLeft: "2px" }}></i>
+          </div>
+        )}
+
+        {/* Type Badge */}
+        <span style={{
+          position: "absolute", top: "10px", left: "10px",
+          fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px",
+          padding: "4px 10px", background: "rgba(255,255,255,0.92)", color: "#8B7355",
+          backdropFilter: "blur(4px)",
+        }}>
+          {TYPE_DISPLAY[post.type] || post.type}
+        </span>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: "16px 18px", flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Title */}
+        <h5 style={{
+          fontFamily: "'Cormorant Garamond', serif",
+          fontSize: "18px", fontWeight: 600, color: "#0A1628",
+          margin: "0 0 8px", lineHeight: 1.3,
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {postTitle}
+        </h5>
+
+        {/* Brief */}
+        <p style={{
+          fontSize: "13px", color: "#64748B", lineHeight: 1.6,
+          margin: "0 0 12px", flex: 1,
+          display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {postBrief}
+        </p>
+
+        {/* Author + Engagement */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #F1F0ED", paddingTop: "10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {post.author?.avatar ? (
+              <img src={post.author.avatar} alt="" style={{ width: "28px", height: "28px", borderRadius: "50%", objectFit: "cover" }} />
+            ) : (
+              <div style={{
+                width: "28px", height: "28px", borderRadius: "50%", background: color,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#FFFFFF", fontWeight: 700, fontSize: "11px",
+              }}>
+                {authorName.charAt(0)}
+              </div>
+            )}
+            <div>
+              <span style={{ fontSize: "12px", fontWeight: 600, color: "#0A1628", display: "block", lineHeight: 1.2 }}>
+                {authorName}
+              </span>
+              <span style={{ fontSize: "11px", color: "#94A3B8" }}>{getTimeAgo(post.createdAt)}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: "12px" }}>
+            <span style={{ fontSize: "12px", color: post.isLiked ? "#EF4444" : "#94A3B8", display: "flex", alignItems: "center", gap: "4px" }}>
+              <i className={post.isLiked ? "fas fa-heart" : "far fa-heart"} style={{ fontSize: "11px" }}></i>
+              {post._count?.likes || 0}
+            </span>
+            <span style={{ fontSize: "12px", color: "#94A3B8", display: "flex", alignItems: "center", gap: "4px" }}>
+              <i className="far fa-comment" style={{ fontSize: "11px" }}></i>
+              {post._count?.comments || 0}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FeedPage = () => {
   const [activeFilter, setActiveFilter] = useState("All");
-  const [likedPosts, setLikedPosts] = useState({});
-  const [posts, setPosts] = useState(MOCK_FEED);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedPostId, setSelectedPostId] = useState(null);
   const { user, isApprovedMember } = useAuth();
 
+  const fetchFeed = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
+    try {
+      const params = {};
+      if (activeFilter !== "All") params.type = activeFilter;
+      const data = await api.getFeed(params);
+      if (data?.posts) setPosts(data.posts);
+      else setPosts([]);
+    } catch {
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchFeed = async () => {
-      try {
-        const params = {};
-        if (activeFilter !== "All") params.type = activeFilter;
-        const data = await api.getFeed(params);
-        if (data?.posts?.length) setPosts(data.posts);
-      } catch {
-        // fallback to mock
-      }
-    };
     fetchFeed();
   }, [activeFilter]);
 
   const filtered = activeFilter === "All" ? posts : posts.filter((p) => p.type === activeFilter);
-
-  const toggleLike = (id) => setLikedPosts((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
     <Layout breadcrumb="Feed" title="Industry Feed">
@@ -82,74 +234,65 @@ const FeedPage = () => {
 
           <div className="row">
             {/* Main Feed */}
-            <div className="col-lg-8">
+            <div className="col-lg-9">
               {/* Filters */}
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "30px" }}>
                 {TYPE_FILTERS.map((f) => (
-                  <button key={f.key} onClick={() => setActiveFilter(f.key)} style={{ padding: "8px 16px", fontSize: "12px", fontWeight: 600, border: `1px solid ${activeFilter === f.key ? "var(--tg-accent-color)" : "var(--tg-border-color)"}`, background: activeFilter === f.key ? "var(--tg-accent-color)" : "#FFFFFF", color: activeFilter === f.key ? "var(--tg-primary-color)" : "var(--tg-body-font-color)", cursor: "pointer", transition: "all 0.3s", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  <button key={f.key} onClick={() => setActiveFilter(f.key)} style={{
+                    padding: "8px 16px", fontSize: "12px", fontWeight: 600,
+                    border: `1px solid ${activeFilter === f.key ? "var(--tg-accent-color, #C6A962)" : "var(--tg-border-color, #E2E8F0)"}`,
+                    background: activeFilter === f.key ? "var(--tg-accent-color, #C6A962)" : "#FFFFFF",
+                    color: activeFilter === f.key ? "var(--tg-primary-color, #0A1628)" : "var(--tg-body-font-color, #475569)",
+                    cursor: "pointer", transition: "all 0.3s", textTransform: "uppercase", letterSpacing: "0.5px",
+                  }}>
                     {f.label}
                   </button>
                 ))}
               </div>
 
-              {/* Posts */}
-              {filtered.map((post, i) => {
-                const authorName = post.author ? `${post.author.firstName} ${post.author.lastName}` : "Unknown";
-                const authorType = post.author?.memberType || "OTHER";
-                const authorTitle = post.author?.title || "";
-                const color = TYPE_COLORS[authorType] || "#8B8178";
+              {/* Loading */}
+              {loading && (
+                <div style={{ textAlign: "center", padding: "80px 0" }}>
+                  <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "28px", color: "#C6A962" }}></i>
+                  <p style={{ marginTop: "12px", color: "#64748B", fontSize: "14px" }}>Loading feed...</p>
+                </div>
+              )}
 
-                return (
-                  <div key={post.id} data-aos="fade-up" data-aos-delay={i * 80} style={{ background: "#FFFFFF", padding: "28px", marginBottom: "20px", border: "1px solid var(--tg-border-color)", transition: "all 0.3s ease" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-                      <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: 700, fontSize: "18px", fontFamily: "var(--tg-heading-font-family)" }}>
-                        {authorName.charAt(0)}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h6 style={{ fontSize: "15px", fontWeight: 600, color: "var(--tg-primary-color)", margin: 0 }}>{authorName}</h6>
-                        <span style={{ fontSize: "12px", color: "var(--tg-gray-three)" }}>{authorTitle} · {post.time || "recently"}</span>
-                      </div>
-                      <span style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", padding: "4px 10px", background: "#F7F5F0", color: "var(--tg-accent-dark)" }}>{TYPE_DISPLAY[post.type] || post.type}</span>
+              {/* Grid */}
+              {!loading && filtered.length > 0 && (
+                <div className="row">
+                  {filtered.map((post, i) => (
+                    <div key={post.id} className="col-lg-4 col-md-6" style={{ marginBottom: "24px" }}>
+                      <FeedCard post={post} index={i} onClick={() => setSelectedPostId(post.id)} />
                     </div>
-                    <p style={{ fontSize: "15px", lineHeight: 1.8, color: "var(--tg-body-font-color)", marginBottom: "16px" }}>{post.content}</p>
-                    {/* Post image — cycle through available images */}
-                    {(post.mediaUrls?.length > 0 || i < 3) && (
-                      <div style={{ marginBottom: "16px", borderRadius: "4px", overflow: "hidden" }}>
-                        <img
-                          src={post.mediaUrls?.[0] || POST_IMAGES[i % POST_IMAGES.length]}
-                          alt=""
-                          style={{ width: "100%", height: "220px", objectFit: "cover", display: "block" }}
-                        />
-                      </div>
-                    )}
-                    <div style={{ display: "flex", gap: "24px", borderTop: "1px solid var(--tg-border-color)", paddingTop: "12px" }}>
-                      <button onClick={() => toggleLike(post.id)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "13px", color: likedPosts[post.id] ? "var(--tg-accent-color)" : "var(--tg-gray-three)", fontWeight: likedPosts[post.id] ? 600 : 400, transition: "all 0.3s", padding: 0 }}>
-                        <i className={likedPosts[post.id] ? "fas fa-thumbs-up" : "far fa-thumbs-up"} style={{ marginRight: "6px" }}></i>
-                        {(post.likes || 0) + (likedPosts[post.id] ? 1 : 0)}
-                      </button>
-                      <span style={{ fontSize: "13px", color: "var(--tg-gray-three)" }}><i className="far fa-comment" style={{ marginRight: "6px" }}></i>{post.comments || 0}</span>
-                      <span style={{ fontSize: "13px", color: "var(--tg-gray-three)", cursor: "pointer" }}><i className="far fa-share-square" style={{ marginRight: "6px" }}></i>Share</span>
-                      <span style={{ fontSize: "13px", color: "var(--tg-gray-three)", cursor: "pointer" }}><i className="far fa-bookmark" style={{ marginRight: "6px" }}></i>Save</span>
-                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!loading && filtered.length === 0 && (
+                <div style={{ textAlign: "center", padding: "80px 20px" }}>
+                  <div style={{
+                    width: "72px", height: "72px", borderRadius: "50%", background: "#F8FAFC",
+                    display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px",
+                  }}>
+                    <i className="far fa-newspaper" style={{ fontSize: "28px", color: "#CBD5E1" }}></i>
                   </div>
-                );
-              })}
+                  <h5 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "#0A1628", marginBottom: "8px" }}>
+                    No posts yet
+                  </h5>
+                  <p style={{ fontSize: "14px", color: "#64748B" }}>
+                    {activeFilter !== "All" ? "No posts match this filter. Try a different category." : "Be the first to share an industry insight."}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}
-            <div className="col-lg-4">
-              <div style={{ background: "#FFFFFF", padding: "24px", border: "1px solid var(--tg-border-color)", marginBottom: "24px" }}>
-                <h5 style={{ fontFamily: "var(--tg-heading-font-family)", fontSize: "20px", fontWeight: 600, color: "var(--tg-primary-color)", marginBottom: "16px" }}>Trending Topics</h5>
-                {["Hospitality Technology 2026", "Revenue Management AI", "Heritage Hotel Conversions", "Hospitality Talent Crisis", "Sustainable Tourism"].map((topic, i) => (
-                  <div key={i} style={{ padding: "10px 0", borderBottom: i < 4 ? "1px solid var(--tg-border-color)" : "none" }}>
-                    <span style={{ fontSize: "14px", color: "var(--tg-primary-color)", fontWeight: 500 }}>#{topic.replace(/ /g, "")}</span>
-                    <p style={{ fontSize: "12px", color: "var(--tg-gray-three)", margin: "2px 0 0" }}>{topic}</p>
-                  </div>
-                ))}
-              </div>
+            <div className="col-lg-3">
               {!user && (
-                <div style={{ background: "var(--tg-primary-color)", padding: "28px", textAlign: "center" }}>
-                  <h5 style={{ fontFamily: "var(--tg-heading-font-family)", fontSize: "20px", fontWeight: 600, color: "#C6A962", marginBottom: "12px" }}>Join the Conversation</h5>
+                <div style={{ background: "var(--tg-primary-color, #0A1628)", padding: "28px", textAlign: "center" }}>
+                  <h5 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", fontWeight: 600, color: "#C6A962", marginBottom: "12px" }}>Join the Conversation</h5>
                   <p style={{ color: "#8DA4BE", fontSize: "13px", marginBottom: "20px" }}>Apply for membership to post updates, comment, and connect with industry leaders.</p>
                   <Link to="/register" className="btn" style={{ background: "#C6A962", color: "#0A1628", border: "2px solid #C6A962", padding: "12px 24px", fontSize: "12px", letterSpacing: "1.5px" }}>Apply for Membership</Link>
                 </div>
@@ -158,6 +301,14 @@ const FeedPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Post Detail Modal */}
+      {selectedPostId && (
+        <PostDetailModal
+          postId={selectedPostId}
+          onClose={() => { setSelectedPostId(null); fetchFeed(false); }}
+        />
+      )}
     </Layout>
   );
 };

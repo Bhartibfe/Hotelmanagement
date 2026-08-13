@@ -49,118 +49,6 @@ const DEFAULT_EXPERTISE_OPTIONS = [
   "Public Relations (PR)",
 ];
 
-const MOCK_EXPERTS = [
-  {
-    id: 1,
-    name: "Dr. Arvind Krishnan",
-    title: "Chief Revenue Strategist",
-    company: "RevMax Hospitality Advisors",
-    expertise: ["Revenue Management", "Hotel Operations", "Finance & Investment"],
-    city: "Mumbai",
-    bio: "25+ years in hospitality revenue optimization. Former VP Revenue at Oberoi Hotels. Published author on dynamic pricing strategies for Indian hotel markets.",
-  },
-  {
-    id: 2,
-    name: "Sunita Chawla",
-    title: "Director of Operations",
-    company: "The Leela Palaces",
-    expertise: ["Hotel Operations", "Luxury Hospitality", "Human Resources"],
-    city: "Delhi",
-    bio: "Seasoned operations leader with experience managing flagship luxury properties. Known for driving service excellence and operational efficiency across multi-property portfolios.",
-  },
-  {
-    id: 3,
-    name: "Chef Rajan Malhotra",
-    title: "Executive Culinary Director",
-    company: "Epicure Hospitality Group",
-    expertise: ["Food & Beverage", "Hotel Operations"],
-    city: "Bengaluru",
-    bio: "Award-winning chef with experience across Michelin-starred restaurants and luxury hotels. Specialist in modern Indian cuisine and F&B concept development.",
-  },
-  {
-    id: 4,
-    name: "Priya Venkatesh",
-    title: "Hospitality Tech Advisor",
-    company: "HotelTech India",
-    expertise: ["Hospitality Technology", "Revenue Management"],
-    city: "Hyderabad",
-    bio: "Technology evangelist bridging the gap between hospitality and innovation. Expert in PMS implementations, AI-driven guest personalization, and cloud migration for hotels.",
-  },
-  {
-    id: 5,
-    name: "Arjun Deshmukh",
-    title: "Principal Architect",
-    company: "Deshmukh & Associates",
-    expertise: ["Hotel Design", "Sustainability"],
-    city: "Pune",
-    bio: "Award-winning hospitality architect with 50+ hotel projects across India. Pioneer in biophilic hotel design and LEED-certified sustainable hospitality properties.",
-  },
-  {
-    id: 6,
-    name: "Meera Iyer",
-    title: "Sustainability Consultant",
-    company: "Green Hospitality India",
-    expertise: ["Sustainability", "Hotel Operations"],
-    city: "Chennai",
-    bio: "Leading voice in sustainable hospitality practices. Helped 200+ properties reduce carbon footprint by 40%. UN Sustainable Development Goals hospitality advisor.",
-  },
-  {
-    id: 7,
-    name: "Vikram Rathore",
-    title: "Luxury Brand Strategist",
-    company: "Rathore Luxury Consulting",
-    expertise: ["Luxury Hospitality", "Hotel Marketing"],
-    city: "Jaipur",
-    bio: "Former marketing head at Aman Resorts. Specialist in positioning heritage and palace hotels for ultra-luxury international markets and UHNW traveler acquisition.",
-  },
-  {
-    id: 8,
-    name: "Deepa Menon",
-    title: "Digital Marketing Director",
-    company: "HospDigital Agency",
-    expertise: ["Hotel Marketing", "Hospitality Technology"],
-    city: "Kochi",
-    bio: "Digital marketing strategist helping independent hotels compete with chains. Expert in direct booking optimization, SEO, and OTA channel management.",
-  },
-  {
-    id: 9,
-    name: "Sanjay Kapoor",
-    title: "HR & Training Head",
-    company: "Taj Hotels (Retired)",
-    expertise: ["Human Resources", "Hotel Operations", "Luxury Hospitality"],
-    city: "Mumbai",
-    bio: "30-year career in hospitality HR at India's top hotel chains. Expert in talent acquisition, employee retention strategies, and hospitality training programs.",
-  },
-  {
-    id: 10,
-    name: "Nandini Sharma",
-    title: "Investment Advisor",
-    company: "HotelVest Capital",
-    expertise: ["Finance & Investment", "Revenue Management"],
-    city: "Gurgaon",
-    bio: "Former investment banker turned hospitality finance expert. Has structured over INR 2,000 crore in hotel deals across acquisition, development, and refinancing.",
-  },
-  {
-    id: 11,
-    name: "Rajesh Pillai",
-    title: "F&B Concept Developer",
-    company: "Pillar Restaurant Group",
-    expertise: ["Food & Beverage", "Hotel Marketing"],
-    city: "Goa",
-    bio: "Serial restaurateur and F&B consultant who has launched 30+ successful restaurant concepts in hotels. Expert in bar programs, banquet optimization, and pop-up dining.",
-  },
-  {
-    id: 12,
-    name: "Anita Bhatia",
-    title: "Hotel Technology CTO",
-    company: "CloudHotel Solutions",
-    expertise: ["Hospitality Technology", "Finance & Investment"],
-    city: "Bengaluru",
-    bio: "Former CTO at a leading PMS company. Now advises hotel groups on digital transformation, contactless operations, and data-driven revenue strategies.",
-  },
-];
-
-const EXPERT_PHOTOS = ["/expert2.jpg", "/expert.jpg", "/expert2.jpg", "/expert4.jpg", "/expert5.jpg"];
 
 const ExpertsPage = () => {
   const [experts, setExperts] = useState([]);
@@ -182,7 +70,7 @@ const ExpertsPage = () => {
           setExperts(data.experts);
         }
       } catch (err) {
-        setExperts(MOCK_EXPERTS);
+        setExperts([]);
       } finally {
         setLoading(false);
       }

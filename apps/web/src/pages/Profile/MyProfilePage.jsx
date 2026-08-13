@@ -3,6 +3,10 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import { Layout } from "../../layouts/Layout";
+import CreatePostForm from "../../components/profile/CreatePostForm";
+import PostDetailModal from "../../components/profile/PostDetailModal";
+import CreateEventForm from "../../components/profile/CreateEventForm";
+import FormDialog from "../../components/profile/FormDialog";
 
 const ROLE_LABELS = {
   HOTEL_OWNER: "Hotel Owner",
@@ -50,10 +54,20 @@ const Section = ({ title, children }) => {
 };
 
 const MyProfilePage = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, isApprovedMember } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [error, setError] = useState("");
+  const [myPosts, setMyPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(true);
+  const [showCreatePost, setShowCreatePost] = useState(false);
+  const [editingPost, setEditingPost] = useState(null);
+  const [selectedPostId, setSelectedPostId] = useState(null);
+  const [myEvents, setMyEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [activeTab, setActiveTab] = useState("intro");
 
   const isIncomplete = user?.profileStatus === "INCOMPLETE";
 
@@ -76,6 +90,82 @@ const MyProfilePage = () => {
       fetchProfile();
     }
   }, [user, isIncomplete]);
+
+  useEffect(() => {
+    if (activeTab !== "posts" || !user || isIncomplete) return;
+    const fetchMyPosts = async () => {
+      setLoadingPosts(true);
+      try {
+        const data = await api.getMyPosts();
+        if (data?.posts) setMyPosts(data.posts);
+      } catch {
+        // silent fail
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
+    fetchMyPosts();
+  }, [user, isIncomplete, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "events" || !user || isIncomplete) return;
+    const fetchMyEvents = async () => {
+      setLoadingEvents(true);
+      try {
+        const data = await api.getMyEvents();
+        if (data?.events) setMyEvents(data.events);
+      } catch {
+        // silent
+      } finally {
+        setLoadingEvents(false);
+      }
+    };
+    fetchMyEvents();
+  }, [user, isIncomplete, activeTab]);
+
+  const handleCreateEvent = async (eventData) => {
+    if (editingEvent) {
+      const updated = await api.updateUserEvent(editingEvent.id, eventData);
+      setMyEvents((prev) => prev.map((e) => (e.id === editingEvent.id ? updated : e)));
+    } else {
+      const newEvent = await api.createUserEvent(eventData);
+      setMyEvents((prev) => [newEvent, ...prev]);
+    }
+    setShowCreateEvent(false);
+    setEditingEvent(null);
+  };
+
+  const handleDeleteEvent = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this event?")) return;
+    try {
+      await api.deleteUserEvent(id);
+      setMyEvents((prev) => prev.filter((e) => e.id !== id));
+    } catch {
+      // error
+    }
+  };
+
+  const handleCreatePost = async (postData) => {
+    if (editingPost) {
+      const updated = await api.updatePost(editingPost.id, postData);
+      setMyPosts((prev) => prev.map((p) => (p.id === editingPost.id ? updated : p)));
+    } else {
+      const newPost = await api.createPost(postData);
+      setMyPosts((prev) => [newPost, ...prev]);
+    }
+    setShowCreatePost(false);
+    setEditingPost(null);
+  };
+
+  const handleDeletePost = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    try {
+      await api.deletePost(id);
+      setMyPosts((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      // error
+    }
+  };
 
   if (loading || loadingProfile) {
     return (
@@ -274,6 +364,162 @@ const MyProfilePage = () => {
   const publishedArticles = Array.isArray(ep?.publishedArticles) ? ep.publishedArticles : [];
   const awards = Array.isArray(ep?.awards) ? ep.awards : [];
   const certifications = Array.isArray(ep?.certifications) ? ep.certifications : [];
+
+  const TABS = [
+    { key: "intro", label: "Intro", icon: "fas fa-user" },
+    { key: "posts", label: "Posts", icon: "far fa-newspaper", count: myPosts.length },
+    { key: "events", label: "Events", icon: "far fa-calendar-alt", count: myEvents.length },
+  ];
+
+  const TabBar = () => (
+    <div style={{ display: "flex", gap: "0", borderBottom: "2px solid #E2DDD5", marginBottom: "30px" }}>
+      {TABS.map((tab) => (
+        <button
+          key={tab.key}
+          onClick={() => setActiveTab(tab.key)}
+          style={{
+            padding: "14px 28px", fontSize: "13px", fontWeight: 600, letterSpacing: "0.5px",
+            textTransform: "uppercase", background: "none", border: "none", cursor: "pointer",
+            color: activeTab === tab.key ? "#C6A962" : "#64748B",
+            borderBottom: activeTab === tab.key ? "2px solid #C6A962" : "2px solid transparent",
+            marginBottom: "-2px", transition: "all 0.3s", display: "flex", alignItems: "center", gap: "8px",
+          }}
+        >
+          <i className={tab.icon} style={{ fontSize: "13px" }}></i>
+          {tab.label}
+          {tab.count !== undefined && (
+            <span style={{
+              fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "10px",
+              background: activeTab === tab.key ? "rgba(198,169,98,0.15)" : "#F1F5F9",
+              color: activeTab === tab.key ? "#C6A962" : "#94A3B8",
+            }}>{tab.count}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
+  const PostsTabContent = () => (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <p style={{ fontSize: "14px", color: "#6B7280", margin: 0 }}>{myPosts.length} {myPosts.length === 1 ? "post" : "posts"}</p>
+        {isApprovedMember && (
+          <button onClick={() => { setEditingPost(null); setShowCreatePost(true); }} style={{
+            padding: "10px 24px", fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase",
+            background: "#C6A962", color: "#0A1628", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+          }}>
+            <i className="fas fa-plus" style={{ fontSize: "10px" }}></i> Create Post
+          </button>
+        )}
+      </div>
+      {loadingPosts ? (
+        <div style={{ textAlign: "center", padding: "40px 0" }}><i className="fas fa-circle-notch fa-spin" style={{ fontSize: "20px", color: "#C6A962" }}></i></div>
+      ) : myPosts.length > 0 ? (
+        <div className="row">
+          {myPosts.map((post) => (
+            <div key={post.id} className="col-lg-4 col-md-6" style={{ marginBottom: "20px" }}>
+              <div style={{ border: "1px solid #E2DDD5", overflow: "hidden", height: "100%", display: "flex", flexDirection: "column" }}>
+                <div onClick={() => setSelectedPostId(post.id)} style={{ height: "160px", background: "#F1F0ED", overflow: "hidden", cursor: "pointer", position: "relative" }}>
+                  {(post.mediaUrls?.[0] || post.thumbnailUrl) ? (
+                    <img src={post.mediaUrls?.[0] || post.thumbnailUrl} alt={post.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, #0A1628, #1E3A5F)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <i className="far fa-newspaper" style={{ fontSize: "28px", color: "rgba(255,255,255,0.2)" }}></i>
+                    </div>
+                  )}
+                  {post.youtubeUrl && !post.mediaUrls?.[0] && post.thumbnailUrl && (
+                    <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "40px", height: "40px", borderRadius: "50%", background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <i className="fas fa-play" style={{ color: "#FFF", fontSize: "14px", marginLeft: "2px" }}></i>
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: "14px", flex: 1, display: "flex", flexDirection: "column" }}>
+                  <h6 onClick={() => setSelectedPostId(post.id)} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", fontWeight: 600, color: "#0A1628", margin: "0 0 6px", cursor: "pointer", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {post.title || "Untitled"}
+                  </h6>
+                  <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 12px", flex: 1, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {post.brief || (post.content ? post.content.replace(/<[^>]*>/g, "").substring(0, 100) : "")}
+                  </p>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", gap: "10px", fontSize: "12px", color: "#94A3B8" }}>
+                      <span><i className="far fa-heart" style={{ marginRight: "3px" }}></i>{post._count?.likes || 0}</span>
+                      <span><i className="far fa-comment" style={{ marginRight: "3px" }}></i>{post._count?.comments || 0}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button onClick={(e) => { e.stopPropagation(); setEditingPost(post); setShowCreatePost(true); }} style={{ fontSize: "11px", padding: "4px 10px", border: "1px solid #C6A962", background: "none", color: "#C6A962", cursor: "pointer" }}>Edit</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDeletePost(post.id); }} style={{ fontSize: "11px", padding: "4px 10px", border: "1px solid #EF4444", background: "none", color: "#EF4444", cursor: "pointer" }}>Delete</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ textAlign: "center", padding: "60px 20px", background: "#F8FAFC", border: "1px solid #E2DDD5" }}>
+          <i className="far fa-newspaper" style={{ fontSize: "36px", color: "#CBD5E1", display: "block", marginBottom: "12px" }}></i>
+          <p style={{ fontSize: "15px", color: "#6B7280", margin: "0 0 4px" }}>You haven't created any posts yet.</p>
+          {isApprovedMember && <p style={{ fontSize: "13px", color: "#94A3B8", margin: 0 }}>Click "Create Post" to share an industry update.</p>}
+        </div>
+      )}
+    </div>
+  );
+
+  const formatEventDate = (start, end) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    const opts = { day: "numeric", month: "short" };
+    if (s.toDateString() === e.toDateString()) return s.toLocaleDateString("en-IN", { ...opts, year: "numeric" });
+    return `${s.toLocaleDateString("en-IN", opts)} - ${e.toLocaleDateString("en-IN", { ...opts, year: "numeric" })}`;
+  };
+
+  const EventsTabContent = () => (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        <p style={{ fontSize: "14px", color: "#6B7280", margin: 0 }}>{myEvents.length} {myEvents.length === 1 ? "event" : "events"}</p>
+        {isApprovedMember && (
+          <button onClick={() => { setEditingEvent(null); setShowCreateEvent(true); }} style={{
+            padding: "10px 24px", fontSize: "11px", fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase",
+            background: "#C6A962", color: "#0A1628", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+          }}>
+            <i className="fas fa-plus" style={{ fontSize: "10px" }}></i> Create Event
+          </button>
+        )}
+      </div>
+      {loadingEvents ? (
+        <div style={{ textAlign: "center", padding: "40px 0" }}><i className="fas fa-circle-notch fa-spin" style={{ fontSize: "20px", color: "#C6A962" }}></i></div>
+      ) : myEvents.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          {myEvents.map((event) => (
+            <div key={event.id} style={{ display: "flex", alignItems: "center", gap: "16px", padding: "16px", border: "1px solid #E2DDD5", borderLeft: "3px solid #C6A962" }}>
+              <div style={{ width: "52px", height: "52px", background: "#0A1628", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <span style={{ color: "#C6A962", fontSize: "16px", fontWeight: 700, fontFamily: "'Cormorant Garamond', serif" }}>{new Date(event.startDate).getDate()}</span>
+                <span style={{ color: "rgba(198,169,98,0.7)", fontSize: "9px", textTransform: "uppercase", letterSpacing: "1px", fontWeight: 600 }}>{new Date(event.startDate).toLocaleDateString("en-IN", { month: "short" })}</span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <Link to={`/events/${event.slug}`} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "16px", fontWeight: 600, color: "#0A1628", textDecoration: "none", display: "block", marginBottom: "4px" }}>{event.title}</Link>
+                <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "#6B7280", flexWrap: "wrap" }}>
+                  <span><i className="far fa-calendar" style={{ marginRight: "4px" }}></i>{formatEventDate(event.startDate, event.endDate)}</span>
+                  <span><i className="fas fa-map-marker-alt" style={{ marginRight: "4px" }}></i>{event.city}</span>
+                  <span><i className="fas fa-users" style={{ marginRight: "4px" }}></i>{event._count?.registrations || 0}</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                <button onClick={() => { setEditingEvent(event); setShowCreateEvent(true); }} style={{ fontSize: "11px", padding: "4px 10px", border: "1px solid #C6A962", background: "none", color: "#C6A962", cursor: "pointer" }}>Edit</button>
+                <button onClick={() => handleDeleteEvent(event.id)} style={{ fontSize: "11px", padding: "4px 10px", border: "1px solid #EF4444", background: "none", color: "#EF4444", cursor: "pointer" }}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ textAlign: "center", padding: "60px 20px", background: "#F8FAFC", border: "1px solid #E2DDD5" }}>
+          <i className="fas fa-calendar-alt" style={{ fontSize: "36px", color: "#CBD5E1", display: "block", marginBottom: "12px" }}></i>
+          <p style={{ fontSize: "15px", color: "#6B7280", margin: "0 0 4px" }}>You haven't created any events yet.</p>
+          {isApprovedMember && <p style={{ fontSize: "13px", color: "#94A3B8", margin: 0 }}>Click "Create Event" to get started.</p>}
+        </div>
+      )}
+    </div>
+  );
 
   const starIcons = (rating) => {
     const stars = [];
@@ -484,6 +730,34 @@ const MyProfilePage = () => {
             </div>
           </section>
         )}
+
+        {/* Tabs Section */}
+        <section style={{ padding: "45px 0 60px", background: "#FFFFFF" }}>
+          <div className="container">
+            <TabBar />
+            {activeTab === "intro" && (
+              <div style={{ color: "#374151", fontSize: "15px", lineHeight: 1.7 }}>
+                {expertBio && <p style={{ whiteSpace: "pre-line" }}>{expertBio}</p>}
+                {!expertBio && <p style={{ color: "#94A3B8" }}>No additional intro information.</p>}
+              </div>
+            )}
+            {activeTab === "posts" && <PostsTabContent />}
+            {activeTab === "events" && <EventsTabContent />}
+          </div>
+        </section>
+
+        {/* Dialogs */}
+        {showCreatePost && (
+          <FormDialog title={editingPost ? "Edit Post" : "Create New Post"} onClose={() => { setShowCreatePost(false); setEditingPost(null); }}>
+            <CreatePostForm onSubmit={handleCreatePost} onCancel={() => { setShowCreatePost(false); setEditingPost(null); }} initialData={editingPost} />
+          </FormDialog>
+        )}
+        {showCreateEvent && (
+          <FormDialog title={editingEvent ? "Edit Event" : "Create New Event"} onClose={() => { setShowCreateEvent(false); setEditingEvent(null); }}>
+            <CreateEventForm onSubmit={handleCreateEvent} onCancel={() => { setShowCreateEvent(false); setEditingEvent(null); }} initialData={editingEvent} />
+          </FormDialog>
+        )}
+        {selectedPostId && <PostDetailModal postId={selectedPostId} onClose={() => setSelectedPostId(null)} />}
       </Layout>
     );
   }
@@ -523,41 +797,55 @@ const MyProfilePage = () => {
           <div className="row">
             <div className="col-lg-8">
               {error && <div style={{ background: "#FEE2E2", color: "#C53030", padding: "12px 16px", marginBottom: "20px", fontSize: "14px" }}>{error}</div>}
-              {bio && <Section title="About"><p style={{ fontSize: "15px", color: "#374151", lineHeight: "1.7", whiteSpace: "pre-line" }}>{bio}</p></Section>}
-              {businessOverview && <Section title="Business Overview"><p style={{ fontSize: "15px", color: "#374151", lineHeight: "1.7", whiteSpace: "pre-line" }}>{businessOverview}</p></Section>}
-              {isHotelOwner && hotels.length > 0 && (
-                <Section title={`Properties (${hotels.length})`}>
-                  {hotels.map((hotel, i) => (
-                    <div key={hotel.id || i} style={{ border: "1px solid #E2DDD5", padding: "20px", marginBottom: "12px", borderLeft: "3px solid #C6A962" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
-                        <h5 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18px", fontWeight: 600, color: "#0A1628", margin: 0 }}>{hotel.name}</h5>
-                        {hotel.starRating > 0 && <div>{starIcons(hotel.starRating)}</div>}
-                      </div>
-                      <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 8px" }}>
-                        {[hotel.city, hotel.state].filter(Boolean).join(", ")}{hotel.propertyType && <span> &middot; {hotel.propertyType}</span>}{hotel.rooms && <span> &middot; {hotel.rooms} rooms</span>}
-                      </p>
-                      {hotel.description && <p style={{ fontSize: "14px", color: "#374151", lineHeight: "1.6", margin: 0 }}>{hotel.description}</p>}
-                    </div>
-                  ))}
-                </Section>
+
+              <TabBar />
+
+              {/* Intro Tab */}
+              {activeTab === "intro" && (
+                <>
+                  {bio && <Section title="About"><p style={{ fontSize: "15px", color: "#374151", lineHeight: "1.7", whiteSpace: "pre-line" }}>{bio}</p></Section>}
+                  {businessOverview && <Section title="Business Overview"><p style={{ fontSize: "15px", color: "#374151", lineHeight: "1.7", whiteSpace: "pre-line" }}>{businessOverview}</p></Section>}
+                  {isHotelOwner && hotels.length > 0 && (
+                    <Section title={`Properties (${hotels.length})`}>
+                      {hotels.map((hotel, i) => (
+                        <div key={hotel.id || i} style={{ border: "1px solid #E2DDD5", padding: "20px", marginBottom: "12px", borderLeft: "3px solid #C6A962" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                            <h5 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "18px", fontWeight: 600, color: "#0A1628", margin: 0 }}>{hotel.name}</h5>
+                            {hotel.starRating > 0 && <div>{starIcons(hotel.starRating)}</div>}
+                          </div>
+                          <p style={{ fontSize: "13px", color: "#6B7280", margin: "0 0 8px" }}>
+                            {[hotel.city, hotel.state].filter(Boolean).join(", ")}{hotel.propertyType && <span> &middot; {hotel.propertyType}</span>}{hotel.rooms && <span> &middot; {hotel.rooms} rooms</span>}
+                          </p>
+                          {hotel.description && <p style={{ fontSize: "14px", color: "#374151", lineHeight: "1.6", margin: 0 }}>{hotel.description}</p>}
+                        </div>
+                      ))}
+                    </Section>
+                  )}
+                  {isVendor && vp && (
+                    <Section title="Company Profile">
+                      <InfoRow label="Company Name" value={vp.companyName} />
+                      <InfoRow label="Category" value={vp.category?.replace(/_/g, " ")} />
+                      <InfoRow label="Location" value={[vp.city, vp.state].filter(Boolean).join(", ")} />
+                      <InfoRow label="Website" value={vp.website} />
+                      <InfoRow label="Phone" value={vp.phone} />
+                      <InfoRow label="Employees" value={vp.employeeCount} />
+                      <InfoRow label="Services" value={vp.services} />
+                    </Section>
+                  )}
+                  {(achievements || industryContributions) && (
+                    <Section title="Achievements & Contributions">
+                      {achievements && <><p style={{ fontSize: "12px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", marginBottom: "6px" }}>Achievements</p><p style={{ fontSize: "14px", color: "#374151", lineHeight: "1.6", whiteSpace: "pre-line", marginBottom: "12px" }}>{achievements}</p></>}
+                      {industryContributions && <><p style={{ fontSize: "12px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", marginBottom: "6px" }}>Industry Contributions</p><p style={{ fontSize: "14px", color: "#374151", lineHeight: "1.6", whiteSpace: "pre-line" }}>{industryContributions}</p></>}
+                    </Section>
+                  )}
+                </>
               )}
-              {isVendor && vp && (
-                <Section title="Company Profile">
-                  <InfoRow label="Company Name" value={vp.companyName} />
-                  <InfoRow label="Category" value={vp.category?.replace(/_/g, " ")} />
-                  <InfoRow label="Location" value={[vp.city, vp.state].filter(Boolean).join(", ")} />
-                  <InfoRow label="Website" value={vp.website} />
-                  <InfoRow label="Phone" value={vp.phone} />
-                  <InfoRow label="Employees" value={vp.employeeCount} />
-                  <InfoRow label="Services" value={vp.services} />
-                </Section>
-              )}
-              {(achievements || industryContributions) && (
-                <Section title="Achievements & Contributions">
-                  {achievements && <><p style={{ fontSize: "12px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", marginBottom: "6px" }}>Achievements</p><p style={{ fontSize: "14px", color: "#374151", lineHeight: "1.6", whiteSpace: "pre-line", marginBottom: "12px" }}>{achievements}</p></>}
-                  {industryContributions && <><p style={{ fontSize: "12px", fontWeight: 600, color: "#6B7280", textTransform: "uppercase", marginBottom: "6px" }}>Industry Contributions</p><p style={{ fontSize: "14px", color: "#374151", lineHeight: "1.6", whiteSpace: "pre-line" }}>{industryContributions}</p></>}
-                </Section>
-              )}
+
+              {/* Posts Tab */}
+              {activeTab === "posts" && <PostsTabContent />}
+
+              {/* Events Tab */}
+              {activeTab === "events" && <EventsTabContent />}
             </div>
             <div className="col-lg-4">
               <div style={{ border: "1px solid #E2DDD5", padding: "24px", position: "sticky", top: "100px" }}>
@@ -574,6 +862,19 @@ const MyProfilePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Dialogs */}
+      {showCreatePost && (
+        <FormDialog title={editingPost ? "Edit Post" : "Create New Post"} onClose={() => { setShowCreatePost(false); setEditingPost(null); }}>
+          <CreatePostForm onSubmit={handleCreatePost} onCancel={() => { setShowCreatePost(false); setEditingPost(null); }} initialData={editingPost} />
+        </FormDialog>
+      )}
+      {showCreateEvent && (
+        <FormDialog title={editingEvent ? "Edit Event" : "Create New Event"} onClose={() => { setShowCreateEvent(false); setEditingEvent(null); }}>
+          <CreateEventForm onSubmit={handleCreateEvent} onCancel={() => { setShowCreateEvent(false); setEditingEvent(null); }} initialData={editingEvent} />
+        </FormDialog>
+      )}
+      {selectedPostId && <PostDetailModal postId={selectedPostId} onClose={() => setSelectedPostId(null)} />}
     </Layout>
   );
 };

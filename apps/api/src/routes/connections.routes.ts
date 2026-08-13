@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "@hospitality/database";
 import { authenticate } from "../middleware/auth";
+import { sendEmail } from "../services/email.service";
+import { connectionRequestReceived, connectionAccepted } from "../templates/email.templates";
 
 const router = Router();
 
@@ -14,9 +16,19 @@ router.post("/", authenticate, async (req: Request, res: Response) => {
     const connection = await prisma.connection.create({
       data: { senderId: req.user!.userId, receiverId, type, message },
       include: {
-        receiver: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+        sender: { select: { id: true, firstName: true, lastName: true } },
+        receiver: { select: { id: true, firstName: true, lastName: true, avatar: true, email: true } },
       },
     });
+
+    // Send email to receiver
+    if (connection.receiver.email) {
+      sendEmail(
+        connection.receiver.email,
+        "New Connection Request - Hotel Sircle",
+        connectionRequestReceived(connection.receiver.firstName, `${connection.sender.firstName} ${connection.sender.lastName}`, type)
+      );
+    }
 
     return res.status(201).json(connection);
   } catch (err: any) {
@@ -83,7 +95,21 @@ router.put("/:id", authenticate, async (req: Request, res: Response) => {
     const updated = await prisma.connection.update({
       where: { id: req.params.id },
       data: { status },
+      include: {
+        sender: { select: { email: true, firstName: true } },
+        receiver: { select: { firstName: true, lastName: true } },
+      },
     });
+
+    // Send email to original sender when accepted
+    if (status === "ACCEPTED" && updated.sender.email) {
+      sendEmail(
+        updated.sender.email,
+        "Connection Accepted - Hotel Sircle",
+        connectionAccepted(updated.sender.firstName, `${updated.receiver.firstName} ${updated.receiver.lastName}`)
+      );
+    }
+
     return res.json(updated);
   } catch (error) {
     return res.status(500).json({ error: "Failed to update connection" });

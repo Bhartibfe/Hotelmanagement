@@ -175,6 +175,35 @@ const SectionCard = ({ id, icon, title, subtitle, children, toggle, toggleValue,
   );
 };
 
+const LiveStatsPreview = () => {
+  const [stats, setStats] = useState(null);
+  useEffect(() => {
+    api.getPublicStats().then((data) => setStats(data)).catch(() => {});
+  }, []);
+  const items = [
+    { label: "Members", value: stats?.members ?? "—", icon: "fas fa-users" },
+    { label: "Hotels", value: stats?.hotels ?? "—", icon: "fas fa-hotel" },
+    { label: "Partners", value: stats?.vendors ?? "—", icon: "fas fa-building" },
+    { label: "Cities", value: stats?.cities ?? "—", icon: "fas fa-map-marker-alt" },
+    { label: "Events", value: stats?.events ?? "—", icon: "fas fa-calendar-alt" },
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `repeat(${items.length}, 1fr)`, gap: "12px", padding: "20px", background: "linear-gradient(135deg, #0A1628, #1E293B)", borderRadius: "8px" }}>
+      {items.map((stat, i) => (
+        <div key={i} style={{ textAlign: "center" }}>
+          <i className={stat.icon} style={{ fontSize: "14px", color: "#546A8B", marginBottom: "6px", display: "block" }}></i>
+          <div style={{ fontSize: "24px", fontWeight: 700, color: "#C6A962", fontFamily: "'Cormorant Garamond', serif" }}>
+            {stat.value}{typeof stat.value === "number" ? "+" : ""}
+          </div>
+          <div style={{ fontSize: "10px", color: "#8DA4BE", textTransform: "uppercase", letterSpacing: "1px", marginTop: "4px" }}>
+            {stat.label}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const AdminHomepage = () => {
   const [mounted, setMounted] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -615,65 +644,16 @@ const AdminHomepage = () => {
         hoveredSection={hoveredSection}
         setHoveredSection={setHoveredSection}
       >
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
-          <div>
-            <label style={labelStyle}>Members Count</label>
-            <input
-              type="text"
-              value={config.statMembers}
-              onChange={(e) => handleChange("statMembers", e.target.value)}
-              style={inputStyle}
-              onFocus={(e) => { e.target.style.borderColor = "#C6A962"; e.target.style.boxShadow = "0 0 0 3px rgba(198, 169, 98, 0.1)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Hotels Count</label>
-            <input
-              type="text"
-              value={config.statHotels}
-              onChange={(e) => handleChange("statHotels", e.target.value)}
-              style={inputStyle}
-              onFocus={(e) => { e.target.style.borderColor = "#C6A962"; e.target.style.boxShadow = "0 0 0 3px rgba(198, 169, 98, 0.1)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Service Providers</label>
-            <input
-              type="text"
-              value={config.statProviders}
-              onChange={(e) => handleChange("statProviders", e.target.value)}
-              style={inputStyle}
-              onFocus={(e) => { e.target.style.borderColor = "#C6A962"; e.target.style.boxShadow = "0 0 0 3px rgba(198, 169, 98, 0.1)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }}
-            />
-          </div>
-          <div>
-            <label style={labelStyle}>Cities Covered</label>
-            <input
-              type="text"
-              value={config.statCities}
-              onChange={(e) => handleChange("statCities", e.target.value)}
-              style={inputStyle}
-              onFocus={(e) => { e.target.style.borderColor = "#C6A962"; e.target.style.boxShadow = "0 0 0 3px rgba(198, 169, 98, 0.1)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }}
-            />
-          </div>
-        </div>
+        <p style={{ fontSize: "13px", color: "#64748B", marginBottom: "16px" }}>
+          <i className="fas fa-info-circle" style={{ marginRight: "6px", color: "#C6A962" }}></i>
+          These numbers are fetched live from the database. They update automatically as members, hotels, and partners are added.
+        </p>
 
-        {/* Stats Preview */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr 1fr 1fr",
-            gap: "16px",
-            marginTop: "20px",
-            padding: "20px",
-            background: "linear-gradient(135deg, #0A1628, #1E293B)",
-            borderRadius: "8px",
-          }}
-        >
+        {/* Stats Preview - Live Data */}
+        <LiveStatsPreview />
+
+        {/* Spacer */}
+        <div style={{ display: "none" }}>
           {[
             { label: "Members", value: config.statMembers },
             { label: "Hotels", value: config.statHotels },

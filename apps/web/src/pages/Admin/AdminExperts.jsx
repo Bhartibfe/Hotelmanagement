@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ReactDOM from "react-dom";
 import api from "../../services/api";
 
 const EXPERTISE_COLORS = [
@@ -73,6 +74,16 @@ const AdminExperts = () => {
       if (data?.expertiseOptions?.length > 0) setExpertiseOptions(data.expertiseOptions);
     }).catch(() => {});
   }, []);
+
+  // Lock body scroll when dialog is open
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [showForm]);
 
   const fetchExperts = async () => {
     try {
@@ -213,15 +224,20 @@ const AdminExperts = () => {
         </div>
       )}
 
-      {/* Add Expert Form */}
-      {showForm && (
-        <div style={{
-          background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px",
-          padding: "28px", marginBottom: "28px",
+      {/* Add Expert Dialog */}
+      {showForm && ReactDOM.createPortal(
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }} onClick={() => { setShowForm(false); setForm(emptyForm); }}>
+        <div onClick={(e) => e.stopPropagation()} style={{
+          background: "#FFFFFF", borderRadius: "12px",
+          padding: "28px", width: "100%", maxWidth: "720px", maxHeight: "90vh", overflowY: "auto",
+          boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
         }}>
-          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 600, color: "#0A1628", marginBottom: "24px" }}>
-            Create Expert Account
-          </h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+            <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 600, color: "#0A1628", margin: 0 }}>
+              Create Expert Account
+            </h3>
+            <button onClick={() => { setShowForm(false); setForm(emptyForm); }} style={{ background: "none", border: "none", fontSize: "20px", color: "#94A3B8", cursor: "pointer" }}><i className="fas fa-times"></i></button>
+          </div>
 
           {/* Account Credentials */}
           <div style={{ marginBottom: "20px", padding: "16px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
@@ -399,6 +415,8 @@ const AdminExperts = () => {
             </button>
           </div>
         </div>
+        </div>,
+        document.body
       )}
 
       {loading && (

@@ -5,6 +5,8 @@ import { AUTH_CONFIG } from "../config/auth";
 import { generateTokens, verifyRefreshToken } from "../utils/jwt";
 import { authenticate } from "../middleware/auth";
 import { validate, registerSchema, loginSchema } from "../utils/validation";
+import { sendEmail } from "../services/email.service";
+import { welcomeEmail } from "../templates/email.templates";
 
 const router = Router();
 
@@ -73,6 +75,9 @@ router.post("/register", validate(registerSchema), async (req: Request, res: Res
       role: user.role,
       membershipStatus: user.membershipStatus,
     });
+
+    // Fire-and-forget welcome email
+    sendEmail(user.email, "Welcome to Hotel Sircle", welcomeEmail(user.firstName));
 
     return res.status(201).json({ user, ...tokens });
   } catch (error) {

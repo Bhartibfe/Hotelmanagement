@@ -108,6 +108,9 @@ const api = {
   logout: () => request("POST", "/auth/logout"),
   getMe: () => request("GET", "/auth/me"),
 
+  // Public stats
+  getPublicStats: () => request("GET", "/public-stats", { auth: false }),
+
   // Users
   getUsers: (params) => request("GET", `/users?${new URLSearchParams(params || {})}`),
   getUser: (id) => request("GET", `/users/${id}`, { auth: false }),
@@ -125,8 +128,17 @@ const api = {
 
   // Feed
   getFeed: (params) => request("GET", `/feed?${new URLSearchParams(params || {})}`),
+  getPost: (id) => request("GET", `/feed/${id}`),
+  getMyPosts: () => request("GET", "/feed/my-posts"),
   createPost: (data) => request("POST", "/feed", { body: data }),
-  likePost: (id) => request("POST", `/feed/${id}/likes`),
+  updatePost: (id, data) => request("PUT", `/feed/${id}`, { body: data }),
+  deletePost: (id) => request("DELETE", `/feed/${id}`),
+  likePost: (id) => request("POST", `/feed/${id}/like`),
+  unlikePost: (id) => request("DELETE", `/feed/${id}/like`),
+  getComments: (id) => request("GET", `/feed/${id}/comments`),
+  addComment: (id, data) => request("POST", `/feed/${id}/comments`, { body: data }),
+  savePost: (id) => request("POST", `/feed/${id}/save`),
+  unsavePost: (id) => request("DELETE", `/feed/${id}/save`),
 
   // Hotels
   getHotels: (params) => request("GET", `/hotels?${new URLSearchParams(params || {})}`, { auth: false }),
@@ -148,9 +160,15 @@ const api = {
 
   // Events
   getEvents: (params) => request("GET", `/events?${new URLSearchParams(params || {})}`, { auth: false }),
-  getEvent: (id) => request("GET", `/events/${id}`, { auth: false }),
+  getEvent: (idOrSlug) => request("GET", `/events/${idOrSlug}`, { auth: false }),
   getFeaturedEvents: () => request("GET", "/events/featured", { auth: false }),
+  getMyEvents: () => request("GET", "/events/my-events"),
+  createUserEvent: (data) => request("POST", "/events", { body: data }),
+  updateUserEvent: (id, data) => request("PUT", `/events/${id}`, { body: data }),
+  deleteUserEvent: (id) => request("DELETE", `/events/${id}`),
   registerForEvent: (id) => request("POST", `/events/${id}/register`),
+  unregisterForEvent: (id) => request("DELETE", `/events/${id}/register`),
+  checkEventRegistration: (id) => request("GET", `/events/${id}/check-registration`),
 
   // Connections
   getConnections: (params) => request("GET", `/connections?${new URLSearchParams(params || {})}`),
@@ -167,16 +185,21 @@ const api = {
   // Admin
   getMembershipRequests: (params) => request("GET", `/admin/membership-requests?${new URLSearchParams(params || {})}`),
   approveMembership: (id, data) => request("PUT", `/admin/membership-requests/${id}`, { body: data }),
-  getAdminMembers: (params) => request("GET", `/admin/users?${new URLSearchParams(params || {})}`),
-  updateMember: (id, data) => request("PUT", `/admin/users/${id}`, { body: data }),
+  getAdminMembers: (params) => request("GET", `/admin/members?memberType=HOTEL_OWNER&${new URLSearchParams(params || {})}`),
+  updateMember: (id, data) => request("PUT", `/admin/members/${id}`, { body: data }),
   getAdminVendors: (params) => request("GET", `/admin/vendors?${new URLSearchParams(params || {})}`),
-  toggleVendorFeatured: (id, data) => request("PUT", `/admin/vendors/${id}`, { body: data }),
+  createVendor: (data) => request("POST", "/admin/vendors", { body: data }),
+  updateVendor: (id, data) => request("PUT", `/admin/vendors/${id}`, { body: data }),
+  deleteVendor: (id) => request("DELETE", `/admin/vendors/${id}`),
+  toggleVendorFeatured: (id, data) => request("PUT", `/admin/vendors/${id}/feature`, { body: data }),
   getAdminExperts: (params) => request("GET", `/admin/experts?${new URLSearchParams(params || {})}`),
   createExpert: (data) => request("POST", "/admin/experts", { body: data }),
   toggleExpertFeatured: (id) => request("PUT", `/admin/experts/${id}`),
   toggleExpertPinned: (id) => request("PUT", `/admin/experts/${id}/pin`),
   deleteExpert: (id) => request("DELETE", `/admin/experts/${id}`),
   getAdminEvents: (params) => request("GET", `/admin/events?${new URLSearchParams(params || {})}`),
+  getEventRegistrations: (id) => request("GET", `/admin/events/${id}/registrations`),
+  notifyEventRegistrant: (eventId, data) => request("POST", `/admin/events/${eventId}/notify-registrant`, { body: data }),
   createEvent: (data) => request("POST", "/admin/events", { body: data }),
   updateEvent: (id, data) => request("PUT", `/admin/events/${id}`, { body: data }),
   deleteEvent: (id) => request("DELETE", `/admin/events/${id}`),
@@ -185,6 +208,7 @@ const api = {
   updateTestimonial: (id, data) => request("PUT", `/admin/testimonials/${id}`, { body: data }),
   deleteTestimonial: (id) => request("DELETE", `/admin/testimonials/${id}`),
   getAdminFeed: (params) => request("GET", `/admin/feed?${new URLSearchParams(params || {})}`),
+  adminCreatePost: (data) => request("POST", "/admin/feed", { body: data }),
   moderatePost: (id, data) => request("PUT", `/admin/feed/${id}`, { body: data }),
   getAdminStats: () => request("GET", "/admin/stats"),
   getProfileForReview: (id) => request("GET", `/admin/profile-review/${id}`),
@@ -194,15 +218,15 @@ const api = {
   approveProduct: (id, data) => request("PUT", `/admin/products/${id}`, { body: data }),
   getPendingEdits: (params) => request("GET", `/admin/profile-edits?${new URLSearchParams(params || {})}`),
   reviewProfileEdit: (id, data) => request("PUT", `/admin/profile-edits/${id}`, { body: data }),
-  adminEditProfile: (id, data) => request("PUT", `/admin/users/${id}/profile`, { body: data }),
+  adminEditProfile: (id, data) => request("PUT", `/admin/profile/${id}/edit`, { body: data }),
 
   // Homepage Config
   getHomepageConfig: () => request("GET", "/homepage-config", { auth: false }),
   saveHomepageConfig: (config) => request("PUT", "/admin/homepage-config", { body: config }),
 
   // Share
-  createShareToken: (data) => request("POST", "/share/token", { body: data }),
-  validateShareToken: (token) => request("GET", `/share/${token}`, { auth: false }),
+  createShareToken: (data) => request("POST", "/share/create-token", { body: data }),
+  validateShareToken: (token) => request("GET", `/share/validate/${token}`, { auth: false }),
   submitSharedProfile: (token, data) => request("POST", `/share/submit/${token}`, { body: data, auth: false }),
 };
 

@@ -64,10 +64,10 @@ const AdminMembers = () => {
   });
 
   const stats = [
-    { label: "Total Members", value: members.length, icon: "fas fa-users", color: "#C6A962", gradient: "linear-gradient(135deg, #FEF9E7, #FFF8E1)" },
-    { label: "Hotel Owners", value: members.filter((m) => m.memberType === "HOTEL_OWNER" || m.memberType === "OWNER").length, icon: "fas fa-hotel", color: "#8B5CF6", gradient: "linear-gradient(135deg, #F5F3FF, #EDE9FE)" },
-    { label: "Vendors & Providers", value: members.filter((m) => m.memberType === "SERVICE_PROVIDER").length, icon: "fas fa-building", color: "#3B82F6", gradient: "linear-gradient(135deg, #EFF6FF, #DBEAFE)" },
-    { label: "Professionals", value: members.filter((m) => m.memberType === "PROFESSIONAL" || m.memberType === "INVESTOR").length, icon: "fas fa-user-tie", color: "#10B981", gradient: "linear-gradient(135deg, #ECFDF5, #D1FAE5)" },
+    { label: "Total Owners", value: members.length, icon: "fas fa-hotel", color: "#C6A962", gradient: "linear-gradient(135deg, #FEF9E7, #FFF8E1)" },
+    { label: "Active", value: members.filter((m) => m.membershipStatus === "APPROVED").length, icon: "fas fa-check-circle", color: "#10B981", gradient: "linear-gradient(135deg, #ECFDF5, #D1FAE5)" },
+    { label: "Suspended", value: members.filter((m) => m.membershipStatus === "SUSPENDED").length, icon: "fas fa-ban", color: "#EF4444", gradient: "linear-gradient(135deg, #FEF2F2, #FEE2E2)" },
+    { label: "Cities", value: new Set(members.map((m) => m.city).filter(Boolean)).size, icon: "fas fa-map-marker-alt", color: "#8B5CF6", gradient: "linear-gradient(135deg, #F5F3FF, #EDE9FE)" },
   ];
 
   const getInitials = (first, last) => {
@@ -124,7 +124,7 @@ const AdminMembers = () => {
                 margin: 0,
               }}
             >
-              Members Directory
+              Hotel Owners
             </h1>
             <span
               style={{

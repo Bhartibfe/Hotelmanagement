@@ -1,88 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-
-const MOCK_TESTIMONIALS = [
-  {
-    id: 1,
-    content:
-      "Being part of this network has transformed how I source vendors for my properties. The quality of connections is unmatched in the Indian hospitality space.",
-    author: "Rajiv Malhotra",
-    title: "Owner",
-    company: "The Grand Palace Hotels",
-  },
-  {
-    id: 2,
-    content:
-      "As a vendor, this platform gave us direct access to hotel decision-makers. Our business has grown threefold since joining.",
-    author: "Sunita Krishnamurthy",
-    title: "Director",
-    company: "Pinnacle Hospitality Supplies",
-  },
-  {
-    id: 3,
-    content:
-      "The networking events alone are worth the membership. I have built partnerships that would have taken years to develop otherwise.",
-    author: "Arun Chadha",
-    title: "CEO",
-    company: "Heritage Stays India",
-  },
-  {
-    id: 4,
-    content:
-      "A truly curated community. Every member brings value, and the vetting process ensures quality interactions at every touchpoint.",
-    author: "Priyanka Oberoi",
-    title: "General Manager",
-    company: "Lakeside Resorts",
-  },
-  {
-    id: 5,
-    content:
-      "The industry insights shared through this network have helped us stay ahead of market trends and make better investment decisions.",
-    author: "Manoj Tiwari",
-    title: "Investment Director",
-    company: "Capital Hospitality Group",
-  },
-  {
-    id: 6,
-    content:
-      "Finding reliable vendors used to be our biggest challenge. This network has made it effortless with verified, pre-screened partners.",
-    author: "Deepika Rajan",
-    title: "Procurement Head",
-    company: "Sunrise Hotel Chain",
-  },
-  {
-    id: 7,
-    content:
-      "The expert consultations available through the platform have been invaluable for our brand repositioning strategy.",
-    author: "Harish Menon",
-    title: "Brand Director",
-    company: "Coastline Hospitality",
-  },
-  {
-    id: 8,
-    content:
-      "What sets this network apart is the genuine spirit of collaboration. Members actually want to help each other succeed.",
-    author: "Kavya Sharma",
-    title: "Founder",
-    company: "Boutique Stays Co.",
-  },
-  {
-    id: 9,
-    content:
-      "From technology solutions to linen suppliers, every vendor on this platform has been thoroughly vetted. It saves us enormous time.",
-    author: "Siddharth Kapoor",
-    title: "Operations VP",
-    company: "Imperial Hotels India",
-  },
-  {
-    id: 10,
-    content:
-      "Joining this network was the best business decision I made last year. The ROI on membership has been exceptional.",
-    author: "Anita Deshmukh",
-    title: "Managing Director",
-    company: "Deccan Hospitality Group",
-  },
-];
+import api from "../../services/api";
 
 const AOS_ANIMATIONS = [
   "fade-up",
@@ -99,16 +17,37 @@ const AOS_ANIMATIONS = [
 
 export const TestimonialsSection = ({ config }) => {
   const [hoveredId, setHoveredId] = useState(null);
+  const [testimonials, setTestimonials] = useState([]);
 
-  // Distribute testimonials across 3 columns for masonry effect
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const data = await api.getTestimonials?.();
+        if (data?.testimonials?.length > 0) {
+          setTestimonials(data.testimonials.map((t) => ({
+            id: t.id,
+            content: t.content,
+            author: t.authorName,
+            title: t.authorTitle || "",
+            company: t.authorCompany || "",
+          })));
+        }
+      } catch {
+        // no testimonials available
+      }
+    };
+    fetchTestimonials();
+  }, []);
+
+  if (testimonials.length === 0) return null;
+
   const count = config?.testimonialsCount || 4;
-  const displayTestimonials = MOCK_TESTIMONIALS.slice(0, count);
+  const displayTestimonials = testimonials.slice(0, count);
   const columns = [[], [], []];
   displayTestimonials.forEach((t, i) => {
     columns[i % 3].push({ ...t, index: i });
   });
 
-  // Staggered margin offsets for masonry feel
   const columnOffsets = ["0px", "24px", "12px"];
 
   return (
@@ -120,7 +59,6 @@ export const TestimonialsSection = ({ config }) => {
         overflow: "hidden",
       }}
     >
-      {/* Subtle decorative elements */}
       <div
         style={{
           position: "absolute",
@@ -147,7 +85,6 @@ export const TestimonialsSection = ({ config }) => {
       />
 
       <div className="container">
-        {/* Section Header */}
         <div className="text-center" style={{ marginBottom: "36px" }}>
           <span
             data-aos="fade-up"
@@ -181,7 +118,6 @@ export const TestimonialsSection = ({ config }) => {
           </h2>
         </div>
 
-        {/* Masonry Grid */}
         <div className="row">
           {columns.map((colItems, colIndex) => (
             <div
@@ -194,7 +130,7 @@ export const TestimonialsSection = ({ config }) => {
               {colItems.map((testimonial) => (
                 <div
                   key={testimonial.id}
-                  data-aos={AOS_ANIMATIONS[testimonial.index]}
+                  data-aos={AOS_ANIMATIONS[testimonial.index] || "fade-up"}
                   data-aos-duration="800"
                   data-aos-delay={testimonial.index * 80}
                   onMouseEnter={() => setHoveredId(testimonial.id)}
@@ -219,7 +155,6 @@ export const TestimonialsSection = ({ config }) => {
                         : "none",
                   }}
                 >
-                  {/* Quote Icon */}
                   <i
                     className="fas fa-quote-left"
                     style={{
@@ -230,7 +165,6 @@ export const TestimonialsSection = ({ config }) => {
                       opacity: 0.6,
                     }}
                   ></i>
-                  {/* Content */}
                   <p
                     style={{
                       color: "#C8D6E5",
@@ -242,7 +176,6 @@ export const TestimonialsSection = ({ config }) => {
                   >
                     {testimonial.content}
                   </p>
-                  {/* Author */}
                   <div>
                     <h6
                       style={{
@@ -263,46 +196,13 @@ export const TestimonialsSection = ({ config }) => {
                         letterSpacing: "0.5px",
                       }}
                     >
-                      {testimonial.title}, {testimonial.company}
+                      {testimonial.title}{testimonial.company ? `, ${testimonial.company}` : ""}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
           ))}
-        </div>
-
-        {/* View All Link */}
-        <div
-          className="text-center"
-          style={{ marginTop: "24px" }}
-          data-aos="fade-up"
-          data-aos-duration="800"
-          data-aos-delay="300"
-        >
-          <Link
-            to="/testimonials"
-            style={{
-              color: "#C6A962",
-              fontSize: "14px",
-              fontWeight: 600,
-              letterSpacing: "2px",
-              textTransform: "uppercase",
-              textDecoration: "none",
-              borderBottom: "2px solid transparent",
-              paddingBottom: "4px",
-              transition: "all 0.3s ease",
-              fontFamily: "var(--tg-body-font-family)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderBottomColor = "#C6A962";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderBottomColor = "transparent";
-            }}
-          >
-            View All Testimonials &rarr;
-          </Link>
         </div>
       </div>
     </section>

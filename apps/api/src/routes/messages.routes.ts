@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "@hospitality/database";
 import { authenticate } from "../middleware/auth";
+import { sendEmail } from "../services/email.service";
+import { newMessageReceived } from "../templates/email.templates";
 
 const router = Router();
 
@@ -105,6 +107,17 @@ router.post("/:userId", authenticate, async (req: Request, res: Response) => {
         receiverId: req.params.userId,
       },
     });
+
+    // Send email to receiver
+    const [receiver, sender] = await Promise.all([
+      prisma.user.findUnique({ where: { id: req.params.userId }, select: { email: true, firstName: true } }),
+      prisma.user.findUnique({ where: { id: req.user!.userId }, select: { firstName: true, lastName: true } }),
+    ]);
+    if (receiver && sender) {
+      const preview = content.length > 150 ? content.substring(0, 150) + "..." : content;
+      sendEmail(receiver.email, `New message from ${sender.firstName} - Hotel Sircle`, newMessageReceived(receiver.firstName, `${sender.firstName} ${sender.lastName}`, preview));
+    }
+
     return res.status(201).json(message);
   } catch (error) {
     return res.status(500).json({ error: "Failed to send message" });

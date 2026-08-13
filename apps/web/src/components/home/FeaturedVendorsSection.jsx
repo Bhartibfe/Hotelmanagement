@@ -1,21 +1,32 @@
-import React from "react";
-
-const PARTNER_LOGOS = [
-  { id: 1, src: "/logocompany/partner-1.jpeg", alt: "Partner 1" },
-  { id: 2, src: "/logocompany/partner-2.jpeg", alt: "Partner 2" },
-  { id: 3, src: "/logocompany/partner-3.jpeg", alt: "Partner 3" },
-  { id: 4, src: "/logocompany/partner-4.jpeg", alt: "Partner 4" },
-  { id: 5, src: "/logocompany/partner-5.jpeg", alt: "Partner 5" },
-  { id: 6, src: "/logocompany/partner-6.jpeg", alt: "Partner 6" },
-  { id: 7, src: "/logocompany/partner-7.jpeg", alt: "Partner 7" },
-  { id: 8, src: "/logocompany/partner-8.jpeg", alt: "Partner 8" },
-  { id: 9, src: "/logocompany/partner-9.jpeg", alt: "Partner 9" },
-];
-
-// Double the logos for seamless infinite scroll
-const SCROLLING_LOGOS = [...PARTNER_LOGOS, ...PARTNER_LOGOS];
+import React, { useState, useEffect } from "react";
+import api from "../../services/api";
 
 export const FeaturedVendorsSection = ({ config }) => {
+  const [logos, setLogos] = useState([]);
+
+  useEffect(() => {
+    const fetchVendors = async () => {
+      try {
+        const data = await api.getFeaturedVendors();
+        const vendors = data?.vendors || data || [];
+        const vendorLogos = vendors
+          .filter((v) => v.logo)
+          .map((v) => ({ id: v.id, src: v.logo, alt: v.companyName || "Partner" }));
+        if (vendorLogos.length > 0) {
+          setLogos(vendorLogos);
+        }
+      } catch {
+        // no vendors available
+      }
+    };
+    fetchVendors();
+  }, []);
+
+  if (logos.length === 0) return null;
+
+  // Double the logos for seamless infinite scroll
+  const scrollingLogos = [...logos, ...logos];
+
   return (
     <section style={{ padding: "clamp(40px, 5vw, 60px) 0", background: "#FFFFFF", overflow: "hidden" }}>
       <div className="container">
@@ -72,7 +83,7 @@ export const FeaturedVendorsSection = ({ config }) => {
             animation: "scrollLogos 30s linear infinite",
           }}
         >
-          {SCROLLING_LOGOS.map((logo, i) => (
+          {scrollingLogos.map((logo, i) => (
             <div
               key={`${logo.id}-${i}`}
               style={{
