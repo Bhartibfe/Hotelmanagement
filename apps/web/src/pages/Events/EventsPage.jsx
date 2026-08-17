@@ -40,116 +40,111 @@ const EventCard = ({ event, index }) => {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         style={{
-          background: "#FFFFFF",
-          border: "1px solid #E2E8F0",
           borderRadius: "12px",
           overflow: "hidden",
-          transition: "all 0.3s ease",
+          transition: "all 0.35s ease",
           transform: hovered ? "translateY(-6px)" : "translateY(0)",
-          boxShadow: hovered ? "0 12px 32px rgba(10, 22, 40, 0.12)" : "0 2px 8px rgba(0,0,0,0.04)",
+          boxShadow: hovered ? "0 16px 40px rgba(10, 22, 40, 0.2)" : "0 4px 16px rgba(0,0,0,0.08)",
           height: "100%",
-          display: "flex",
-          flexDirection: "column",
+          position: "relative",
+          minHeight: "360px",
         }}
       >
-        {/* Poster Image */}
-        <div style={{ position: "relative", paddingBottom: "56.25%", overflow: "hidden" }}>
-          {event.coverImage ? (
-            <img
-              src={event.coverImage}
-              alt={event.title}
-              style={{
-                position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-                objectFit: "cover",
-                transition: "transform 0.4s ease",
-                transform: hovered ? "scale(1.05)" : "scale(1)",
-              }}
-            />
-          ) : (
-            <div style={{
+        {/* Full-bleed Image */}
+        {event.coverImage ? (
+          <img
+            src={event.coverImage}
+            alt={event.title}
+            style={{
               position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
-              background: PLACEHOLDER_GRADIENTS[index % PLACEHOLDER_GRADIENTS.length],
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <i className="fas fa-calendar-alt" style={{ fontSize: "40px", color: "rgba(198,169,98,0.25)" }}></i>
-            </div>
-          )}
+              objectFit: "cover",
+              transition: "transform 0.5s ease",
+              transform: hovered ? "scale(1.06)" : "scale(1)",
+            }}
+          />
+        ) : (
+          <div style={{
+            position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+            background: PLACEHOLDER_GRADIENTS[index % PLACEHOLDER_GRADIENTS.length],
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <i className="fas fa-calendar-alt" style={{ fontSize: "56px", color: "rgba(198,169,98,0.15)" }}></i>
+          </div>
+        )}
 
+        {/* Dark gradient overlay */}
+        <div style={{
+          position: "absolute", top: 0, left: 0, width: "100%", height: "100%",
+          background: "linear-gradient(180deg, rgba(0,0,0,0) 30%, rgba(10,22,40,0.85) 100%)",
+        }} />
+
+        {/* Top badges */}
+        <div style={{ position: "absolute", top: "14px", left: "14px", right: "14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start", zIndex: 2 }}>
           {/* Date Badge */}
           <div style={{
-            position: "absolute", top: "12px", left: "12px",
-            background: "#FFFFFF", borderRadius: "8px", padding: "6px 10px",
-            textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
-            minWidth: "50px",
+            background: "#FFFFFF", borderRadius: "10px", padding: "8px 12px",
+            textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.15)", minWidth: "52px",
           }}>
-            <div style={{ fontSize: "18px", fontWeight: 700, color: "#0A1628", lineHeight: 1, fontFamily: "'Cormorant Garamond', serif" }}>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0A1628", lineHeight: 1, fontFamily: "'Cormorant Garamond', serif" }}>
               {startDate.getDate()}
             </div>
-            <div style={{ fontSize: "10px", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            <div style={{ fontSize: "10px", fontWeight: 700, color: color, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>
               {startDate.toLocaleDateString("en-IN", { month: "short" })}
             </div>
           </div>
 
-          {/* Type Badge */}
-          <span style={{
-            position: "absolute", top: "12px", right: "12px",
-            fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px",
-            padding: "4px 10px", background: color, color: "#FFFFFF",
-            borderRadius: "4px",
-          }}>
-            {event.type}
-          </span>
-
-          {/* Running Now Badge */}
-          {isRunning && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-end" }}>
+            {/* Type Badge */}
             <span style={{
-              position: "absolute", bottom: "12px", left: "12px",
-              fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px",
-              padding: "4px 12px", background: "#10B981", color: "#FFFFFF",
-              borderRadius: "12px", display: "flex", alignItems: "center", gap: "5px",
+              fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px",
+              padding: "5px 12px", background: color, color: "#FFFFFF",
+              borderRadius: "6px", boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
             }}>
-              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FFFFFF", animation: "pulse 1.5s infinite" }}></span>
-              Live Now
+              {event.type}
             </span>
-          )}
+            {/* Live Badge */}
+            {isRunning && (
+              <span style={{
+                fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px",
+                padding: "4px 12px", background: "#10B981", color: "#FFFFFF",
+                borderRadius: "12px", display: "flex", alignItems: "center", gap: "5px",
+                boxShadow: "0 2px 8px rgba(16,185,129,0.4)",
+              }}>
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#FFFFFF", animation: "pulse 1.5s infinite" }}></span>
+                Live Now
+              </span>
+            )}
+          </div>
         </div>
 
-        {/* Content */}
-        <div style={{ padding: "18px 20px", flex: 1, display: "flex", flexDirection: "column" }}>
+        {/* Bottom content overlay */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 20px 18px",
+          zIndex: 2,
+        }}>
           <h4 style={{
             fontFamily: "'Cormorant Garamond', serif",
-            fontSize: "19px", fontWeight: 700, color: "#0A1628",
-            margin: "0 0 10px", lineHeight: 1.3,
+            fontSize: "22px", fontWeight: 700, color: "#FFFFFF",
+            margin: "0 0 10px", lineHeight: 1.25,
+            textShadow: "0 1px 4px rgba(0,0,0,0.3)",
             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
           }}>
             {event.title}
           </h4>
 
-          {event.description && (
-            <p style={{
-              fontSize: "13px", color: "#64748B", lineHeight: 1.6,
-              margin: "0 0 14px", flex: 1,
-              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-            }}>
-              {event.description.replace(/<[^>]*>/g, "").substring(0, 150)}
-            </p>
-          )}
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#475569" }}>
-              <i className="far fa-calendar" style={{ fontSize: "11px", color: "#94A3B8", width: "14px" }}></i>
+          <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: "5px" }}>
+              <i className="far fa-calendar" style={{ fontSize: "11px", color: "#C6A962" }}></i>
               {formatDateRange(event.startDate, event.endDate)}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#475569" }}>
-                <i className="fas fa-map-marker-alt" style={{ fontSize: "11px", color: "#94A3B8", width: "14px" }}></i>
-                {event.venue ? `${event.venue}, ${event.city}` : `${event.city}, ${event.state}`}
-              </div>
-              <span style={{ fontSize: "11px", color: "#94A3B8", fontWeight: 500 }}>
-                <i className="fas fa-users" style={{ marginRight: "4px", fontSize: "10px" }}></i>
-                {event._count?.registrations || 0}
-              </span>
-            </div>
+            </span>
+            <span style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: "5px" }}>
+              <i className="fas fa-map-marker-alt" style={{ fontSize: "11px", color: "#C6A962" }}></i>
+              {event.venue ? `${event.venue}, ${event.city}` : `${event.city}, ${event.state}`}
+            </span>
+            <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: "4px", marginLeft: "auto" }}>
+              <i className="fas fa-users" style={{ fontSize: "10px" }}></i>
+              {event._count?.registrations || 0}
+            </span>
           </div>
         </div>
       </div>
@@ -237,7 +232,7 @@ const EventsPage = () => {
 
                   <div className="row">
                     {upcomingAndRunning.map((event, i) => (
-                      <div key={event.id} className="col-lg-4 col-md-6" style={{ marginBottom: "24px" }}>
+                      <div key={event.id} className="col-lg-6 col-md-6" style={{ marginBottom: "24px" }}>
                         <EventCard event={event} index={i} />
                       </div>
                     ))}
