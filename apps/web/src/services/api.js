@@ -194,6 +194,7 @@ const api = {
   toggleVendorFeatured: (id, data) => request("PUT", `/admin/vendors/${id}/feature`, { body: data }),
   getAdminExperts: (params) => request("GET", `/admin/experts?${new URLSearchParams(params || {})}`),
   createExpert: (data) => request("POST", "/admin/experts", { body: data }),
+  updateExpert: (id, data) => request("PUT", `/admin/experts/${id}/edit`, { body: data }),
   toggleExpertFeatured: (id) => request("PUT", `/admin/experts/${id}`),
   toggleExpertPinned: (id) => request("PUT", `/admin/experts/${id}/pin`),
   deleteExpert: (id) => request("DELETE", `/admin/experts/${id}`),

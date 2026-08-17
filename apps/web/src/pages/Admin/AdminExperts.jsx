@@ -55,6 +55,7 @@ const AdminExperts = () => {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [expertiseOptions, setExpertiseOptions] = useState(DEFAULT_EXPERTISE);
+  const [editingId, setEditingId] = useState(null);
 
   const emptyForm = {
     email: "", password: "", firstName: "", lastName: "",
@@ -155,9 +156,44 @@ const AdminExperts = () => {
     setForm((prev) => ({ ...prev, expertise: prev.expertise.filter((e) => e !== val) }));
   };
 
+  const handleEditExpert = (expert) => {
+    setForm({
+      email: expert.user?.email || "",
+      password: "",
+      firstName: expert.user?.firstName || "",
+      lastName: expert.user?.lastName || "",
+      title: expert.user?.title || "",
+      phone: expert.user?.phone || "",
+      city: expert.user?.city || "",
+      state: expert.user?.state || "",
+      organizationName: expert.user?.organizationName || "",
+      organizationRole: expert.user?.organizationRole || "",
+      bio: expert.bio || "",
+      avatar: expert.user?.avatar || "",
+      expertise: expert.expertise || [],
+      currentOrganization: expert.currentOrganization || "",
+      currentRole: expert.currentRole || "",
+      yearsOfExperience: expert.yearsOfExperience || "",
+      industryInsights: expert.industryInsights || "",
+      publishedArticles: (expert.publishedArticles || []).join("\n"),
+      speakingEngagements: (expert.speakingEngagements || []).join("\n"),
+      awards: (expert.awards || []).join("\n"),
+      certifications: (expert.certifications || []).join("\n"),
+      isFeatured: expert.isFeatured || false,
+      isPinned: expert.isPinned || false,
+    });
+    setEditingId(expert.id);
+    setShowForm(true);
+    setError(null);
+  };
+
   const handleSubmit = async () => {
-    if (!form.email || !form.password || !form.firstName || !form.lastName) {
+    if (!editingId && (!form.email || !form.password || !form.firstName || !form.lastName)) {
       setError("Email, password, first name, and last name are required");
+      return;
+    }
+    if (editingId && (!form.firstName || !form.lastName)) {
+      setError("First name and last name are required");
       return;
     }
     if (form.expertise.length === 0) {
@@ -167,13 +203,18 @@ const AdminExperts = () => {
     setSaving(true);
     setError(null);
     try {
-      await api.createExpert(form);
+      if (editingId) {
+        await api.updateExpert(editingId, form);
+      } else {
+        await api.createExpert(form);
+      }
       setShowForm(false);
       setForm(emptyForm);
+      setEditingId(null);
       setLoading(true);
       fetchExperts();
     } catch (err) {
-      setError(err.message || "Failed to create expert");
+      setError(err.message || "Failed to save expert");
     } finally {
       setSaving(false);
     }
@@ -201,7 +242,7 @@ const AdminExperts = () => {
           </p>
         </div>
         <button
-          onClick={() => { setShowForm(!showForm); setError(null); }}
+          onClick={() => { setShowForm(!showForm); if (showForm) { setForm(emptyForm); setEditingId(null); } setError(null); }}
           onMouseEnter={() => setHoveredBtn("add")}
           onMouseLeave={() => setHoveredBtn(null)}
           style={{
@@ -235,12 +276,13 @@ const AdminExperts = () => {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
             <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "22px", fontWeight: 600, color: "#0A1628", margin: 0 }}>
-              Create Expert Account
+              {editingId ? "Edit Expert" : "Create Expert Account"}
             </h3>
-            <button onClick={() => { setShowForm(false); setForm(emptyForm); }} style={{ background: "none", border: "none", fontSize: "20px", color: "#94A3B8", cursor: "pointer" }}><i className="fas fa-times"></i></button>
+            <button onClick={() => { setShowForm(false); setForm(emptyForm); setEditingId(null); }} style={{ background: "none", border: "none", fontSize: "20px", color: "#94A3B8", cursor: "pointer" }}><i className="fas fa-times"></i></button>
           </div>
 
-          {/* Account Credentials */}
+          {/* Account Credentials (only for new experts) */}
+          {!editingId && (
           <div style={{ marginBottom: "20px", padding: "16px", background: "#F8FAFC", borderRadius: "8px", border: "1px solid #E2E8F0" }}>
             <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "14px" }}>
               <i className="fas fa-key" style={{ marginRight: "8px", color: "#C6A962" }}></i>
@@ -257,6 +299,7 @@ const AdminExperts = () => {
               </div>
             </div>
           </div>
+          )}
 
           {/* Personal Info */}
           <div style={{ marginBottom: "20px" }}>
@@ -413,7 +456,7 @@ const AdminExperts = () => {
                 opacity: saving ? 0.7 : 1,
               }}
             >
-              {saving ? <><i className="fas fa-spinner fa-spin" style={{ fontSize: "12px" }}></i> Creating...</> : <><i className="fas fa-check" style={{ fontSize: "12px" }}></i> Create Expert</>}
+              {saving ? <><i className="fas fa-spinner fa-spin" style={{ fontSize: "12px" }}></i> Saving...</> : <><i className="fas fa-check" style={{ fontSize: "12px" }}></i> {editingId ? "Save Changes" : "Create Expert"}</>}
             </button>
           </div>
         </div>
@@ -567,6 +610,22 @@ const AdminExperts = () => {
 
                   {/* Action Buttons */}
                   <div style={{ display: "flex", gap: "8px" }}>
+                    <button
+                      onClick={() => handleEditExpert(expert)}
+                      onMouseEnter={() => setHoveredBtn(`edit-${expert.id}`)}
+                      onMouseLeave={() => setHoveredBtn(null)}
+                      style={{
+                        flex: 1, padding: "8px 14px", fontSize: "12px", fontWeight: 600,
+                        background: hoveredBtn === `edit-${expert.id}` ? "#0A1628" : "transparent",
+                        color: hoveredBtn === `edit-${expert.id}` ? "#FFFFFF" : "#0A1628",
+                        border: "1px solid #E2E8F0", borderRadius: "6px",
+                        cursor: "pointer", transition: "all 0.25s ease",
+                        display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                      }}
+                    >
+                      <i className="fas fa-pen" style={{ fontSize: "10px" }}></i>
+                      Edit
+                    </button>
                     <button
                       onClick={() => handleDelete(expert.id)}
                       onMouseEnter={() => setHoveredBtn(`del-${expert.id}`)}

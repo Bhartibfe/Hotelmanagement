@@ -705,6 +705,81 @@ router.put("/experts/:id/pin", async (req: Request, res: Response) => {
   }
 });
 
+// PUT /api/admin/experts/:id/edit - Update expert profile
+router.put("/experts/:id/edit", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      firstName, lastName, title, phone, city, state, avatar,
+      organizationName, organizationRole, bio,
+      expertise, currentOrganization, currentRole, yearsOfExperience,
+      industryInsights, publishedArticles, speakingEngagements, awards, certifications,
+      isFeatured, isPinned,
+    } = req.body;
+
+    const expert = await prisma.industryExpert.findUnique({ where: { id }, include: { user: true } });
+    if (!expert) {
+      return res.status(404).json({ error: "Expert not found" });
+    }
+
+    await prisma.$transaction(async (tx: any) => {
+      // Update user fields
+      await tx.user.update({
+        where: { id: expert.userId },
+        data: {
+          ...(firstName !== undefined && { firstName }),
+          ...(lastName !== undefined && { lastName }),
+          ...(title !== undefined && { title }),
+          ...(phone !== undefined && { phone }),
+          ...(city !== undefined && { city }),
+          ...(state !== undefined && { state }),
+          ...(avatar !== undefined && { avatar }),
+          ...(organizationName !== undefined && { organizationName }),
+          ...(organizationRole !== undefined && { organizationRole }),
+          ...(bio !== undefined && { bio }),
+          ...(isFeatured !== undefined && { isFeaturedExpert: isFeatured }),
+        },
+      });
+
+      // Update expert profile
+      await tx.industryExpert.update({
+        where: { id },
+        data: {
+          ...(expertise !== undefined && { expertise }),
+          ...(bio !== undefined && { bio }),
+          ...(currentOrganization !== undefined && { currentOrganization }),
+          ...(currentRole !== undefined && { currentRole }),
+          ...(yearsOfExperience !== undefined && { yearsOfExperience: yearsOfExperience ? parseInt(yearsOfExperience) : null }),
+          ...(industryInsights !== undefined && { industryInsights }),
+          ...(publishedArticles !== undefined && { publishedArticles: Array.isArray(publishedArticles) ? publishedArticles : publishedArticles ? publishedArticles.split("\n").filter(Boolean) : undefined }),
+          ...(speakingEngagements !== undefined && { speakingEngagements: Array.isArray(speakingEngagements) ? speakingEngagements : speakingEngagements ? speakingEngagements.split("\n").filter(Boolean) : undefined }),
+          ...(awards !== undefined && { awards: Array.isArray(awards) ? awards : awards ? awards.split("\n").filter(Boolean) : undefined }),
+          ...(certifications !== undefined && { certifications: Array.isArray(certifications) ? certifications : certifications ? certifications.split("\n").filter(Boolean) : undefined }),
+          ...(isFeatured !== undefined && { isFeatured }),
+          ...(isPinned !== undefined && { isPinned }),
+        },
+      });
+    });
+
+    const updated = await prisma.industryExpert.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true, firstName: true, lastName: true, email: true,
+            avatar: true, title: true, organizationName: true, city: true,
+          },
+        },
+      },
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    console.error("Update expert error:", error);
+    return res.status(500).json({ error: "Failed to update expert" });
+  }
+});
+
 // DELETE /api/admin/experts/:id - Remove expert profile
 router.delete("/experts/:id", async (req: Request, res: Response) => {
   try {
