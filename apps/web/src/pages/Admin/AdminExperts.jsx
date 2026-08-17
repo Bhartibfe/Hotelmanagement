@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
+import PhotoUpload from "../../components/profile/PhotoUpload";
 
 const EXPERTISE_COLORS = [
   { bg: "#EFF6FF", color: "#3B82F6" },
@@ -63,7 +64,7 @@ const AdminExperts = () => {
     yearsOfExperience: "", industryInsights: "",
     publishedArticles: "", speakingEngagements: "",
     awards: "", certifications: "",
-    isFeatured: false, isPinned: false,
+    isFeatured: false, isPinned: false, avatar: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -289,6 +290,7 @@ const AdminExperts = () => {
                 <input type="text" value={form.state} onChange={(e) => handleFormChange("state", e.target.value)} style={inputStyle} />
               </div>
             </div>
+            <PhotoUpload value={form.avatar} onChange={(val) => handleFormChange("avatar", val)} label="Expert Photo" />
           </div>
 
           {/* Professional Info */}

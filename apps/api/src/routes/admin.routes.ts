@@ -574,7 +574,7 @@ router.post("/experts", async (req: Request, res: Response) => {
       organizationName, organizationRole, bio,
       expertise, currentOrganization, currentRole, yearsOfExperience,
       industryInsights, publishedArticles, speakingEngagements, awards, certifications,
-      isFeatured, isPinned,
+      isFeatured, isPinned, avatar,
     } = req.body;
 
     if (!email || !password || !firstName || !lastName) {
@@ -610,6 +610,7 @@ router.post("/experts", async (req: Request, res: Response) => {
           organizationName,
           organizationRole,
           bio,
+          avatar: avatar || null,
           isFeaturedExpert: isFeatured || false,
           isActive: true,
           approvedAt: new Date(),
