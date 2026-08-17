@@ -139,38 +139,32 @@ const ExpertsPage = () => {
                   Connect with Industry Leaders
                 </h3>
               </div>
-              <div className="col-lg-4">
-                <input
-                  type="text"
-                  placeholder="Search experts..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 20px",
-                    border: "1px solid var(--tg-border-color)",
-                    fontSize: "14px",
-                    outline: "none",
-                    transition: "border-color 0.3s ease",
-                    background: "#FFFFFF",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#C6A962";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "var(--tg-border-color)";
-                  }}
-                />
-              </div>
             </div>
 
-            {/* Expertise Filter Dropdown */}
-            <div style={{ marginBottom: "16px" }}>
+            {/* Search + Filter in one row */}
+            <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Search experts..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "12px 18px",
+                  border: "1px solid var(--tg-border-color, #E2E8F0)",
+                  fontSize: "14px",
+                  outline: "none",
+                  transition: "border-color 0.3s ease",
+                  background: "#FFFFFF",
+                }}
+                onFocus={(e) => { e.target.style.borderColor = "#C6A962"; }}
+                onBlur={(e) => { e.target.style.borderColor = "var(--tg-border-color)"; }}
+              />
               <select
                 value={activeExpertise}
                 onChange={(e) => setActiveExpertise(e.target.value)}
                 style={{
-                  padding: "10px 16px",
+                  padding: "12px 16px",
                   fontSize: "13px",
                   fontWeight: 600,
                   border: "1px solid var(--tg-border-color, #E2E8F0)",
