@@ -18,7 +18,7 @@ export const ContactAreaInner = () => {
               </div>
               <div style={{ marginBottom: "24px" }}>
                 <h5 style={{ color: "#FFFFFF", fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>Phone</h5>
-                <a href="tel:+919999999999" style={{ color: "#C6A962", textDecoration: "none", fontSize: "15px" }}>+91 99999 99999</a>
+                <a href="tel:+919560454774" style={{ color: "#C6A962", textDecoration: "none", fontSize: "15px" }}>+91 95604 54774</a>
               </div>
               <div>
                 <h5 style={{ color: "#FFFFFF", fontSize: "16px", fontWeight: 600, marginBottom: "8px" }}>Location</h5>

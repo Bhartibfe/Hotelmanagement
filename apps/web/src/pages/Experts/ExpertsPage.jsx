@@ -164,45 +164,29 @@ const ExpertsPage = () => {
               </div>
             </div>
 
-            {/* Expertise Filters */}
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px", alignItems: "center" }}>
-              {["ALL", ...visibleFilters].map((exp) => (
-                <button
-                  key={exp}
-                  onClick={() => setActiveExpertise(exp)}
-                  style={{
-                    padding: "9px 16px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    border: `1px solid ${activeExpertise === exp ? "var(--tg-accent-color)" : "var(--tg-border-color)"}`,
-                    background: activeExpertise === exp ? "var(--tg-accent-color)" : "transparent",
-                    color: activeExpertise === exp ? "var(--tg-primary-color)" : "var(--tg-body-font-color)",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    letterSpacing: "0.3px",
-                  }}
-                >
-                  {exp === "ALL" ? "All Experts" : exp}
-                </button>
-              ))}
-              {hasMoreFilters && (
-                <button
-                  onClick={() => setShowAllFilters(!showAllFilters)}
-                  style={{
-                    padding: "9px 16px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    border: "1px solid var(--tg-border-color)",
-                    background: "transparent",
-                    color: "#C6A962",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    letterSpacing: "0.3px",
-                  }}
-                >
-                  {showAllFilters ? "Show Less" : `+${expertiseOptions.length - VISIBLE_FILTER_COUNT} More`}
-                </button>
-              )}
+            {/* Expertise Filter Dropdown */}
+            <div style={{ marginBottom: "16px" }}>
+              <select
+                value={activeExpertise}
+                onChange={(e) => setActiveExpertise(e.target.value)}
+                style={{
+                  padding: "10px 16px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  border: "1px solid var(--tg-border-color, #E2E8F0)",
+                  background: "#FFFFFF",
+                  color: "var(--tg-primary-color, #0A1628)",
+                  cursor: "pointer",
+                  outline: "none",
+                  minWidth: "220px",
+                  appearance: "auto",
+                }}
+              >
+                <option value="ALL">All Experts</option>
+                {expertiseOptions.map((exp) => (
+                  <option key={exp} value={exp}>{exp}</option>
+                ))}
+              </select>
             </div>
 
             <p style={{ fontSize: "14px", color: "var(--tg-gray-three)", margin: 0 }}>
