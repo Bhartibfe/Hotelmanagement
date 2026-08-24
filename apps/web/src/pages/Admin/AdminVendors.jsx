@@ -126,10 +126,6 @@ const AdminVendors = () => {
   const handleCreateVendor = async (e) => {
     e.preventDefault();
     setFormError(null);
-    if (!form.companyName || !form.category) {
-      setFormError("Company name and category are required.");
-      return;
-    }
     if (!editingId && (!form.email || !form.password || !form.firstName || !form.lastName)) {
       setFormError("Email, password, first name, and last name are required for new partners.");
       return;
@@ -293,10 +289,10 @@ const AdminVendors = () => {
 
             <p style={{ fontSize: "13px", fontWeight: 600, color: "#0A1628", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "1px" }}>Company Details</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-              <div><label style={labelStyle}>Company Name *</label><input style={inputStyle} value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} required /></div>
+              <div><label style={labelStyle}>Company Name</label><input style={inputStyle} value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} /></div>
               <div>
-                <label style={labelStyle}>Category *</label>
-                <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required>
+                <label style={labelStyle}>Category</label>
+                <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                   <option value="">Select Category</option>
                   {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>{label}</option>
@@ -309,8 +305,8 @@ const AdminVendors = () => {
               <textarea style={{ ...inputStyle, minHeight: "80px", resize: "vertical" }} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Enterprise property management systems, POS solutions, and integrated hotel technology platforms..." />
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-              <div><label style={labelStyle}>City *</label><input style={inputStyle} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Bengaluru" /></div>
-              <div><label style={labelStyle}>State *</label><input style={inputStyle} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="Karnataka" /></div>
+              <div><label style={labelStyle}>City</label><input style={inputStyle} value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Bengaluru" /></div>
+              <div><label style={labelStyle}>State</label><input style={inputStyle} value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} placeholder="Karnataka" /></div>
               <div><label style={labelStyle}>Employees</label><input style={inputStyle} value={form.employeeCount} onChange={(e) => setForm({ ...form, employeeCount: e.target.value })} placeholder="120" /></div>
               <div><label style={labelStyle}>Est. Year</label><input style={inputStyle} type="number" value={form.yearEstablished} onChange={(e) => setForm({ ...form, yearEstablished: e.target.value })} placeholder="2015" /></div>
             </div>

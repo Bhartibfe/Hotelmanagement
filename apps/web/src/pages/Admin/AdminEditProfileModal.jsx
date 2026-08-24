@@ -241,6 +241,7 @@ const AdminEditProfileModal = ({ user, onClose, onSaved }) => {
             onSubmit={handleSubmit}
             initialData={initialData}
             isSharedForm
+            isAdminEdit
           />
         )}
         {user.memberType === "VENDOR" && (
@@ -248,12 +249,14 @@ const AdminEditProfileModal = ({ user, onClose, onSaved }) => {
             onSubmit={handleSubmit}
             initialData={initialData}
             isSharedForm
+            isAdminEdit
           />
         )}
         {(user.memberType === "PROFESSIONAL" || user.memberType === "CONSULTANT") && (
           <ExpertProfileForm
             onSubmit={handleSubmit}
             initialData={initialData}
+            isAdminEdit
           />
         )}
       </div>

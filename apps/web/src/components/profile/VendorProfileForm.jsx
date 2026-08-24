@@ -125,7 +125,7 @@ const requiredStar = {
   marginLeft: "2px",
 };
 
-const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
+const VendorProfileForm = ({ onSubmit, initialData, isSharedForm, isAdminEdit }) => {
   const [openSections, setOpenSections] = useState({
     personal: true,
     company: false,
@@ -247,19 +247,19 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
     e.preventDefault();
     setValidationError("");
     // Validation
-    if (!formData.companyName.trim()) {
+    if (!isAdminEdit && (!formData.companyName.trim())) {
       setValidationError("Company Name is required.");
       return;
     }
-    if (!formData.category) {
+    if (!isAdminEdit && (!formData.category)) {
       setValidationError("Category is required.");
       return;
     }
-    if (!compliance.gstNumber.trim()) {
+    if (!isAdminEdit && (!compliance.gstNumber.trim())) {
       setValidationError("GST Number is required.");
       return;
     }
-    if (!compliance.panNumber.trim()) {
+    if (!isAdminEdit && (!compliance.panNumber.trim())) {
       setValidationError("PAN Number is required.");
       return;
     }
@@ -447,27 +447,27 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
           <div className="row">
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Company Name<span style={requiredStar}>*</span>
+                Company Name{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="text"
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 placeholder="Your company name"
                 style={inputStyle}
               />
             </div>
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Category<span style={requiredStar}>*</span>
+                Category{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 style={inputStyle}
               >
                 <option value="">Select Category</option>
@@ -554,7 +554,7 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
               className="flaticon-investment"
               style={{ color: "#C6A962", fontSize: "20px" }}
             ></i>
-            Products / Services<span style={requiredStar}>*</span>
+            Products / Services{!isAdminEdit && <span style={requiredStar}>*</span>}
           </h4>
           <span style={chevronStyle(openSections.products)}>
             <i className="fas fa-chevron-down"></i>
@@ -562,7 +562,7 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
         </div>
         <div style={sectionBodyStyle(openSections.products)}>
           <p style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "16px" }}>
-            At least 1 product/service is required<span style={requiredStar}>*</span>
+            {isAdminEdit ? "Add as many products/services as needed — nothing here is mandatory." : <>At least 1 product/service is required<span style={requiredStar}>*</span></>}
           </p>
           {formData.products.map((product, index) => (
             <div
@@ -822,14 +822,14 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
           <div className="row">
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                GST Number<span style={requiredStar}>*</span>
+                GST Number{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="text"
                 name="gstNumber"
                 value={compliance.gstNumber}
                 onChange={handleComplianceChange}
-                required
+                required={!isAdminEdit}
                 pattern="[0-9A-Z]{15}"
                 maxLength={15}
                 placeholder="e.g., 22AAAAA0000A1Z5"
@@ -838,14 +838,14 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
             </div>
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                PAN Number<span style={requiredStar}>*</span>
+                PAN Number{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="text"
                 name="panNumber"
                 value={compliance.panNumber}
                 onChange={handleComplianceChange}
-                required
+                required={!isAdminEdit}
                 pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
                 maxLength={10}
                 placeholder="e.g., ABCDE1234F"

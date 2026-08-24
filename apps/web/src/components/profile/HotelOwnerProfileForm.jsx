@@ -99,7 +99,7 @@ const requiredStar = {
   marginLeft: "2px",
 };
 
-const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
+const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm, isAdminEdit }) => {
   const [openSections, setOpenSections] = useState({
     personal: true,
     organization: false,
@@ -197,23 +197,23 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
     e.preventDefault();
     setValidationError("");
     // Validation
-    if (!formData.designation.trim()) {
+    if (!isAdminEdit && (!formData.designation.trim())) {
       setValidationError("Designation is required.");
       return;
     }
-    if (!formData.phone.trim()) {
+    if (!isAdminEdit && (!formData.phone.trim())) {
       setValidationError("Phone number is required.");
       return;
     }
-    if (!formData.bio.trim()) {
+    if (!isAdminEdit && (!formData.bio.trim())) {
       setValidationError("Bio is required.");
       return;
     }
-    if (!formData.companyName.trim()) {
+    if (!isAdminEdit && (!formData.companyName.trim())) {
       setValidationError("Company Name is required.");
       return;
     }
-    if (formData.hotels.length === 0 || !formData.hotels[0].name.trim()) {
+    if (!isAdminEdit && (formData.hotels.length === 0 || !formData.hotels[0].name.trim())) {
       setValidationError("At least one hotel with a name is required.");
       return;
     }
@@ -300,28 +300,28 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
           <div className="row">
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Designation<span style={requiredStar}>*</span>
+                Designation{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="text"
                 name="designation"
                 value={formData.designation}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 placeholder="e.g. CEO, Managing Director"
                 style={inputStyle}
               />
             </div>
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Phone<span style={requiredStar}>*</span>
+                Phone{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="tel"
                 name="phone"
                 value={formData.phone}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 pattern="[0-9+\-\s]+"
                 inputMode="tel"
                 placeholder="+91 XXXXX XXXXX"
@@ -345,13 +345,13 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
           <div className="row">
             <div className="col-lg-12" style={{ marginBottom: "8px" }}>
               <label style={labelStyle}>
-                Bio<span style={requiredStar}>*</span>
+                Bio{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <textarea
                 name="bio"
                 value={formData.bio}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 rows={4}
                 placeholder="Tell us about yourself..."
                 style={textareaStyle}
@@ -382,14 +382,14 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
           <div className="row">
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Company Name<span style={requiredStar}>*</span>
+                Company Name{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="text"
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 placeholder="Your company name"
                 style={inputStyle}
               />
@@ -471,7 +471,7 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
               className="flaticon-piggy-bank"
               style={{ color: "#C6A962", fontSize: "20px" }}
             ></i>
-            Hotel Portfolio<span style={requiredStar}>*</span>
+            Hotel Portfolio{!isAdminEdit && <span style={requiredStar}>*</span>}
           </h4>
           <span style={chevronStyle(openSections.hotels)}>
             <i className="fas fa-chevron-down"></i>
@@ -479,7 +479,7 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm }) => {
         </div>
         <div style={sectionBodyStyle(openSections.hotels)}>
           <p style={{ fontSize: "12px", color: "#9CA3AF", marginBottom: "16px" }}>
-            At least 1 hotel is required<span style={requiredStar}>*</span>
+            {isAdminEdit ? "Add as many hotels as needed — nothing here is mandatory." : <>At least 1 hotel is required<span style={requiredStar}>*</span></>}
           </p>
           {formData.hotels.map((hotel, index) => (
             <div

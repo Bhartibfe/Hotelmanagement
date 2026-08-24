@@ -192,14 +192,6 @@ const AdminExperts = () => {
       setError("Email, password, first name, and last name are required");
       return;
     }
-    if (editingId && (!form.firstName || !form.lastName)) {
-      setError("First name and last name are required");
-      return;
-    }
-    if (form.expertise.length === 0) {
-      setError("At least one specialization is required");
-      return;
-    }
     setSaving(true);
     setError(null);
     try {
@@ -309,11 +301,11 @@ const AdminExperts = () => {
             </h4>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <div>
-                <label style={labelStyle}>First Name <span style={{ color: "#EF4444" }}>*</span></label>
+                <label style={labelStyle}>First Name {!editingId && <span style={{ color: "#EF4444" }}>*</span>}</label>
                 <input type="text" value={form.firstName} onChange={(e) => handleFormChange("firstName", e.target.value)} style={inputStyle} />
               </div>
               <div>
-                <label style={labelStyle}>Last Name <span style={{ color: "#EF4444" }}>*</span></label>
+                <label style={labelStyle}>Last Name {!editingId && <span style={{ color: "#EF4444" }}>*</span>}</label>
                 <input type="text" value={form.lastName} onChange={(e) => handleFormChange("lastName", e.target.value)} style={inputStyle} />
               </div>
               <div>
@@ -370,7 +362,7 @@ const AdminExperts = () => {
           <div style={{ marginBottom: "20px" }}>
             <h4 style={{ fontSize: "13px", fontWeight: 700, color: "#0A1628", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "14px" }}>
               <i className="fas fa-tags" style={{ marginRight: "8px", color: "#C6A962" }}></i>
-              Specializations / Expertise <span style={{ color: "#EF4444" }}>*</span>
+              Specializations / Expertise
             </h4>
             <select
               onChange={(e) => { handleAddExpertise(e.target.value); e.target.value = ""; }}

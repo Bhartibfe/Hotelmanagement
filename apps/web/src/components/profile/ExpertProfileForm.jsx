@@ -148,7 +148,7 @@ const DEPARTMENT_OPTIONS = [
   "Public Relations (PR)",
 ];
 
-const ExpertProfileForm = ({ onSubmit, initialData }) => {
+const ExpertProfileForm = ({ onSubmit, initialData, isAdminEdit }) => {
   const [departmentOptions, setDepartmentOptions] = useState(DEPARTMENT_OPTIONS);
   const [openSections, setOpenSections] = useState({
     personal: true,
@@ -239,19 +239,19 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
     e.preventDefault();
     setValidationError("");
     // Validation
-    if (!formData.bio.trim()) {
+    if (!isAdminEdit && (!formData.bio.trim())) {
       setValidationError("Bio is required.");
       return;
     }
-    if (!formData.currentOrganization.trim()) {
+    if (!isAdminEdit && (!formData.currentOrganization.trim())) {
       setValidationError("Current Organization is required.");
       return;
     }
-    if (!formData.currentRole.trim()) {
+    if (!isAdminEdit && (!formData.currentRole.trim())) {
       setValidationError("Current Role is required.");
       return;
     }
-    if (formData.specializations.length === 0) {
+    if (!isAdminEdit && (formData.specializations.length === 0)) {
       setValidationError("At least one specialization is required.");
       return;
     }
@@ -399,13 +399,13 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
           <div className="row">
             <div className="col-lg-12" style={{ marginBottom: "8px" }}>
               <label style={labelStyle}>
-                Bio<span style={requiredStar}>*</span>
+                Bio{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <textarea
                 name="bio"
                 value={formData.bio}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 rows={4}
                 placeholder="Tell us about yourself..."
                 style={textareaStyle}
@@ -437,10 +437,10 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
           <div className="row">
             <div className="col-lg-12" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Specializations / Expertise<span style={requiredStar}>*</span>
+                Specializations / Expertise{!isAdminEdit && <span style={requiredStar}>*</span>}
                 {" "}
                 <span style={{ fontWeight: 400, textTransform: "none", fontSize: "11px", color: "#9CA3AF" }}>
-                  (select from dropdown; at least 1 required)
+                  (select from dropdown{isAdminEdit ? "" : "; at least 1 required"})
                 </span>
               </label>
               <select
@@ -504,28 +504,28 @@ const ExpertProfileForm = ({ onSubmit, initialData }) => {
           <div className="row">
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Current Organization<span style={requiredStar}>*</span>
+                Current Organization{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="text"
                 name="currentOrganization"
                 value={formData.currentOrganization}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 placeholder="Your current organization"
                 style={inputStyle}
               />
             </div>
             <div className="col-lg-6" style={{ marginBottom: "16px" }}>
               <label style={labelStyle}>
-                Current Role<span style={requiredStar}>*</span>
+                Current Role{!isAdminEdit && <span style={requiredStar}>*</span>}
               </label>
               <input
                 type="text"
                 name="currentRole"
                 value={formData.currentRole}
                 onChange={handleChange}
-                required
+                required={!isAdminEdit}
                 placeholder="e.g. Lead Consultant, Partner"
                 style={inputStyle}
               />

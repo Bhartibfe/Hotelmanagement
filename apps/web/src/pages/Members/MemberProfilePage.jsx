@@ -163,6 +163,12 @@ const MemberProfilePage = () => {
   const vendorProducts = vendorProfile.products || [];
   const expertProfile = member.expertProfile || {};
   const achievements = member.achievements || [];
+  // Owners only expose LinkedIn; email/phone/website stay private
+  const hasContactInfo = Boolean(
+    member.linkedinUrl ||
+      member.linkedin ||
+      (!isHotelOwner && (member.email || member.phone || member.websiteUrl || member.website))
+  );
   const memberSince = member.memberSince || (member.createdAt ? new Date(member.createdAt).getFullYear().toString() : "");
 
   return (
@@ -679,70 +685,74 @@ const MemberProfilePage = () => {
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-8" data-aos="fade-up">
-              <div style={{ textAlign: "center", marginBottom: "40px" }}>
-                <span style={{ color: "#C6A962", letterSpacing: "3px", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", display: "block", marginBottom: "12px" }}>
-                  Get in Touch
-                </span>
-                <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 600, color: "#0A1628" }}>
-                  Contact {(member.firstName || fullName.split(" ")[0])}
-                </h2>
-              </div>
-              <div style={{ background: "#F9FAFB", padding: "40px", border: "1px solid #E2DDD5" }}>
-                <div className="row">
-                  {member.email && (
-                    <div className="col-md-6" style={{ marginBottom: "24px" }}>
-                      <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                        <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <i className="far fa-envelope" style={{ color: "#C6A962", fontSize: "16px" }}></i>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>Email</span>
-                          <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.email}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {member.phone && (
-                    <div className="col-md-6" style={{ marginBottom: "24px" }}>
-                      <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                        <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <i className="fas fa-phone-alt" style={{ color: "#C6A962", fontSize: "16px" }}></i>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>Phone</span>
-                          <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.phone}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {(member.websiteUrl || member.website) && (
-                    <div className="col-md-6" style={{ marginBottom: "24px" }}>
-                      <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                        <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <i className="fas fa-globe" style={{ color: "#C6A962", fontSize: "16px" }}></i>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>Website</span>
-                          <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.websiteUrl || member.website}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  {(member.linkedinUrl || member.linkedin) && (
-                    <div className="col-md-6" style={{ marginBottom: "24px" }}>
-                      <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                        <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                          <i className="fab fa-linkedin-in" style={{ color: "#C6A962", fontSize: "16px" }}></i>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>LinkedIn</span>
-                          <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.linkedinUrl || member.linkedin}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+              {hasContactInfo && (
+                <>
+                <div style={{ textAlign: "center", marginBottom: "40px" }}>
+                  <span style={{ color: "#C6A962", letterSpacing: "3px", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", display: "block", marginBottom: "12px" }}>
+                    Get in Touch
+                  </span>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(24px, 3vw, 36px)", fontWeight: 600, color: "#0A1628" }}>
+                    Contact {(member.firstName || fullName.split(" ")[0])}
+                  </h2>
                 </div>
-              </div>
+                <div style={{ background: "#F9FAFB", padding: "40px", border: "1px solid #E2DDD5" }}>
+                  <div className="row">
+                    {!isHotelOwner && member.email && (
+                      <div className="col-md-6" style={{ marginBottom: "24px" }}>
+                        <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                          <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <i className="far fa-envelope" style={{ color: "#C6A962", fontSize: "16px" }}></i>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>Email</span>
+                            <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.email}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {!isHotelOwner && member.phone && (
+                      <div className="col-md-6" style={{ marginBottom: "24px" }}>
+                        <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                          <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <i className="fas fa-phone-alt" style={{ color: "#C6A962", fontSize: "16px" }}></i>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>Phone</span>
+                            <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.phone}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {!isHotelOwner && (member.websiteUrl || member.website) && (
+                      <div className="col-md-6" style={{ marginBottom: "24px" }}>
+                        <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                          <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <i className="fas fa-globe" style={{ color: "#C6A962", fontSize: "16px" }}></i>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>Website</span>
+                            <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.websiteUrl || member.website}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {(member.linkedinUrl || member.linkedin) && (
+                      <div className="col-md-6" style={{ marginBottom: "24px" }}>
+                        <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
+                          <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                            <i className="fab fa-linkedin-in" style={{ color: "#C6A962", fontSize: "16px" }}></i>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>LinkedIn</span>
+                            <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.linkedinUrl || member.linkedin}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                </>
+              )}
               <div className="text-center" style={{ marginTop: "32px" }}>
                 <Link
                   to="/members"
