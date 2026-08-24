@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 
 const CATEGORIES = [
   "ALL",
@@ -70,6 +71,8 @@ const VendorsPage = () => {
     };
     fetchVendors();
   }, []);
+
+  useAosRefresh(!loading);
 
   const filtered = vendors.filter((v) => {
     const matchCategory = activeCategory === "ALL" || v.category === activeCategory;

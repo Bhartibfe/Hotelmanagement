@@ -12,39 +12,36 @@ import api from "../../services/api";
 
 const Home = () => {
   const [config, setConfig] = useState(null);
+  const [configLoaded, setConfigLoaded] = useState(false);
 
   useEffect(() => {
-    api.getHomepageConfig().then((data) => {
-      if (data && Object.keys(data).length > 0) setConfig(data);
-    }).catch(() => {});
+    api.getHomepageConfig()
+      .then((data) => {
+        if (data && Object.keys(data).length > 0) setConfig(data);
+      })
+      .catch(() => {})
+      .finally(() => setConfigLoaded(true));
   }, []);
 
   return (
     <Layout header={1} footer={1} transparentHeader>
-      <HeroSection config={config} />
+      <HeroSection config={config} configLoaded={configLoaded} />
 
-      {(!config || config.showStats !== false) && (
-        <NetworkStatsSection config={config} />
-      )}
+      {/* Sections wait for the config so none of them render and then vanish */}
+      {configLoaded && (
+        <>
+          {config?.showStats !== false && <NetworkStatsSection config={config} />}
 
-      {(!config || config.showFeaturedExperts !== false) && (
-        <FeaturedExpertsSection config={config} />
-      )}
+          {config?.showFeaturedExperts !== false && <FeaturedExpertsSection config={config} />}
 
-      {(!config || config.showFeaturedVendors !== false) && (
-        <FeaturedVendorsSection config={config} />
-      )}
+          {config?.showFeaturedVendors !== false && <FeaturedVendorsSection config={config} />}
 
-      {(!config || config.showEvents !== false) && (
-        <EventsPreview config={config} />
-      )}
+          {config?.showEvents !== false && <EventsPreview config={config} />}
 
-      {(!config || config.showTestimonials !== false) && (
-        <TestimonialsSection config={config} />
-      )}
+          {config?.showTestimonials !== false && <TestimonialsSection config={config} />}
 
-      {(!config || config.showCta !== false) && (
-        <JoinNetworkCTA config={config} />
+          {config?.showCta !== false && <JoinNetworkCTA config={config} />}
+        </>
       )}
     </Layout>
   );

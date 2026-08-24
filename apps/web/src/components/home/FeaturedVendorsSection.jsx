@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import { SectionSkeleton, SkeletonCards } from "../common/Skeleton";
 
 export const FeaturedVendorsSection = ({ config }) => {
   const [logos, setLogos] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const fetchVendors = async () => {
@@ -17,10 +20,22 @@ export const FeaturedVendorsSection = ({ config }) => {
         }
       } catch {
         // no vendors available
+      } finally {
+        setLoaded(true);
       }
     };
     fetchVendors();
   }, []);
+
+  useAosRefresh(loaded);
+
+  if (!loaded) {
+    return (
+      <SectionSkeleton padding="clamp(40px, 5vw, 60px) 0" background="#FFFFFF" centered>
+        <SkeletonCards count={4} columnClass="col-6 col-md-3" height="50px" />
+      </SectionSkeleton>
+    );
+  }
 
   if (logos.length === 0) return null;
 

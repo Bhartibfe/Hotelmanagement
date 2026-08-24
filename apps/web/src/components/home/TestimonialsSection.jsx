@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import { SectionSkeleton, SkeletonCards } from "../common/Skeleton";
 
 const AOS_ANIMATIONS = [
   "fade-up",
@@ -18,6 +20,7 @@ const AOS_ANIMATIONS = [
 export const TestimonialsSection = ({ config }) => {
   const [hoveredId, setHoveredId] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const fetchTestimonials = async () => {
@@ -34,10 +37,22 @@ export const TestimonialsSection = ({ config }) => {
         }
       } catch {
         // no testimonials available
+      } finally {
+        setLoaded(true);
       }
     };
     fetchTestimonials();
   }, []);
+
+  useAosRefresh(loaded);
+
+  if (!loaded) {
+    return (
+      <SectionSkeleton padding="clamp(48px, 6vw, 72px) 0" background="#0A1628" dark centered>
+        <SkeletonCards count={3} columnClass="col-lg-4 col-md-6" height="220px" dark />
+      </SectionSkeleton>
+    );
+  }
 
   if (testimonials.length === 0) return null;
 

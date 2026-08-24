@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Layout } from "../../layouts/Layout";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 
 const TestimonialsPage = () => {
   const [testimonials, setTestimonials] = useState([]);
@@ -22,6 +23,8 @@ const TestimonialsPage = () => {
     };
     fetchTestimonials();
   }, []);
+
+  useAosRefresh(!loading);
 
   return (
     <Layout breadcrumb="Testimonials" title="What Our Members Say">

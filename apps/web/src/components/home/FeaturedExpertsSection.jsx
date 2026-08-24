@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import { SectionSkeleton, SkeletonCards } from "../common/Skeleton";
 
 
 export const FeaturedExpertsSection = ({ config }) => {
@@ -17,7 +19,18 @@ export const FeaturedExpertsSection = ({ config }) => {
       .finally(() => setLoaded(true));
   }, []);
 
-  if (!loaded || experts.length === 0) return null;
+  useAosRefresh(loaded);
+
+  // Hold the section's height while loading so the page does not jump
+  if (!loaded) {
+    return (
+      <SectionSkeleton padding="clamp(48px, 6vw, 72px) 0" background="#FFFFFF">
+        <SkeletonCards count={config?.featuredExpertsCount || 4} height="clamp(280px, 40vw, 380px)" />
+      </SectionSkeleton>
+    );
+  }
+
+  if (experts.length === 0) return null;
 
   return (
     <section style={{ padding: "clamp(48px, 6vw, 72px) 0", background: "#FFFFFF" }}>

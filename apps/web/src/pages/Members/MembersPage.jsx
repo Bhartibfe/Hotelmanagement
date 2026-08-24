@@ -2,11 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import { SkeletonCards, SkeletonKeyframes } from "../../components/common/Skeleton";
 
 const MembersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -19,13 +22,17 @@ const MembersPage = () => {
         const params = { memberType: "HOTEL_OWNER" };
         if (debouncedSearch) params.search = debouncedSearch;
         const data = await api.getUsers(params);
-        if (data?.users?.length) setMembers(data.users.filter((u) => u.memberType === "HOTEL_OWNER"));
+        setMembers((data?.users || []).filter((u) => u.memberType === "HOTEL_OWNER"));
       } catch {
-        // fallback to mock
+        // leave the current list in place
+      } finally {
+        setLoading(false);
       }
     };
     fetchMembers();
   }, [debouncedSearch]);
+
+  useAosRefresh(!loading);
 
   const filtered = members.filter((m) => {
     const name = `${m.firstName} ${m.lastName}`;
@@ -64,12 +71,19 @@ const MembersPage = () => {
               </div>
             </div>
             <p style={{ fontSize: "14px", color: "var(--tg-gray-three)", marginTop: "12px" }}>
-              Showing {filtered.length} hotel owners
+              {loading ? "Loading hotel owners..." : `Showing ${filtered.length} hotel owners`}
             </p>
           </div>
 
+          {loading && (
+            <>
+              <SkeletonKeyframes />
+              <SkeletonCards count={6} columnClass="col-lg-4 col-md-6" height="212px" />
+            </>
+          )}
+
           <div className="row">
-            {filtered.map((member, i) => {
+            {!loading && filtered.map((member, i) => {
               const name = `${member.firstName} ${member.lastName}`;
               return (
                 <div key={member.id} className="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay={i * 50}>
@@ -112,7 +126,7 @@ const MembersPage = () => {
             })}
           </div>
 
-          {filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="text-center" style={{ padding: "60px 0" }}>
               <p style={{ fontSize: "16px", color: "var(--tg-gray-three)" }}>No hotel owners found matching your search.</p>
             </div>

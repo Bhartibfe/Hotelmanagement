@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 
 const DEFAULT_EXPERTISE_OPTIONS = [
   "General Management",
@@ -90,6 +91,8 @@ const ExpertsPage = () => {
   const getCompany = (e) => e.user?.organizationName || e.company || "";
   const getCity = (e) => e.user?.city || e.city || "";
   const getAvatar = (e) => e.user?.avatar || e.avatar || "";
+
+  useAosRefresh(!loading);
 
   const filtered = experts.filter((e) => {
     const matchExpertise =

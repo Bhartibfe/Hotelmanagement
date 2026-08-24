@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import { SectionSkeleton, SkeletonRows } from "../common/Skeleton";
 
 export const EventsPreview = ({ config }) => {
   const [clickedId, setClickedId] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [events, setEvents] = useState([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -30,15 +33,27 @@ export const EventsPreview = ({ config }) => {
         );
       } catch {
         // keep empty
+      } finally {
+        setLoaded(true);
       }
     };
     fetchEvents();
   }, []);
 
+  useAosRefresh(loaded);
+
   const handleClick = (id) => {
     setClickedId(id);
     setTimeout(() => setClickedId(null), 600);
   };
+
+  if (!loaded) {
+    return (
+      <SectionSkeleton padding="clamp(56px, 7vw, 84px) 0" background="#FFFFFF">
+        <SkeletonRows count={config?.eventsCount || 3} height="104px" />
+      </SectionSkeleton>
+    );
+  }
 
   if (events.length === 0) return null;
 

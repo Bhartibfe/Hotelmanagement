@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 
 const TYPE_LABELS = { ALL: "All Events", SUMMIT: "Summits", CONFERENCE: "Conferences", NETWORKING: "Networking", WEBINAR: "Webinars" };
 const TYPE_COLORS = { SUMMIT: "#C6A962", CONFERENCE: "#1A365D", NETWORKING: "#276749", WEBINAR: "#553C9A" };
@@ -174,6 +175,8 @@ const EventsPage = () => {
     };
     fetchEvents();
   }, [activeType]);
+
+  useAosRefresh(!loading);
 
   const now = new Date();
   const upcomingAndRunning = events.filter((e) => new Date(e.endDate) >= now);

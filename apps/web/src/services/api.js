@@ -83,6 +83,9 @@ const request = async (method, path, { body, auth = true, timeout = 30000 } = {}
 
     clearTimeout(timeoutId);
 
+    // Any write invalidates the public GET cache so fresh data is served next time
+    if (method !== "GET" && response.ok) publicCache.clear();
+
     // Handle non-JSON responses
     const contentType = response.headers.get("content-type");
     if (response.status === 204) return null;
@@ -101,6 +104,31 @@ const request = async (method, path, { body, auth = true, timeout = 30000 } = {}
   }
 };
 
+// Short-lived cache for public GETs used by the homepage and directories.
+// Keeps repeat navigation instant and de-duplicates parallel requests for the
+// same path (sections mount together, React StrictMode mounts twice).
+const PUBLIC_CACHE_TTL = 60000;
+const publicCache = new Map();
+const inFlight = new Map();
+
+const cachedGet = (path) => {
+  const hit = publicCache.get(path);
+  if (hit && Date.now() - hit.time < PUBLIC_CACHE_TTL) return Promise.resolve(hit.data);
+
+  const pending = inFlight.get(path);
+  if (pending) return pending;
+
+  const promise = request("GET", path, { auth: false })
+    .then((data) => {
+      publicCache.set(path, { data, time: Date.now() });
+      return data;
+    })
+    .finally(() => inFlight.delete(path));
+
+  inFlight.set(path, promise);
+  return promise;
+};
+
 const api = {
   // Auth
   register: (data) => request("POST", "/auth/register", { body: data, auth: false }),
@@ -109,7 +137,7 @@ const api = {
   getMe: () => request("GET", "/auth/me"),
 
   // Public stats
-  getPublicStats: () => request("GET", "/public-stats", { auth: false }),
+  getPublicStats: () => cachedGet("/public-stats"),
 
   // Users
   getUsers: (params) => request("GET", `/users?${new URLSearchParams(params || {})}`),
@@ -147,19 +175,19 @@ const api = {
 
   // Vendors/Marketplace
   getVendors: (params) => request("GET", `/marketplace?${new URLSearchParams(params || {})}`, { auth: false }),
-  getFeaturedVendors: () => request("GET", "/marketplace/featured", { auth: false }),
+  getFeaturedVendors: () => cachedGet("/marketplace/featured"),
 
   // Experts
   getExperts: (params) => request("GET", `/experts?${new URLSearchParams(params || {})}`, { auth: false }),
   getExpert: (id) => request("GET", `/experts/${id}`, { auth: false }),
-  getFeaturedExperts: () => request("GET", "/experts/featured", { auth: false }),
+  getFeaturedExperts: () => cachedGet("/experts/featured"),
 
   // Testimonials
-  getTestimonials: (params) => request("GET", `/testimonials?${new URLSearchParams(params || {})}`, { auth: false }),
+  getTestimonials: (params) => cachedGet(`/testimonials?${new URLSearchParams(params || {})}`),
   getFeaturedTestimonials: () => request("GET", "/testimonials/featured", { auth: false }),
 
   // Events
-  getEvents: (params) => request("GET", `/events?${new URLSearchParams(params || {})}`, { auth: false }),
+  getEvents: (params) => cachedGet(`/events?${new URLSearchParams(params || {})}`),
   getEvent: (idOrSlug) => request("GET", `/events/${idOrSlug}`, { auth: false }),
   getFeaturedEvents: () => request("GET", "/events/featured", { auth: false }),
   getMyEvents: () => request("GET", "/events/my-events"),
@@ -222,7 +250,7 @@ const api = {
   adminEditProfile: (id, data) => request("PUT", `/admin/profile/${id}/edit`, { body: data }),
 
   // Homepage Config
-  getHomepageConfig: () => request("GET", "/homepage-config", { auth: false }),
+  getHomepageConfig: () => cachedGet("/homepage-config"),
   saveHomepageConfig: (config) => request("PUT", "/admin/homepage-config", { body: config }),
 
   // Share

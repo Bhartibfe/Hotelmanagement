@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 
-export const HeroSection = ({ config }) => {
+export const HeroSection = ({ config, configLoaded = true }) => {
   const [loaded, setLoaded] = useState(false);
 
+  // Reveal the copy once the homepage config has resolved, so visitors never
+  // see the default headline swap to the configured one. A fallback keeps the
+  // hero from waiting on a slow API.
   useEffect(() => {
-    const timer = setTimeout(() => setLoaded(true), 100);
+    const timer = setTimeout(() => setLoaded(true), configLoaded ? 100 : 1500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [configLoaded]);
 
   return (
     <section
