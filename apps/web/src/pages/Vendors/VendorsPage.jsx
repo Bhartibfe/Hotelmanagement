@@ -59,10 +59,22 @@ const VendorsPage = () => {
     const fetchVendors = async () => {
       setLoading(true);
       try {
-        const data = await api.getVendors();
-        if (data && data.length > 0) {
-          setVendors(data);
-        }
+        const data = await api.getVendors({ limit: "100" });
+        // The API answers with { vendors, total, ... } and its own field names
+        const list = data?.vendors || (Array.isArray(data) ? data : []);
+        setVendors(
+          list.map((v) => ({
+            id: v.id,
+            company: v.companyName || v.company || "",
+            category: v.category,
+            city: v.city,
+            state: v.state,
+            description: v.description || "",
+            employees: v.employeeCount || v.employees,
+            yearEstablished: v.yearEstablished,
+            logo: v.logo,
+          }))
+        );
       } catch (err) {
         setVendors([]);
       } finally {
@@ -172,127 +184,139 @@ const VendorsPage = () => {
 
           {/* Vendor Grid */}
           <div className="row">
-            {filtered.map((vendor, i) => (
-              <div key={vendor.id} className="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay={i * 60}>
-                <div
-                  style={{
-                    background: "#FFFFFF",
-                    border: "1px solid var(--tg-border-color)",
-                    borderLeft: `4px solid ${CATEGORY_COLORS[vendor.category] || "var(--tg-accent-color)"}`,
-                    padding: "32px 28px",
-                    marginBottom: "24px",
-                    transition: "all 0.4s ease",
-                    position: "relative",
-                    overflow: "hidden",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = "0 20px 48px rgba(10,22,40,0.1)";
-                    e.currentTarget.style.transform = "translateY(-6px)";
-                    e.currentTarget.style.borderColor = CATEGORY_COLORS[vendor.category] || "var(--tg-accent-color)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = "none";
-                    e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.borderColor = "var(--tg-border-color)";
-                    e.currentTarget.style.borderLeftColor = CATEGORY_COLORS[vendor.category] || "var(--tg-accent-color)";
-                  }}
-                >
-                  {/* Category Badge */}
-                  <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            {filtered.map((vendor, i) => {
+              const accent = CATEGORY_COLORS[vendor.category] || "var(--tg-accent-color)";
+              const initial = (vendor.company || "?").trim().charAt(0).toUpperCase();
+              const meta = [vendor.employees && `${vendor.employees} employees`, vendor.yearEstablished && `Est. ${vendor.yearEstablished}`]
+                .filter(Boolean)
+                .join("  ·  ");
+              return (
+                <div key={vendor.id} className="col-lg-3 col-md-4 col-sm-6 d-flex" data-aos="fade-up" data-aos-delay={i * 50} style={{ marginBottom: "20px" }}>
+                  <div
+                    style={{
+                      background: "#FFFFFF",
+                      border: "1px solid var(--tg-border-color)",
+                      borderTop: `3px solid ${accent}`,
+                      padding: "18px",
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "12px",
+                      transition: "all 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "0 12px 28px rgba(10,22,40,0.09)";
+                      e.currentTarget.style.transform = "translateY(-4px)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.transform = "translateY(0)";
+                    }}
+                  >
+                    {/* Logo + name */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <div
+                        style={{
+                          width: "48px",
+                          height: "48px",
+                          flexShrink: 0,
+                          border: "1px solid var(--tg-border-color)",
+                          background: "#F8FAFC",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {vendor.logo ? (
+                          <img
+                            src={vendor.logo}
+                            alt={vendor.company}
+                            style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+                          />
+                        ) : (
+                          <span style={{ fontFamily: "var(--tg-heading-font-family)", fontSize: "20px", fontWeight: 700, color: accent }}>
+                            {initial}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <h5
+                          title={vendor.company}
+                          style={{
+                            fontFamily: "var(--tg-heading-font-family)",
+                            fontSize: "16px",
+                            fontWeight: 600,
+                            color: "var(--tg-primary-color)",
+                            margin: 0,
+                            lineHeight: 1.3,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          }}
+                        >
+                          {vendor.company}
+                        </h5>
+                        <span style={{ fontSize: "12px", color: "var(--tg-gray-three)" }}>
+                          <i className="flaticon-pin" style={{ fontSize: "11px", marginRight: "4px" }}></i>
+                          {[vendor.city, vendor.state].filter(Boolean).join(", ")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Category */}
                     <span
                       style={{
-                        fontSize: "11px",
+                        alignSelf: "flex-start",
+                        fontSize: "10px",
                         fontWeight: 700,
                         textTransform: "uppercase",
                         letterSpacing: "1px",
-                        padding: "4px 12px",
+                        padding: "3px 10px",
                         background: `${CATEGORY_COLORS[vendor.category] || "#C6A962"}15`,
-                        color: CATEGORY_COLORS[vendor.category] || "#C6A962",
+                        color: accent,
                       }}
                     >
                       {CATEGORY_LABELS[vendor.category] || vendor.category}
                     </span>
-                    {vendor.verified && (
-                      <span
+
+                    {/* Description */}
+                    {vendor.description && (
+                      <p
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontSize: "11px",
-                          color: "#059669",
-                          fontWeight: 600,
+                          fontSize: "13px",
+                          lineHeight: 1.6,
+                          color: "var(--tg-body-font-color)",
+                          margin: 0,
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
                         }}
                       >
-                        <i className="fas fa-check-circle" style={{ fontSize: "12px" }}></i>
-                        Verified
+                        {vendor.description}
+                      </p>
+                    )}
+
+                    {/* Meta - only when filled in */}
+                    {meta && (
+                      <span
+                        style={{
+                          marginTop: "auto",
+                          paddingTop: "10px",
+                          borderTop: "1px solid var(--tg-border-color)",
+                          fontSize: "12px",
+                          color: "var(--tg-gray-three)",
+                        }}
+                      >
+                        {meta}
                       </span>
                     )}
                   </div>
-
-                  {/* Company Name */}
-                  <h4
-                    style={{
-                      fontFamily: "var(--tg-heading-font-family)",
-                      fontSize: "22px",
-                      fontWeight: 600,
-                      color: "var(--tg-primary-color)",
-                      marginBottom: "8px",
-                      lineHeight: 1.25,
-                    }}
-                  >
-                    {vendor.company}
-                  </h4>
-
-                  {/* City */}
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: "var(--tg-gray-three)",
-                      marginBottom: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    <i className="flaticon-pin" style={{ fontSize: "12px" }}></i>
-                    {vendor.city}, {vendor.state}
-                  </p>
-
-                  {/* Description */}
-                  <p
-                    style={{
-                      fontSize: "14px",
-                      lineHeight: 1.7,
-                      color: "var(--tg-body-font-color)",
-                      marginBottom: "20px",
-                      minHeight: "72px",
-                    }}
-                  >
-                    {vendor.description}
-                  </p>
-
-                  {/* Meta Info */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      borderTop: "1px solid var(--tg-border-color)",
-                      paddingTop: "16px",
-                    }}
-                  >
-                    <span style={{ fontSize: "13px", color: "var(--tg-gray-three)" }}>
-                      <i className="far fa-building" style={{ marginRight: "6px", color: "var(--tg-accent-color)" }}></i>
-                      {vendor.employees} employees
-                    </span>
-                    <span style={{ fontSize: "13px", color: "var(--tg-gray-three)" }}>
-                      <i className="far fa-clock" style={{ marginRight: "6px", color: "var(--tg-accent-color)" }}></i>
-                      Est. {vendor.yearEstablished}
-                    </span>
-                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Empty State */}

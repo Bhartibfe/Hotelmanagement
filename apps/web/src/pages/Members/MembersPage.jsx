@@ -19,7 +19,7 @@ const MembersPage = () => {
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const params = { memberType: "HOTEL_OWNER" };
+        const params = { memberType: "HOTEL_OWNER", limit: "100" };
         if (debouncedSearch) params.search = debouncedSearch;
         const data = await api.getUsers(params);
         setMembers((data?.users || []).filter((u) => u.memberType === "HOTEL_OWNER"));
@@ -84,41 +84,82 @@ const MembersPage = () => {
 
           <div className="row">
             {!loading && filtered.map((member, i) => {
-              const name = `${member.firstName} ${member.lastName}`;
+              const name = `${member.firstName || ""} ${member.lastName || ""}`.trim();
+              const location = [member.city, member.state].filter(Boolean).join(", ");
+              const hasDetails = Boolean(member.organizationName || location);
               return (
-                <div key={member.id} className="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay={i * 50}>
-                  <Link to={`/members/${member.id}`} style={{ textDecoration: "none" }}>
+                <div key={member.id} className="col-lg-4 col-md-6 d-flex" data-aos="fade-up" data-aos-delay={i * 50} style={{ marginBottom: "24px" }}>
+                  <Link to={`/members/${member.id}`} style={{ textDecoration: "none", display: "flex", flex: 1 }}>
                     <div
                       style={{
                         background: "#FFFFFF",
                         border: "1px solid var(--tg-border-color)",
-                        padding: "28px",
-                        marginBottom: "24px",
                         borderTop: "3px solid #C6A962",
+                        padding: "24px",
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "16px",
                         transition: "all 0.3s ease",
                         cursor: "pointer",
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.boxShadow = "0 16px 40px rgba(10,22,40,0.08)"; e.currentTarget.style.transform = "translateY(-4px)"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "translateY(0)"; }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "16px" }}>
-                        <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "#C6A962", display: "flex", alignItems: "center", justifyContent: "center", color: "#FFFFFF", fontWeight: 700, fontSize: "18px", fontFamily: "var(--tg-heading-font-family)" }}>
-                          {member.firstName.charAt(0)}
-                        </div>
-                        <div>
-                          <h5 style={{ fontFamily: "var(--tg-heading-font-family)", fontSize: "20px", fontWeight: 600, color: "var(--tg-primary-color)", margin: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                        {member.avatar ? (
+                          <img
+                            src={member.avatar}
+                            alt={name}
+                            style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "2px solid rgba(198,169,98,0.35)" }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: "60px",
+                              height: "60px",
+                              borderRadius: "50%",
+                              background: "#C6A962",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#FFFFFF",
+                              fontWeight: 700,
+                              fontSize: "22px",
+                              fontFamily: "var(--tg-heading-font-family)",
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(member.firstName || name || "?").charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div style={{ minWidth: 0 }}>
+                          <h5 style={{ fontFamily: "var(--tg-heading-font-family)", fontSize: "19px", fontWeight: 600, color: "var(--tg-primary-color)", margin: 0, lineHeight: 1.3 }}>
                             {name}
                           </h5>
-                          <span style={{ fontSize: "13px", color: "var(--tg-gray-three)" }}>{member.title}</span>
+                          {member.title && (
+                            <span style={{ fontSize: "13px", color: "var(--tg-gray-three)" }}>{member.title}</span>
+                          )}
                         </div>
                       </div>
-                      <p style={{ fontSize: "14px", color: "var(--tg-body-font-color)", marginBottom: "12px" }}>{member.organizationName}</p>
-                      <div style={{ borderTop: "1px solid var(--tg-border-color)", paddingTop: "12px" }}>
-                        <span style={{ fontSize: "13px", color: "var(--tg-gray-three)" }}>
-                          <i className="flaticon-pin" style={{ marginRight: "4px" }}></i>
-                          {member.city}, {member.state}
-                        </span>
-                      </div>
+
+                      {/* Details render only when the owner has them filled in */}
+                      {hasDetails && (
+                        <div style={{ borderTop: "1px solid var(--tg-border-color)", paddingTop: "14px", display: "flex", flexDirection: "column", gap: "6px", marginTop: "auto" }}>
+                          {member.organizationName && (
+                            <span style={{ fontSize: "14px", color: "var(--tg-body-font-color)" }}>
+                              <i className="far fa-building" style={{ marginRight: "6px", color: "#C6A962", fontSize: "12px" }}></i>
+                              {member.organizationName}
+                            </span>
+                          )}
+                          {location && (
+                            <span style={{ fontSize: "13px", color: "var(--tg-gray-three)" }}>
+                              <i className="flaticon-pin" style={{ marginRight: "6px", fontSize: "12px" }}></i>
+                              {location}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </Link>
                 </div>
