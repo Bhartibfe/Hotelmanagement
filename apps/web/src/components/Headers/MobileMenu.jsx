@@ -45,9 +45,13 @@ export const MobileMenu = () => {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [close]);
 
+  // Both elements: <html> carries the mobile overflow-x rule, which stops
+  // <body>'s overflow from propagating to the viewport, so locking body alone
+  // would leave the page scrolling behind the open drawer.
   useEffect(() => {
-    document.body.classList.toggle("mobile-menu-visible", open);
-    return () => document.body.classList.remove("mobile-menu-visible");
+    const roots = [document.documentElement, document.body];
+    roots.forEach((el) => el.classList.toggle("mobile-menu-visible", open));
+    return () => roots.forEach((el) => el.classList.remove("mobile-menu-visible"));
   }, [open]);
 
   const handleLogout = () => {

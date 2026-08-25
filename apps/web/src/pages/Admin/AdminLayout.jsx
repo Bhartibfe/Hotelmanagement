@@ -31,9 +31,14 @@ const AdminLayout = () => {
     setDrawerOpen(false);
   }, [location.pathname]);
 
+  // <html> too — it carries the mobile overflow-x rule, which stops <body>'s
+  // overflow from reaching the viewport.
   useEffect(() => {
-    document.body.style.overflow = drawerOpen ? "hidden" : "";
+    const value = drawerOpen ? "hidden" : "";
+    document.documentElement.style.overflow = value;
+    document.body.style.overflow = value;
     return () => {
+      document.documentElement.style.overflow = "";
       document.body.style.overflow = "";
     };
   }, [drawerOpen]);

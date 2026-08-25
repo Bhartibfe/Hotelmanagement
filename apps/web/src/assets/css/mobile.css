@@ -46,14 +46,16 @@
    and break position: sticky further up the page.
    -------------------------------------------------------------------------- */
 @media (max-width: 991.98px) {
-  html,
-  body {
+  /* On <html> only. Putting it on <body> as well makes both a scroll container
+     and gives phones two competing scrollers. */
+  html {
     overflow-x: hidden;
     overflow-x: clip;
     max-width: 100%;
   }
 
   body {
+    max-width: 100%;
     overflow-wrap: break-word;
     word-break: break-word;
   }
@@ -320,15 +322,26 @@ iframe {
   flex-shrink: 0;
 }
 
-/* Keep the drawer above the fixed page header it is rendered inside. */
-.mobile-menu,
-.menu-backdrop {
+/* Keep the drawer above the fixed page header it is rendered inside — and keep
+   the backdrop strictly below the drawer. The backdrop is the later sibling in
+   the DOM, so an equal z-index paints it over the menu, which both hides the
+   panel and swallows every tap on it. */
+.mobile-menu {
   z-index: 9999;
 }
 
+.menu-backdrop {
+  z-index: 9998;
+}
+
+/* overflow: hidden is the scroll lock. `touch-action: none` here would also
+   kill touch scrolling inside the drawer itself.
+   It has to land on <html> as well: once html carries the overflow-x above it
+   is no longer `visible`, so body's overflow stops propagating to the viewport
+   and locking body alone leaves the page scrolling behind the drawer. */
+html.mobile-menu-visible,
 body.mobile-menu-visible {
   overflow: hidden;
-  touch-action: none;
 }
 
 /* --------------------------------------------------------------------------
@@ -443,6 +456,9 @@ body.mobile-menu-visible {
 
   .admin-topbar {
     padding: 0 16px !important;
+    /* Below the drawer backdrop (999). At an equal z-index the topbar is the
+       later element in the DOM and would show through the dim overlay. */
+    z-index: 998 !important;
   }
 
   .admin-content {
