@@ -10,10 +10,13 @@ import { HeaderFive } from "../components/Headers/HeaderFive";
 import { HeaderOne } from "../components/Headers/HeaderOne";
 import { HeaderSix } from "../components/Headers/HeaderSix";
 import ErrorBoundary from "../components/ErrorBoundary";
+import { useHeaderSpacer } from "../lib/hooks/useHeaderSpacer";
 
 export const Layout = ({ children, header, footer, transparentHeader }) => {
   const h = Number(header);
   const f = Number(footer);
+
+  useHeaderSpacer();
 
   return (
     <>

@@ -10,6 +10,8 @@ import "./assets/css/flaticon.css";
 import "./assets/css/default.css";
 import "./assets/css/style.css";
 import "./assets/css/responsive.css"
+// Loaded last so its small-screen overrides win over style.css/responsive.css.
+import "./assets/css/mobile.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

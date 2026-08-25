@@ -1,0 +1,514 @@
+/*=============================
+  Mobile hardening
+  -----------------------------
+  Loaded last, after style.css and responsive.css.
+
+  Most of this file exists because the pages are styled with React inline
+  `style` objects, which no stylesheet can reach without `!important` and an
+  attribute selector. Every rule here is scoped to a small-screen media query,
+  so desktop rendering is untouched.
+===============================*/
+
+/* --------------------------------------------------------------------------
+   1. Scroll-reveal safety net
+
+   aos.css parks every [data-aos] element at opacity: 0 and only reveals it
+   once AOS adds .aos-animate. Anything AOS fails to pick up — a lazy route, a
+   section that renders after its fetch resolves — therefore stays invisible.
+   On phones we do not want the animations at all, so pin the elements visible
+   and let AOS's classes be a no-op.
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  [data-aos],
+  [data-aos][data-aos][data-aos] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-aos],
+  [data-aos][data-aos][data-aos] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. No horizontal scroll, ever
+
+   `clip` rather than `hidden` so we do not turn <html> into a scroll container
+   and break position: sticky further up the page.
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  html,
+  body {
+    overflow-x: hidden;
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  body {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .fix,
+  main.fix,
+  section,
+  footer,
+  .container,
+  .custom-container {
+    max-width: 100%;
+  }
+
+  /* Bootstrap rows carry negative margins; without this the gutters spill. */
+  .row {
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .container,
+  .custom-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   3. Media never overflows its column
+   -------------------------------------------------------------------------- */
+img,
+svg,
+video,
+canvas,
+iframe {
+  max-width: 100%;
+}
+
+@media (max-width: 767.98px) {
+  /* Once max-width kicks in, an image with only a width attribute would squash
+     unless the height follows. Images that set their own height — avatars,
+     object-fit crops — are left alone. */
+  img:not([style*="height"]):not([height]):not([class]) {
+    height: auto;
+  }
+
+  iframe {
+    width: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. Inline CSS grids collapse instead of squeezing
+
+   Admin screens and several public sections hard-code `repeat(3, 1fr)` /
+   `repeat(4, 1fr)` / `1fr 1fr 340px` inline. Grids that already use auto-fit or
+   auto-fill are responsive on their own and are left alone.
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  [style*="grid-template-columns"]:not([style*="auto-fit"]):not([style*="auto-fill"]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 575.98px) {
+  [style*="grid-template-columns"]:not([style*="auto-fit"]):not([style*="auto-fill"]) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Inline flex rows wrap
+
+   Applies only to row-direction containers — wrapping a column-direction flex
+   container would spill its children into extra columns instead.
+   `flex-wrap` only takes effect once the row would otherwise overflow, so this
+   is inert on rows that already fit.
+   -------------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+  [style*="display: flex"]:not([style*="flex-direction: column"]):not([style*="flex-wrap: nowrap"]) {
+    flex-wrap: wrap;
+  }
+
+  /* Fixed-width children inside those rows must be allowed to shrink. */
+  [style*="min-width"]:not(input):not(select):not(textarea) {
+    max-width: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Sticky rails become normal flow
+
+   Several detail pages pin a sidebar with `position: sticky; top: 100px`.
+   Stacked on a phone that rail sits at the bottom of a full-width column, where
+   sticking to the viewport just leaves a floating box over the footer.
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  /* `top: 0` is the modal-header case — a title bar pinned inside its own
+     scrolling panel, which is still the right behaviour on a phone. Everything
+     else is a page rail offset below the site header. */
+  [style*="position: sticky"]:not([style*="top: 0"]) {
+    position: static !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   7. Forms
+
+   16px is the threshold below which iOS Safari zooms the viewport on focus and
+   never zooms back out — the single most common "the site broke" report on
+   iPhone. Inline font sizes of 13-14px are overridden here on small screens
+   only.
+   -------------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    max-width: 100%;
+    min-width: 0 !important;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select,
+  textarea {
+    width: 100%;
+  }
+
+  /* A search box and its filter dropdown sit in the same inline flex row on the
+     directory pages; each needs the full width once they stack. */
+  [style*="display: flex"] > input:not([type="checkbox"]):not([type="radio"]),
+  [style*="display: flex"] > select {
+    flex: 1 1 100% !important;
+  }
+
+  label {
+    max-width: 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Tap targets and buttons
+   -------------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  button,
+  a.btn,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. Header
+
+   The static header is `position: fixed`, so the page needs a spacer exactly as
+   tall as the header. That spacer used to be a hard-coded 100px / 70px, which
+   never matched the real height once the top bar wrapped — content slid under
+   the header. `useHeaderSpacer` now measures it and writes --header-height, and
+   this rule consumes it. The literal heights stay as the pre-measurement
+   fallback.
+   -------------------------------------------------------------------------- */
+.header-spacer {
+  height: var(--header-height, 100px);
+}
+
+@media (max-width: 767.98px) {
+  .header-spacer {
+    height: var(--header-height, 86px) !important;
+  }
+
+  /* Tagline is already hidden here and only social icons remain, so the whole
+     bar is dead height on a phone. */
+  .heder-top-wrap {
+    display: none;
+  }
+}
+
+@media (max-width: 991.98px) {
+  /* Sign in / Join move into the slide-out menu below 992px, where the nav
+     itself is already collapsed. Keeping them in the bar crowds the logo. */
+  .menu-area .header-action {
+    display: none !important;
+  }
+
+  .menu-nav {
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo img {
+    max-height: 40px;
+    width: auto;
+  }
+}
+
+/* The toggler is floated right against the logo row; keep the float, just give
+   it a finger-sized hit area. */
+@media (max-width: 991.98px) {
+  .menu-area .mobile-nav-toggler {
+    min-width: 46px;
+    min-height: 42px;
+    line-height: 30px;
+    text-align: center;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   10. Slide-out mobile menu
+   -------------------------------------------------------------------------- */
+.mobile-menu {
+  width: min(320px, 88vw);
+}
+
+.mobile-menu .menu-box {
+  padding-bottom: 40px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-menu .mobile-auth-actions {
+  padding: 20px 25px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mobile-menu .mobile-auth-actions .btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 46px;
+}
+
+.mobile-menu .mobile-auth-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 25px;
+  border-top: 1px solid rgba(10, 22, 40, 0.08);
+  border-bottom: 1px solid rgba(10, 22, 40, 0.08);
+  margin-bottom: 8px;
+}
+
+.mobile-menu .mobile-auth-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #c6a962;
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Keep the drawer above the fixed page header it is rendered inside. */
+.mobile-menu,
+.menu-backdrop {
+  z-index: 9999;
+}
+
+body.mobile-menu-visible {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* --------------------------------------------------------------------------
+   11. Hero
+
+   100vh on a phone measures the viewport with the browser chrome retracted, so
+   the hero is taller than the screen and the section below never peeks.
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  /* The home header overlays the hero instead of using .header-spacer, so the
+     hero has to reserve the header's height itself. */
+  .banner-area-two {
+    padding-top: calc(var(--header-height, 86px) + 28px) !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .banner-area-two {
+    min-height: 100svh !important;
+  }
+
+  .banner-content-two .banner-btn {
+    justify-content: flex-start;
+  }
+
+  .banner-content-two .banner-btn .btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   12. Full-screen overlays and modals
+
+   The modal shells are inline `position: fixed` flex centring boxes with 20px
+   padding and a panel capped at 90vh. On a phone the padding is wasted width
+   and the panel needs to be able to scroll to its own bottom.
+   -------------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+  [style*="position: fixed"][style*="display: flex"]:not(.admin-sidebar):not([style*="flex-direction: column"]) {
+    padding: 12px !important;
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+  }
+
+  [style*="max-height: 90vh"] {
+    max-height: calc(100dvh - 24px) !important;
+  }
+
+  /* Expert profile's modal and cards are declared in a <style> tag rather than
+     inline, so the attribute selectors above cannot reach them. */
+  .expert-modal-bg {
+    padding: 12px !important;
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+  }
+
+  .expert-modal-box {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .expert-card,
+  .expert-sidebar-card {
+    padding: 20px !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   13. Wide content scrolls inside its own box rather than the page
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  [style*="overflow-x: auto"] {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    max-width: 100%;
+  }
+
+  pre,
+  code {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   14. Admin shell
+
+   The sidebar is `position: fixed; width: 270px` with the main column pushed
+   over by an equal margin. On a 375px screen that leaves ~105px of content.
+   AdminLayout now drives these classes to run the sidebar as a drawer.
+   -------------------------------------------------------------------------- */
+@media (max-width: 991.98px) {
+  .admin-shell {
+    display: block !important;
+  }
+
+  .admin-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.28s ease !important;
+    width: 270px !important;
+  }
+
+  .admin-shell.admin-sidebar-open .admin-sidebar {
+    transform: translateX(0);
+  }
+
+  .admin-main {
+    margin-left: 0 !important;
+  }
+
+  .admin-topbar {
+    padding: 0 16px !important;
+  }
+
+  .admin-content {
+    padding: 20px 16px !important;
+  }
+
+  .admin-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 22, 40, 0.5);
+    z-index: 999;
+  }
+}
+
+@media (min-width: 992px) {
+  .admin-sidebar-toggle,
+  .admin-sidebar-backdrop {
+    display: none !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   15. Footer
+   -------------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+  .footer-area .row > [class*="col-"] {
+    margin-bottom: 28px;
+  }
+
+  .footer-area .row > [class*="col-"]:last-child {
+    margin-bottom: 0;
+  }
+
+  .footer-bottom {
+    text-align: center;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   16. Typography ceilings
+
+   A few headings are hard-coded at 28-44px inline. clamp() would be better at
+   the source, but these keep long words from forcing a scrollbar meanwhile.
+   -------------------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+  h1 {
+    font-size: min(2rem, 9vw);
+  }
+
+  h2 {
+    font-size: min(1.75rem, 8vw);
+  }
+
+  h3 {
+    font-size: min(1.5rem, 7vw);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  span,
+  a {
+    overflow-wrap: break-word;
+  }
+}

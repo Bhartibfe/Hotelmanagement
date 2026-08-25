@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -22,6 +22,21 @@ const AdminLayout = () => {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [hoveredNav, setHoveredNav] = useState(null);
+  // Below 992px the sidebar is a drawer rather than a column (see the
+  // .admin-shell rules in mobile.css), so it needs its own open state — the
+  // collapse toggle only makes sense when it sits beside the content.
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [drawerOpen]);
 
   if (!user || user.role !== "ADMIN") return <Navigate to="/" replace />;
 
@@ -38,9 +53,13 @@ const AdminLayout = () => {
   ) || NAV_ITEMS[0];
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#F8FAFC" }}>
+    <div
+      className={`admin-shell${drawerOpen ? " admin-sidebar-open" : ""}`}
+      style={{ display: "flex", minHeight: "100vh", background: "#F8FAFC" }}
+    >
       {/* Sidebar */}
       <aside
+        className="admin-sidebar"
         style={{
           width: sidebarWidth,
           background: "linear-gradient(180deg, #0A1628 0%, #0F1D32 100%)",
@@ -183,8 +202,13 @@ const AdminLayout = () => {
         </div>
       </aside>
 
+      {drawerOpen && (
+        <div className="admin-sidebar-backdrop" onClick={() => setDrawerOpen(false)} />
+      )}
+
       {/* Main Content */}
       <main
+        className="admin-main"
         style={{
           flex: 1,
           marginLeft: sidebarWidth,
@@ -196,6 +220,7 @@ const AdminLayout = () => {
       >
         {/* Top Bar */}
         <header
+          className="admin-topbar"
           style={{
             background: "#FFFFFF",
             padding: "0 32px",
@@ -209,9 +234,18 @@ const AdminLayout = () => {
             zIndex: 999,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", minWidth: 0 }}>
+            <button
+              className="admin-sidebar-toggle"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open admin navigation"
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#0A1628", fontSize: "18px", padding: "8px 4px" }}
+            >
+              <i className="fas fa-bars"></i>
+            </button>
             {sidebarCollapsed && (
               <button
+                className="d-none d-lg-inline-block"
                 onClick={() => setSidebarCollapsed(false)}
                 style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B", fontSize: "16px", padding: "4px" }}
               >
@@ -229,15 +263,15 @@ const AdminLayout = () => {
               <i className="far fa-bell" style={{ fontSize: "18px", color: "#64748B", cursor: "pointer" }}></i>
               <span style={{ position: "absolute", top: "-4px", right: "-6px", width: "8px", height: "8px", borderRadius: "50%", background: "#EF4444", border: "2px solid #FFFFFF" }}></span>
             </div>
-            <div style={{ width: "1px", height: "24px", background: "#E2E8F0" }}></div>
-            <span style={{ fontSize: "13px", color: "#64748B" }}>
+            <div className="d-none d-md-block" style={{ width: "1px", height: "24px", background: "#E2E8F0" }}></div>
+            <span className="d-none d-md-inline" style={{ fontSize: "13px", color: "#64748B" }}>
               {new Date().toLocaleDateString("en-IN", { weekday: "short", month: "short", day: "numeric" })}
             </span>
           </div>
         </header>
 
         {/* Page Content */}
-        <div style={{ padding: "28px 32px", flex: 1 }}>
+        <div className="admin-content" style={{ padding: "28px 32px", flex: 1, minWidth: 0 }}>
           <Outlet />
         </div>
       </main>
