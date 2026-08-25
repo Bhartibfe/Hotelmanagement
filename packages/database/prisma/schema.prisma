@@ -165,6 +165,10 @@ model User {
   yearsInIndustry       Int?
   isFeaturedExpert      Boolean          @default(false)
   isFeaturedVendor      Boolean          @default(false)
+  // Manual admin-curated position in the Owners directory. Only read for
+  // memberType = HOTEL_OWNER; vendors and experts carry their own displayOrder
+  // on VendorProfile / IndustryExpert.
+  displayOrder          Int              @default(0)
   isActive              Boolean          @default(true)
   approvedAt            DateTime?
   approvedBy            String?
@@ -197,6 +201,7 @@ model User {
 
   @@index([role])
   @@index([memberType])
+  @@index([memberType, displayOrder])
   @@index([membershipStatus])
   @@index([profileStatus])
   @@index([city, state])

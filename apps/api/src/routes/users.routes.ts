@@ -1,13 +1,49 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "@hospitality/database";
+import { prisma, Prisma } from "@hospitality/database";
 import { authenticate } from "../middleware/auth";
 
 const router: Router = Router();
 
+// Ordering modes for the Owners directory. `manual` is the admin-curated
+// drag-and-drop sequence; it falls back to createdAt so owners approved after
+// the last reorder (displayOrder 0) surface predictably instead of tying.
+export const OWNER_SORT_MODES = ["manual", "name_asc", "name_desc", "newest", "oldest"] as const;
+
+export type OwnerSortMode = (typeof OWNER_SORT_MODES)[number];
+
+export const OWNER_SORTS: Record<OwnerSortMode, Prisma.UserOrderByWithRelationInput[]> = {
+  manual: [{ displayOrder: "asc" }, { createdAt: "desc" }],
+  name_asc: [{ firstName: "asc" }, { lastName: "asc" }],
+  name_desc: [{ firstName: "desc" }, { lastName: "desc" }],
+  newest: [{ createdAt: "desc" }],
+  oldest: [{ createdAt: "asc" }],
+};
+
+export const isOwnerSortMode = (value: unknown): value is OwnerSortMode =>
+  typeof value === "string" && (OWNER_SORT_MODES as readonly string[]).includes(value);
+
+// The admin's chosen default, stored alongside the homepage settings. Unknown or
+// missing values fall back to the manual order rather than throwing.
+export const getDefaultOwnerSort = async (): Promise<OwnerSortMode> => {
+  try {
+    const row = await prisma.homepageConfig.findUnique({ where: { id: "singleton" } });
+    const mode = (row?.config as any)?.ownersSort;
+    return isOwnerSortMode(mode) ? mode : "manual";
+  } catch {
+    return "manual";
+  }
+};
+
+// Resolves an explicit ?sort= value, else the admin default.
+export const resolveOwnerOrderBy = async (sort: unknown) => {
+  const mode = isOwnerSortMode(sort) ? sort : await getDefaultOwnerSort();
+  return OWNER_SORTS[mode];
+};
+
 // GET /api/users - List/search users (only APPROVED members visible publicly)
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const { memberType, city, state, search, page = "1", limit = "20" } = req.query;
+    const { memberType, city, state, search, sort, page = "1", limit = "20" } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
 
     const where: any = { isActive: true, membershipStatus: "APPROVED" };
@@ -22,6 +58,8 @@ router.get("/", async (req: Request, res: Response) => {
         { organizationName: { contains: search as string, mode: "insensitive" } },
       ];
     }
+
+    const orderBy = await resolveOwnerOrderBy(sort);
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -40,10 +78,11 @@ router.get("/", async (req: Request, res: Response) => {
           organizationRole: true,
           isFeaturedExpert: true,
           isFeaturedVendor: true,
+          createdAt: true,
         },
         skip,
         take: parseInt(limit as string),
-        orderBy: { createdAt: "desc" },
+        orderBy,
       }),
       prisma.user.count({ where }),
     ]);

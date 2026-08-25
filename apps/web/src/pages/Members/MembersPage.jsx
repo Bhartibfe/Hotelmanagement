@@ -5,9 +5,19 @@ import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { SkeletonCards, SkeletonKeyframes } from "../../components/common/Skeleton";
 
+// "" means: let the API apply the order the admin chose in the panel.
+const SORT_OPTIONS = [
+  { value: "", label: "Featured order" },
+  { value: "name_asc", label: "Name A – Z" },
+  { value: "name_desc", label: "Name Z – A" },
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+];
+
 const MembersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [sort, setSort] = useState("");
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -21,6 +31,7 @@ const MembersPage = () => {
       try {
         const params = { memberType: "HOTEL_OWNER", limit: "100" };
         if (debouncedSearch) params.search = debouncedSearch;
+        if (sort) params.sort = sort;
         const data = await api.getUsers(params);
         setMembers((data?.users || []).filter((u) => u.memberType === "HOTEL_OWNER"));
       } catch {
@@ -30,7 +41,7 @@ const MembersPage = () => {
       }
     };
     fetchMembers();
-  }, [debouncedSearch]);
+  }, [debouncedSearch, sort]);
 
   useAosRefresh(!loading);
 
@@ -46,7 +57,7 @@ const MembersPage = () => {
         <div className="container">
           <div style={{ marginBottom: "40px" }}>
             <div className="row align-items-center">
-              <div className="col-lg-8">
+              <div className="col-lg-5">
                 <span style={{ color: "var(--tg-accent-color)", letterSpacing: "3px", fontSize: "12px", fontWeight: 600, textTransform: "uppercase", display: "block", marginBottom: "8px" }}>
                   Our Network
                 </span>
@@ -68,6 +79,29 @@ const MembersPage = () => {
                     outline: "none",
                   }}
                 />
+              </div>
+              <div className="col-lg-3">
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                  aria-label="Sort hotel owners"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    border: "1px solid var(--tg-border-color)",
+                    fontSize: "14px",
+                    outline: "none",
+                    background: "#FFFFFF",
+                    cursor: "pointer",
+                    color: "var(--tg-primary-color)",
+                  }}
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      Sort: {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <p style={{ fontSize: "14px", color: "var(--tg-gray-three)", marginTop: "12px" }}>

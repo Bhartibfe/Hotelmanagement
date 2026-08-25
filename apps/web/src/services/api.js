@@ -251,7 +251,12 @@ const api = {
 
   // Homepage Config
   getHomepageConfig: () => cachedGet("/homepage-config"),
+  getAdminHomepageConfig: () => request("GET", "/admin/homepage-config"),
   saveHomepageConfig: (config) => request("PUT", "/admin/homepage-config", { body: config }),
+
+  // Owner ordering
+  reorderMembers: (orderedIds) => request("PUT", "/admin/members/reorder", { body: { orderedIds } }),
+  setOwnersSort: (mode) => request("PUT", "/admin/owners-sort", { body: { mode } }),
 
   // Share
   createShareToken: (data) => request("POST", "/share/create-token", { body: data }),

@@ -1,5 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import api from "../../services/api";
+
+// Ordering modes for the public Owners directory. "manual" is the drag & drop
+// sequence stored per owner; the rest are computed by the API at query time, so
+// switching away and back leaves the hand-built order intact.
+const SORT_MODES = [
+  { value: "manual", label: "Manual (drag & drop)" },
+  { value: "name_asc", label: "Name A – Z" },
+  { value: "name_desc", label: "Name Z – A" },
+  { value: "newest", label: "Newest first" },
+  { value: "oldest", label: "Oldest first" },
+];
+
+const isSortMode = (value) => SORT_MODES.some((m) => m.value === value);
 
 const ROLE_LABELS = {
   HOTEL_OWNER: "Hotel Owner",
@@ -34,23 +47,61 @@ const AdminMembers = () => {
   const [hoveredStat, setHoveredStat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // null until the saved mode is loaded, so we fetch the list only once we know
+  // which order to ask for.
+  const [sortMode, setSortMode] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [orderNotice, setOrderNotice] = useState(null);
+  // The pre-drag list, so a failed save can be rolled back.
+  const preDragOrder = useRef(null);
 
   useEffect(() => {
     setMounted(true);
+    let cancelled = false;
+    const loadSortMode = async () => {
+      try {
+        const config = await api.getAdminHomepageConfig();
+        if (!cancelled) setSortMode(isSortMode(config?.ownersSort) ? config.ownersSort : "manual");
+      } catch (err) {
+        if (!cancelled) setSortMode("manual");
+      }
+    };
+    loadSortMode();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sortMode) return undefined;
+    let cancelled = false;
     const fetchMembers = async () => {
       try {
-        const data = await api.getAdminMembers();
-        if (data?.users) {
+        // limit=200: the API defaults to 20, which would silently truncate the
+        // list and make reordering operate on a partial set.
+        const data = await api.getAdminMembers({ limit: "200", sort: sortMode });
+        if (!cancelled && data?.users) {
           setMembers(data.users);
+          setTotal(typeof data.total === "number" ? data.total : data.users.length);
         }
       } catch (err) {
-        // keep empty array on failure
+        // keep the current list on failure
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchMembers();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [sortMode]);
+
+  useEffect(() => {
+    if (!orderNotice) return undefined;
+    const timer = setTimeout(() => setOrderNotice(null), 2500);
+    return () => clearTimeout(timer);
+  }, [orderNotice]);
 
   const filtered = members.filter((m) => {
     const fullName = ((m.firstName || '') + ' ' + (m.lastName || '')).trim();
@@ -63,8 +114,67 @@ const AdminMembers = () => {
     return matchRole && matchSearch;
   });
 
+  // Rows may only be dragged when the visible list is the complete list in its
+  // true stored order — reordering a filtered subset has no defined meaning for
+  // the full sequence.
+  const filtersActive = Boolean(searchTerm) || roleFilter !== "ALL";
+  const canReorder = sortMode === "manual" && !filtersActive && !loading;
+
+  const handleSortModeChange = async (mode) => {
+    const previous = sortMode;
+    setSortMode(mode);
+    setError(null);
+    try {
+      await api.setOwnersSort(mode);
+      setOrderNotice("Visitor order updated");
+    } catch (err) {
+      setSortMode(previous);
+      setError("Could not save the display order. Please try again.");
+    }
+  };
+
+  const handleDragStart = (e, index) => {
+    if (!canReorder) return;
+    preDragOrder.current = members;
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragOver = (e, index) => {
+    if (!canReorder || dragIndex === null || dragIndex === index) return;
+    e.preventDefault();
+    setMembers((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
+    setDragIndex(index);
+  };
+
+  // Saves once, on drop — dragOver fires continuously and would spam the API.
+  const handleDragEnd = async () => {
+    const snapshot = preDragOrder.current;
+    preDragOrder.current = null;
+    setDragIndex(null);
+    if (!snapshot) return;
+
+    const orderedIds = members.map((m) => m.id);
+    if (snapshot.map((m) => m.id).join(",") === orderedIds.join(",")) return;
+
+    setError(null);
+    try {
+      await api.reorderMembers(orderedIds);
+      setOrderNotice("Order saved");
+    } catch (err) {
+      setMembers(snapshot);
+      setError("Could not save the new order. The previous order has been restored.");
+    }
+  };
+
   const stats = [
-    { label: "Total Owners", value: members.length, icon: "fas fa-hotel", color: "#C6A962", gradient: "linear-gradient(135deg, #FEF9E7, #FFF8E1)" },
+    { label: "Total Owners", value: total || members.length, icon: "fas fa-hotel", color: "#C6A962", gradient: "linear-gradient(135deg, #FEF9E7, #FFF8E1)" },
     { label: "Active", value: members.filter((m) => m.membershipStatus === "APPROVED").length, icon: "fas fa-check-circle", color: "#10B981", gradient: "linear-gradient(135deg, #ECFDF5, #D1FAE5)" },
     { label: "Suspended", value: members.filter((m) => m.membershipStatus === "SUSPENDED").length, icon: "fas fa-ban", color: "#EF4444", gradient: "linear-gradient(135deg, #FEF2F2, #FEE2E2)" },
     { label: "Cities", value: new Set(members.map((m) => m.city).filter(Boolean)).size, icon: "fas fa-map-marker-alt", color: "#8B5CF6", gradient: "linear-gradient(135deg, #F5F3FF, #EDE9FE)" },
@@ -303,9 +413,69 @@ const AdminMembers = () => {
               <option value="SERVICE_PROVIDER">Service Providers</option>
               <option value="PROFESSIONAL">Professionals</option>
             </select>
+            <select
+              value={sortMode || "manual"}
+              disabled={!sortMode}
+              onChange={(e) => handleSortModeChange(e.target.value)}
+              title="The order visitors see by default on the public Owners page"
+              style={{
+                padding: "11px 16px",
+                border: "1px solid #E2E8F0",
+                borderRadius: "8px",
+                fontSize: "14px",
+                outline: "none",
+                background: "#FFFFFF",
+                cursor: sortMode ? "pointer" : "default",
+                color: "#0A1628",
+                transition: "border-color 0.3s",
+                minWidth: "200px",
+              }}
+              onFocus={(e) => { e.target.style.borderColor = "#C6A962"; }}
+              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; }}
+            >
+              {SORT_MODES.map((mode) => (
+                <option key={mode.value} value={mode.value}>
+                  Order: {mode.label}
+                </option>
+              ))}
+            </select>
             <span style={{ fontSize: "13px", color: "#94A3B8", marginLeft: "auto" }}>
               {filtered.length} results
             </span>
+          </div>
+
+          {/* Ordering status line */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "-12px", marginBottom: "20px", minHeight: "20px", fontSize: "13px" }}>
+            {sortMode === "manual" && !filtersActive && (
+              <span style={{ color: "#94A3B8" }}>
+                <i className="fas fa-grip-vertical" style={{ marginRight: "6px", color: "#C6A962" }}></i>
+                Drag rows to set the order visitors see on the public Owners page.
+              </span>
+            )}
+            {sortMode === "manual" && !filtersActive && total > members.length && (
+              <span style={{ color: "#F59E0B" }}>
+                <i className="fas fa-exclamation-triangle" style={{ marginRight: "6px" }}></i>
+                Showing the first {members.length} of {total} owners — only these can be reordered.
+              </span>
+            )}
+            {sortMode === "manual" && filtersActive && (
+              <span style={{ color: "#F59E0B" }}>
+                <i className="fas fa-info-circle" style={{ marginRight: "6px" }}></i>
+                Clear the search and type filter to reorder owners.
+              </span>
+            )}
+            {sortMode && sortMode !== "manual" && (
+              <span style={{ color: "#94A3B8" }}>
+                <i className="fas fa-info-circle" style={{ marginRight: "6px" }}></i>
+                Visitors see owners sorted automatically. Switch to “Manual” to drag — your saved manual order is kept.
+              </span>
+            )}
+            {orderNotice && (
+              <span style={{ color: "#10B981", fontWeight: 600 }}>
+                <i className="fas fa-check-circle" style={{ marginRight: "6px" }}></i>
+                {orderNotice}
+              </span>
+            )}
           </div>
 
           {/* Table */}
@@ -321,6 +491,7 @@ const AdminMembers = () => {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F8FAFC" }}>
+                  {sortMode === "manual" && <th style={{ ...thStyle, width: "64px" }}>#</th>}
                   <th style={thStyle}>Member</th>
                   <th style={thStyle}>Type</th>
                   <th style={thStyle}>Organization</th>
@@ -338,18 +509,46 @@ const AdminMembers = () => {
                   return (
                     <tr
                       key={member.id}
+                      draggable={canReorder}
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => e.preventDefault()}
                       onMouseEnter={() => setHoveredRow(member.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                       style={{
                         borderBottom: "1px solid #F1F5F9",
                         transition: "all 0.25s ease",
                         background: hoveredRow === member.id ? "#FAFBFC" : "transparent",
-                        borderLeft: hoveredRow === member.id ? "3px solid #C6A962" : "3px solid transparent",
-                        opacity: mounted ? 1 : 0,
+                        borderLeft:
+                          dragIndex === idx
+                            ? "3px solid #C6A962"
+                            : hoveredRow === member.id
+                            ? "3px solid #C6A962"
+                            : "3px solid transparent",
+                        opacity: mounted ? (dragIndex === idx ? 0.6 : 1) : 0,
                         transform: mounted ? "translateY(0)" : "translateY(8px)",
-                        transitionDelay: `${0.3 + idx * 0.03}s`,
+                        // Skip the mount stagger while dragging, or every row
+                        // re-animates on each reorder.
+                        transitionDelay: dragIndex === null ? `${0.3 + idx * 0.03}s` : "0s",
                       }}
                     >
+                      {sortMode === "manual" && (
+                        <td style={{ padding: "14px 20px", width: "64px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              cursor: canReorder ? "grab" : "not-allowed",
+                              color: canReorder ? "#C6A962" : "#CBD5E1",
+                            }}
+                          >
+                            <i className="fas fa-grip-vertical" style={{ fontSize: "13px" }}></i>
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#94A3B8" }}>{idx + 1}</span>
+                          </div>
+                        </td>
+                      )}
                       <td style={{ padding: "14px 20px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           <div

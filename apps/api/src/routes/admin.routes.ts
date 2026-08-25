@@ -4,6 +4,7 @@ import { authenticate, requireAdmin } from "../middleware/auth";
 import { slugify } from "../utils/slugify";
 import { sendEmail } from "../services/email.service";
 import * as emailTemplates from "../templates/email.templates";
+import { isOwnerSortMode, resolveOwnerOrderBy } from "./users.routes";
 
 const router = Router();
 
@@ -169,7 +170,7 @@ router.put("/membership-requests/:id", async (req: Request, res: Response) => {
 // GET /api/admin/members - List all members (paginated, filterable)
 router.get("/members", async (req: Request, res: Response) => {
   try {
-    const { memberType, membershipStatus, search, page = "1", limit = "20" } = req.query;
+    const { memberType, membershipStatus, search, sort, page = "1", limit = "20" } = req.query;
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const take = parseInt(limit as string);
 
@@ -206,12 +207,13 @@ router.get("/members", async (req: Request, res: Response) => {
           isActive: true,
           isFeaturedExpert: true,
           isFeaturedVendor: true,
+          displayOrder: true,
           createdAt: true,
           lastLoginAt: true,
         },
         skip,
         take,
-        orderBy: { createdAt: "desc" },
+        orderBy: await resolveOwnerOrderBy(sort),
       }),
       prisma.user.count({ where }),
     ]);
@@ -225,6 +227,69 @@ router.get("/members", async (req: Request, res: Response) => {
   } catch (error) {
     console.error("List members error:", error);
     return res.status(500).json({ error: "Failed to fetch members" });
+  }
+});
+
+// PUT /api/admin/members/reorder - Persist the manual owner order (drag & drop).
+// NOTE: must stay above PUT /members/:id, or Express matches "reorder" as an id.
+router.put("/members/reorder", async (req: Request, res: Response) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== "string" || !id)) {
+      return res.status(400).json({ error: "orderedIds must be an array of member ids" });
+    }
+    if (orderedIds.length === 0) {
+      return res.status(400).json({ error: "orderedIds cannot be empty" });
+    }
+    if (orderedIds.length > 500) {
+      return res.status(400).json({ error: "Cannot reorder more than 500 members at once" });
+    }
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      return res.status(400).json({ error: "orderedIds contains duplicates" });
+    }
+
+    // Reject unknown ids up front so a bad payload cannot half-apply.
+    const found = await prisma.user.count({ where: { id: { in: orderedIds } } });
+    if (found !== orderedIds.length) {
+      return res.status(400).json({ error: "One or more members no longer exist" });
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id: string, index: number) =>
+        prisma.user.update({ where: { id }, data: { displayOrder: index + 1 } })
+      )
+    );
+
+    return res.json({ success: true, count: orderedIds.length });
+  } catch (error) {
+    console.error("Reorder members error:", error);
+    return res.status(500).json({ error: "Failed to reorder members" });
+  }
+});
+
+// PUT /api/admin/owners-sort - Set the default ordering mode for the Owners directory.
+// Merges into the shared config singleton so homepage settings are preserved.
+router.put("/owners-sort", async (req: Request, res: Response) => {
+  try {
+    const { mode } = req.body;
+    if (!isOwnerSortMode(mode)) {
+      return res.status(400).json({ error: "Invalid sort mode" });
+    }
+
+    const existing = await prisma.homepageConfig.findUnique({ where: { id: "singleton" } });
+    const config = { ...((existing?.config as object) || {}), ownersSort: mode };
+
+    await prisma.homepageConfig.upsert({
+      where: { id: "singleton" },
+      update: { config },
+      create: { id: "singleton", config },
+    });
+
+    return res.json({ success: true, mode });
+  } catch (error) {
+    console.error("Set owners sort error:", error);
+    return res.status(500).json({ error: "Failed to save sort mode" });
   }
 });
 
@@ -242,6 +307,7 @@ router.put("/members/:id", async (req: Request, res: Response) => {
       organizationRole,
       isFeaturedExpert,
       isFeaturedVendor,
+      displayOrder,
     } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id } });
@@ -259,6 +325,7 @@ router.put("/members/:id", async (req: Request, res: Response) => {
     if (organizationRole !== undefined) data.organizationRole = organizationRole;
     if (isFeaturedExpert !== undefined) data.isFeaturedExpert = isFeaturedExpert;
     if (isFeaturedVendor !== undefined) data.isFeaturedVendor = isFeaturedVendor;
+    if (displayOrder !== undefined) data.displayOrder = displayOrder;
 
     // If suspending, set the status
     if (membershipStatus === "SUSPENDED") {
@@ -282,6 +349,7 @@ router.put("/members/:id", async (req: Request, res: Response) => {
         isActive: true,
         isFeaturedExpert: true,
         isFeaturedVendor: true,
+        displayOrder: true,
       },
     });
 
