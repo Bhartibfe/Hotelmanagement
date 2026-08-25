@@ -3,7 +3,7 @@
 export const NAV_LINKS = [
   { to: "/about", title: "About" },
   { to: "/members", title: "Owners" },
-  { to: "/vendors", title: "Partners" },
+  { to: "/hospitality-partners", title: "Partners" },
   { to: "/experts", title: "Experts" },
   { to: "/events", title: "Events" },
   { to: "/feed", title: "Feed" },

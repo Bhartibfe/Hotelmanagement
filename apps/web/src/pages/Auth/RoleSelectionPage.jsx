@@ -118,7 +118,7 @@ const RoleSelectionPage = () => {
 
                   <div className="col-md-6" style={{ marginBottom: "20px" }}>
                     <Link
-                      to="/register/vendor"
+                      to="/register/partner"
                       style={cardStyle}
                       onMouseOver={(e) => {
                         e.currentTarget.style.borderColor = cardHoverClass.borderColor;

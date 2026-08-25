@@ -103,7 +103,7 @@ function App() {
             <Route path="/members" element={<MembersPage />} />
             <Route path="/members/:id" element={<MemberProfilePage />} />
             <Route path="/feed" element={<FeedPage />} />
-            <Route path="/vendors" element={<VendorsPage />} />
+            <Route path="/hospitality-partners" element={<VendorsPage />} />
             <Route path="/experts" element={<ExpertsPage />} />
             <Route path="/experts/:id" element={<ExpertProfilePage />} />
             <Route path="/testimonials" element={<TestimonialsPage />} />
@@ -112,11 +112,16 @@ function App() {
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/insights/:slug" element={<BlogDetailsPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/marketplace" element={<Navigate to="/vendors" replace />} />
+            {/* Legacy public URLs. "Vendor" is the internal word for these
+                records; the pages have always been branded Partners. Keep these
+                indefinitely — they were live addresses. */}
+            <Route path="/vendors" element={<Navigate to="/hospitality-partners" replace />} />
+            <Route path="/register/vendor" element={<Navigate to="/register/partner" replace />} />
+            <Route path="/marketplace" element={<Navigate to="/hospitality-partners" replace />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RoleSelectionPage />} />
             <Route path="/register/hotel-owner" element={<RegisterPage />} />
-            <Route path="/register/vendor" element={<VendorRegisterPage />} />
+            <Route path="/register/partner" element={<VendorRegisterPage />} />
             <Route path="/register/expert" element={<ExpertRegisterPage />} />
             <Route path="/shared-profile/:token" element={<SharedProfileFormPage />} />
             <Route path="/membership-pending" element={<MembershipPendingPage />} />

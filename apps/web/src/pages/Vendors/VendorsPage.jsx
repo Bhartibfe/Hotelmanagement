@@ -20,7 +20,7 @@ const CATEGORIES = [
 ];
 
 const CATEGORY_LABELS = {
-  ALL: "All Vendors",
+  ALL: "All Partners",
   TECHNOLOGY: "Technology",
   ARCHITECTURE: "Architecture",
   INTERIOR_DESIGN: "Interior Design",
@@ -393,7 +393,7 @@ const VendorsPage = () => {
               Join Hotel Sircle to showcase your services to hotel owners across India.
             </p>
             <Link
-              to="/register/vendor"
+              to="/register/partner"
               style={{
                 display: "inline-block",
                 padding: "14px 40px",

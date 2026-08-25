@@ -1,1 +1,8 @@
+# Retired public URLs. "Vendor" is the internal name for these records; the
+# pages have always been branded Partners. 301 so search engines and bookmarks
+# follow, rather than relying on the in-app <Navigate> bounce alone.
+/vendors           /hospitality-partners  301!
+/register/vendor   /register/partner      301!
+
+# SPA fallback — must stay last, Netlify matches in order.
 /*    /index.html   200

@@ -8,7 +8,16 @@ const LoadingSpinner = () => (
   </div>
 );
 
-const authPaths = ["/login", "/register", "/register/hotel-owner", "/register/vendor", "/register/expert"];
+// /register/vendor is the retired alias for /register/partner. Listing both
+// sends a logged-in visitor on the old URL home in one hop rather than two.
+const authPaths = [
+  "/login",
+  "/register",
+  "/register/hotel-owner",
+  "/register/partner",
+  "/register/vendor",
+  "/register/expert",
+];
 
 const PublicRoute = () => {
   const { user, loading, isAdmin } = useAuth();

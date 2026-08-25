@@ -81,7 +81,7 @@ export const FooterOne = () => {
                         <Link to="/investments">Investments</Link>
                       </li>
                       <li>
-                        <Link to="/marketplace">Marketplace</Link>
+                        <Link to="/hospitality-partners">Marketplace</Link>
                       </li>
                       <li>
                         <Link to="/register">Join Network</Link>
