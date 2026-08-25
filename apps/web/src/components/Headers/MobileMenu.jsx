@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import cn from "classnames";
 import { LOGO } from "../../lib/assets";
 import { useAuth } from "../../contexts/AuthContext";
+import { SOCIAL_LINKS, externalLinkProps } from "../../lib/socialLinks";
 import { NAV_LINKS, isNavLinkActive } from "./navLinks";
 
 // This used to clone the desktop <ul> with jQuery's .html() and append it here.
@@ -144,7 +145,7 @@ export const MobileMenu = () => {
                 </a>
               </li>
               <li>
-                <a href="#" aria-label="LinkedIn">
+                <a href={SOCIAL_LINKS.linkedin} aria-label="LinkedIn" {...externalLinkProps}>
                   <i className="fab fa-linkedin-in"></i>
                 </a>
               </li>

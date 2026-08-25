@@ -6,6 +6,7 @@ import { LOGO_DARK, LOGO_LIGHT } from "../../lib/assets";
 import { useStickyMenu } from "../../lib/hooks/useStickyMenu";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { SOCIAL_LINKS, externalLinkProps } from "../../lib/socialLinks";
 import api from "../../services/api";
 
 export const HeaderOne = ({ transparent }) => {
@@ -62,7 +63,7 @@ export const HeaderOne = ({ transparent }) => {
                   <div className="header-social">
                     <ul className="list-wrap">
                       <li>
-                        <a href="#" aria-label="LinkedIn">
+                        <a href={SOCIAL_LINKS.linkedin} aria-label="LinkedIn" {...externalLinkProps}>
                           <i className="fab fa-linkedin-in"></i>
                         </a>
                       </li>

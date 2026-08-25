@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { LOGO_DARK } from "../../lib/assets";
+import { SOCIAL_LINKS, externalLinkProps } from "../../lib/socialLinks";
 
 export const FooterOne = () => {
   return (
@@ -131,7 +132,7 @@ export const FooterOne = () => {
                 <div className="footer-social">
                   <ul className="list-wrap">
                     <li>
-                      <a href="#" aria-label="LinkedIn">
+                      <a href={SOCIAL_LINKS.linkedin} aria-label="LinkedIn" {...externalLinkProps}>
                         <i className="fab fa-linkedin-in"></i>
                       </a>
                     </li>
