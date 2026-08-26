@@ -101,8 +101,8 @@ const VendorsPage = () => {
       <section style={{ padding: "60px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Search & Filters */}
-          <div style={{ marginBottom: "48px" }}>
-            <div className="row align-items-center" style={{ marginBottom: "24px" }}>
+          <div style={{ marginBottom: "32px" }}>
+            <div className="row align-items-center" style={{ marginBottom: "16px" }}>
               <div className="col-lg-8">
                 <span
                   style={{
@@ -129,52 +129,47 @@ const VendorsPage = () => {
                   Find Trusted Service Providers
                 </h3>
               </div>
-              <div className="col-lg-4">
-                <input
-                  type="text"
-                  placeholder="Search partners..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "14px 20px",
-                    border: "1px solid var(--tg-border-color)",
-                    fontSize: "14px",
-                    outline: "none",
-                    transition: "border-color 0.3s ease",
-                    background: "#FFFFFF",
-                  }}
-                  onFocus={(e) => {
-                    e.target.style.borderColor = "#C6A962";
-                  }}
-                  onBlur={(e) => {
-                    e.target.style.borderColor = "var(--tg-border-color)";
-                  }}
-                />
-              </div>
             </div>
 
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  style={{
-                    padding: "9px 18px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    border: `1px solid ${activeCategory === cat ? "var(--tg-accent-color)" : "var(--tg-border-color)"}`,
-                    background: activeCategory === cat ? "var(--tg-accent-color)" : "transparent",
-                    color: activeCategory === cat ? "var(--tg-primary-color)" : "var(--tg-body-font-color)",
-                    cursor: "pointer",
-                    transition: "all 0.3s ease",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </button>
-              ))}
+            {/* Search + Filter in one row, matching the experts directory */}
+            <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
+              <input
+                type="text"
+                placeholder="Search partners..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "12px 18px",
+                  border: "1px solid var(--tg-border-color, #E2E8F0)",
+                  fontSize: "14px",
+                  outline: "none",
+                  transition: "border-color 0.3s ease",
+                  background: "#FFFFFF",
+                }}
+                onFocus={(e) => { e.target.style.borderColor = "#C6A962"; }}
+                onBlur={(e) => { e.target.style.borderColor = "var(--tg-border-color)"; }}
+              />
+              <select
+                value={activeCategory}
+                onChange={(e) => setActiveCategory(e.target.value)}
+                style={{
+                  padding: "12px 16px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  border: "1px solid var(--tg-border-color, #E2E8F0)",
+                  background: "#FFFFFF",
+                  color: "var(--tg-primary-color, #0A1628)",
+                  cursor: "pointer",
+                  outline: "none",
+                  minWidth: "220px",
+                  appearance: "auto",
+                }}
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                ))}
+              </select>
             </div>
 
             <p style={{ fontSize: "14px", color: "var(--tg-gray-three)", margin: 0 }}>

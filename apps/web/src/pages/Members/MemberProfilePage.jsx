@@ -169,7 +169,6 @@ const MemberProfilePage = () => {
       member.linkedin ||
       (!isHotelOwner && (member.email || member.phone || member.websiteUrl || member.website))
   );
-  const memberSince = member.memberSince || (member.createdAt ? new Date(member.createdAt).getFullYear().toString() : "");
 
   return (
     <Layout breadcrumb="Members" title="Member Profile">
@@ -275,21 +274,6 @@ const MemberProfilePage = () => {
                     }}
                   >
                     {member.membershipTier} Member
-                  </span>
-                )}
-                {memberSince && (
-                  <span
-                    style={{
-                      padding: "8px 20px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "1.5px",
-                      border: "1px solid rgba(198,169,98,0.3)",
-                      color: "#8DA4BE",
-                    }}
-                  >
-                    Since {memberSince}
                   </span>
                 )}
               </div>
