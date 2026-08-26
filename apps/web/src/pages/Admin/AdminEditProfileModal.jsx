@@ -70,8 +70,26 @@ const AdminEditProfileModal = ({ user, onClose, onSaved }) => {
         city: vp.city || "",
         state: vp.state || "",
         previousClients: (vp.previousClients || []).join("\n"),
+        // VendorProfileForm reads this as caseStudyUrls; without the alias the
+        // field renders blank and saving would clear the stored case studies.
+        caseStudyUrls: (vp.caseStudies || []).join("\n"),
         caseStudies: (vp.caseStudies || []).join("\n"),
         certifications: (vp.certifications || []).join("\n"),
+        // The form keeps compliance in its own state, sourced from
+        // initialData.compliance. Supplying it flat left every compliance field
+        // blank on open, so a save wiped GST/PAN/MSME and the rest.
+        compliance: {
+          gstNumber: vp.gstNumber || "",
+          panNumber: vp.panNumber || "",
+          msmeNumber: vp.msmeRegistration || "",
+          tradeLicense: vp.tradeLicense || "",
+          isoCertification: vp.isoCertification || "",
+          dunsNumber: vp.dunsNumber || "",
+          annualTurnover: vp.annualTurnover || "",
+          hotelClientsServed: vp.hotelClientsServed ? String(vp.hotelClientsServed) : "",
+          serviceRegions: (vp.serviceRegions || []).join("\n"),
+          insuranceDetails: vp.insuranceDetails || "",
+        },
         gstNumber: vp.gstNumber || "",
         panNumber: vp.panNumber || "",
         msmeRegistration: vp.msmeRegistration || "",

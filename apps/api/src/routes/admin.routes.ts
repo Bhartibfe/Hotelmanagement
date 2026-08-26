@@ -5,6 +5,7 @@ import { slugify } from "../utils/slugify";
 import { sendEmail } from "../services/email.service";
 import * as emailTemplates from "../templates/email.templates";
 import { isOwnerSortMode, resolveOwnerOrderBy } from "./users.routes";
+import { normalizeProfileFields } from "../utils/profileFields";
 
 const router = Router();
 
@@ -1866,8 +1867,9 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
     }
 
     if (action === "APPROVE") {
-      // Apply draftData fields to the user model
-      const draftData = draft.draftData as Record<string, any>;
+      // Apply draftData fields to the user model. Drafts are captured straight
+      // from the profile forms, so they carry the form's field names too.
+      const draftData = normalizeProfileFields(draft.draftData as Record<string, any>);
 
       // Only allow safe user fields to be updated from draft
       const allowedFields = [
@@ -1995,7 +1997,7 @@ router.put("/profile/:userId/edit", async (req: Request, res: Response) => {
       vendorProfile,
       products,
       expertProfile,
-    } = req.body;
+    } = normalizeProfileFields(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
       // Update user fields

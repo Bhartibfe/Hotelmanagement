@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "@hospitality/database";
 import { authenticate, requireApproved } from "../middleware/auth";
 import { slugify } from "../utils/slugify";
+import { normalizeProfileFields } from "../utils/profileFields";
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.post("/complete", authenticate, async (req: Request, res: Response) => {
       vendorProfile,
       products,
       expertProfile,
-    } = req.body;
+    } = normalizeProfileFields(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
       // Update user profile fields
@@ -258,7 +259,7 @@ router.put("/resubmit", authenticate, async (req: Request, res: Response) => {
       vendorProfile,
       products,
       expertProfile,
-    } = req.body;
+    } = normalizeProfileFields(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
       // Resolve all open profile revisions

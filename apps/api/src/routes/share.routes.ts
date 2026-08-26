@@ -3,6 +3,7 @@ import crypto from "crypto";
 import { prisma } from "@hospitality/database";
 import { authenticate } from "../middleware/auth";
 import { slugify } from "../utils/slugify";
+import { normalizeProfileFields } from "../utils/profileFields";
 
 const router = Router();
 
@@ -144,7 +145,7 @@ router.post("/submit/:token", async (req: Request, res: Response) => {
       hotels,
       vendorProfile,
       products,
-    } = req.body;
+    } = normalizeProfileFields(req.body);
 
     const result = await prisma.$transaction(async (tx) => {
       // Update user profile fields
