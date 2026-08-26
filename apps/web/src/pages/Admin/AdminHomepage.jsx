@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
 import PhotoUpload from "../../components/profile/PhotoUpload";
+import { DEFAULT_VENDOR_CATEGORIES } from "../../lib/vendorCategories";
 
 const ToggleSwitch = ({ value, onChange }) => (
   <button
@@ -214,6 +215,7 @@ const AdminHomepage = () => {
     vendors: true,
     experts: true,
     expertise: true,
+    categories: true,
     leadership: true,
     events: true,
     testimonials: true,
@@ -223,6 +225,7 @@ const AdminHomepage = () => {
   const [hoveredSection, setHoveredSection] = useState(null);
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [newExpertise, setNewExpertise] = useState("");
+  const [newCategory, setNewCategory] = useState("");
 
   const [config, setConfig] = useState({
     // Hero
@@ -248,6 +251,7 @@ const AdminHomepage = () => {
     ctaTitle: "Ready to Join the Network?",
     ctaDescription: "Connect with India's most trusted hospitality ecosystem.",
     ctaButtonText: "Apply for Membership",
+    categoryOptions: DEFAULT_VENDOR_CATEGORIES,
     expertiseOptions: [
       "General Management",
       "Hotel Owners / Ownership",
@@ -760,6 +764,117 @@ const AdminHomepage = () => {
                   handleChange(
                     "expertiseOptions",
                     config.expertiseOptions.filter((o) => o !== opt)
+                  );
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94A3B8",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  padding: "0 2px",
+                  lineHeight: 1,
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "#EF4444"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "#94A3B8"; }}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </SectionCard>
+
+      {/* Partner Categories */}
+      <SectionCard
+        id="categories"
+        icon="fas fa-th-large"
+        title="Partner Categories"
+        subtitle="Manage category filters for the partners page, sign-up and product forms"
+        expanded={expandedSections.categories}
+        onToggleSection={toggleSection}
+        hoveredSection={hoveredSection}
+        setHoveredSection={setHoveredSection}
+      >
+        <div style={{ marginBottom: "16px" }}>
+          <label style={labelStyle}>Add New Category</label>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="text"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              placeholder="e.g. Landscaping"
+              style={inputStyle}
+              onFocus={(e) => { e.target.style.borderColor = "#C6A962"; e.target.style.boxShadow = "0 0 0 3px rgba(198, 169, 98, 0.1)"; }}
+              onBlur={(e) => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newCategory.trim()) {
+                  const trimmed = newCategory.trim();
+                  if (!(config.categoryOptions || []).includes(trimmed)) {
+                    handleChange("categoryOptions", [...(config.categoryOptions || []), trimmed]);
+                  }
+                  setNewCategory("");
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                const trimmed = newCategory.trim();
+                if (trimmed && !(config.categoryOptions || []).includes(trimmed)) {
+                  handleChange("categoryOptions", [...(config.categoryOptions || []), trimmed]);
+                }
+                setNewCategory("");
+              }}
+              style={{
+                padding: "10px 20px",
+                background: "#C6A962",
+                color: "#0A1628",
+                border: "none",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+                transition: "all 0.2s",
+              }}
+            >
+              <i className="fas fa-plus" style={{ marginRight: "6px" }}></i>
+              Add
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginBottom: "8px" }}>
+          <span style={{ fontSize: "12px", color: "#64748B" }}>
+            {config.categoryOptions?.length || 0} categories — click × to remove.
+            Removing one does not recategorise partners already using it.
+          </span>
+        </div>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", maxHeight: "300px", overflowY: "auto", padding: "4px 0" }}>
+          {(config.categoryOptions || []).map((opt) => (
+            <div
+              key={opt}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "6px 12px",
+                background: "#F1F5F9",
+                border: "1px solid #E2E8F0",
+                borderRadius: "6px",
+                fontSize: "13px",
+                color: "#0A1628",
+                transition: "all 0.2s",
+              }}
+            >
+              <span>{opt}</span>
+              <button
+                onClick={() => {
+                  handleChange(
+                    "categoryOptions",
+                    (config.categoryOptions || []).filter((o) => o !== opt)
                   );
                 }}
                 style={{

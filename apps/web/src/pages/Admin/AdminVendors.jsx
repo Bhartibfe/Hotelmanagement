@@ -2,56 +2,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
 import PhotoUpload from "../../components/profile/PhotoUpload";
-
-const CATEGORY_LABELS = {
-  TECHNOLOGY: "Technology",
-  ARCHITECTURE: "Architecture",
-  INTERIOR_DESIGN: "Interior Design",
-  HVAC: "HVAC",
-  PROCUREMENT: "Procurement",
-  SECURITY: "Security",
-  MARKETING: "Marketing",
-  RECRUITMENT: "Recruitment",
-  CONSULTING: "Consulting",
-  LEGAL: "Legal",
-  FINANCE: "Finance",
-};
-
-const CATEGORY_COLORS = {
-  TECHNOLOGY: { bg: "#EFF6FF", color: "#3B82F6" },
-  ARCHITECTURE: { bg: "#FEF9E7", color: "#C6A962" },
-  INTERIOR_DESIGN: { bg: "#F5F3FF", color: "#8B5CF6" },
-  HVAC: { bg: "#ECFDF5", color: "#10B981" },
-  PROCUREMENT: { bg: "#FFF7ED", color: "#F59E0B" },
-  SECURITY: { bg: "#FEF2F2", color: "#EF4444" },
-  MARKETING: { bg: "#FCE7F3", color: "#EC4899" },
-  RECRUITMENT: { bg: "#F0FDFA", color: "#14B8A6" },
-  CONSULTING: { bg: "#EFF6FF", color: "#3B82F6" },
-  LEGAL: { bg: "#F8FAFC", color: "#64748B" },
-  FINANCE: { bg: "#ECFDF5", color: "#10B981" },
-};
-
-const inputStyle = {
-  width: "100%",
-  padding: "10px 14px",
-  border: "1px solid #E2E8F0",
-  borderRadius: "8px",
-  fontSize: "14px",
-  outline: "none",
-  background: "#FFFFFF",
-  color: "#0A1628",
-  boxSizing: "border-box",
-};
-
-const labelStyle = {
-  display: "block",
-  fontSize: "12px",
-  fontWeight: 600,
-  color: "#475569",
-  textTransform: "uppercase",
-  letterSpacing: "0.5px",
-  marginBottom: "6px",
-};
+import { DEFAULT_VENDOR_CATEGORIES, categoryChip, categoryLabel } from "../../lib/vendorCategories";
 
 const EMPTY_FORM = {
   email: "", password: "", firstName: "", lastName: "",
@@ -62,6 +13,7 @@ const EMPTY_FORM = {
 const AdminVendors = () => {
   const [vendors, setVendors] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryOptions, setCategoryOptions] = useState(DEFAULT_VENDOR_CATEGORIES);
   const [mounted, setMounted] = useState(false);
   const [hoveredRow, setHoveredRow] = useState(null);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -93,6 +45,13 @@ const AdminVendors = () => {
     fetchVendors();
   }, []);
 
+  // Categories are admin-managed in Admin -> Homepage, same as expertise.
+  useEffect(() => {
+    api.getHomepageConfig().then((data) => {
+      if (data?.categoryOptions?.length > 0) setCategoryOptions(data.categoryOptions);
+    }).catch(() => {});
+  }, []);
+
   // Lock body scroll when dialog is open
   useEffect(() => {
     if (showForm) {
@@ -111,7 +70,7 @@ const AdminVendors = () => {
         (v.companyName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (v.city || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (CATEGORY_LABELS[v.category] || "").toLowerCase().includes(searchTerm.toLowerCase())
+        categoryLabel(v.category).toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
   );
@@ -294,8 +253,8 @@ const AdminVendors = () => {
                 <label style={labelStyle}>Category</label>
                 <select style={inputStyle} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                   <option value="">Select Category</option>
-                  {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
-                    <option key={key} value={key}>{label}</option>
+                  {categoryOptions.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
               </div>
@@ -471,7 +430,7 @@ const AdminVendors = () => {
               </thead>
               <tbody>
                 {filtered.map((vendor, idx) => {
-                  const catStyle = CATEGORY_COLORS[vendor.category] || { bg: "#F1F5F9", color: "#475569" };
+                  const catStyle = categoryChip(vendor.category);
                   const contactName = ((vendor.user?.firstName || '') + ' ' + (vendor.user?.lastName || '')).trim();
                   return (
                     <tr
@@ -518,7 +477,7 @@ const AdminVendors = () => {
                             borderRadius: "12px",
                           }}
                         >
-                          {CATEGORY_LABELS[vendor.category] || vendor.category}
+                          {categoryLabel(vendor.category)}
                         </span>
                       </td>
                       <td style={{ padding: "14px 20px" }}>

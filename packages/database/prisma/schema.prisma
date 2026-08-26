@@ -87,19 +87,6 @@ enum HotelMemberRole {
   GUEST_EXPERIENCE_HEAD
 }
 
-enum MarketplaceCategory {
-  TECHNOLOGY
-  ARCHITECTURE
-  INTERIOR_DESIGN
-  HVAC
-  PROCUREMENT
-  SECURITY
-  MARKETING
-  RECRUITMENT
-  CONSULTING
-  LEGAL
-  FINANCE
-}
 
 enum MessageStatus {
   SENT
@@ -355,7 +342,7 @@ model VendorProfile {
   companyName        String
   slug               String              @unique
   description        String?             @db.Text
-  category           MarketplaceCategory
+  category           String
   services           String[]
   portfolio          String[]
   logo               String?
@@ -399,7 +386,7 @@ model Product {
   id            String              @id @default(cuid())
   name          String
   slug          String              @unique
-  category      MarketplaceCategory
+  category      String
   description   String?             @db.Text
   priceRange    String?
   photos        String[]

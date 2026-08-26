@@ -3,50 +3,8 @@ import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import { DEFAULT_VENDOR_CATEGORIES, categoryColor, categoryLabel } from "../../lib/vendorCategories";
 
-const CATEGORIES = [
-  "ALL",
-  "TECHNOLOGY",
-  "ARCHITECTURE",
-  "INTERIOR_DESIGN",
-  "HVAC",
-  "PROCUREMENT",
-  "SECURITY",
-  "MARKETING",
-  "RECRUITMENT",
-  "CONSULTING",
-  "LEGAL",
-  "FINANCE",
-];
-
-const CATEGORY_LABELS = {
-  ALL: "All Partners",
-  TECHNOLOGY: "Technology",
-  ARCHITECTURE: "Architecture",
-  INTERIOR_DESIGN: "Interior Design",
-  HVAC: "HVAC",
-  PROCUREMENT: "Procurement",
-  SECURITY: "Security",
-  MARKETING: "Marketing",
-  RECRUITMENT: "Recruitment",
-  CONSULTING: "Consulting",
-  LEGAL: "Legal",
-  FINANCE: "Finance",
-};
-
-const CATEGORY_COLORS = {
-  TECHNOLOGY: "#2563EB",
-  ARCHITECTURE: "#7C3AED",
-  INTERIOR_DESIGN: "#DB2777",
-  HVAC: "#059669",
-  PROCUREMENT: "#D97706",
-  SECURITY: "#DC2626",
-  MARKETING: "#8B5CF6",
-  RECRUITMENT: "#0891B2",
-  CONSULTING: "#1A365D",
-  LEGAL: "#6B7280",
-  FINANCE: "#276749",
-};
 
 
 const VendorsPage = () => {
@@ -54,6 +12,7 @@ const VendorsPage = () => {
   const [activeCategory, setActiveCategory] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [categoryOptions, setCategoryOptions] = useState(DEFAULT_VENDOR_CATEGORIES);
 
   useEffect(() => {
     const fetchVendors = async () => {
@@ -82,12 +41,21 @@ const VendorsPage = () => {
       }
     };
     fetchVendors();
+
+    // Categories are admin-managed, same source as the experts page's
+    // expertise list. Fall back to the seed list if the call fails.
+    api.getHomepageConfig().then((data) => {
+      if (data?.categoryOptions?.length > 0) setCategoryOptions(data.categoryOptions);
+    }).catch(() => {});
   }, []);
 
   useAosRefresh(!loading);
 
   const filtered = vendors.filter((v) => {
-    const matchCategory = activeCategory === "ALL" || v.category === activeCategory;
+    // Compare through categoryLabel so a row still holding a pre-migration
+    // enum member ("INTERIOR_DESIGN") matches the option that replaced it.
+    const matchCategory =
+      activeCategory === "ALL" || categoryLabel(v.category) === activeCategory;
     const matchSearch =
       !searchTerm ||
       (v.company || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -166,8 +134,9 @@ const VendorsPage = () => {
                   appearance: "auto",
                 }}
               >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+                <option value="ALL">All Partners</option>
+                {categoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
             </div>
@@ -180,7 +149,7 @@ const VendorsPage = () => {
           {/* Vendor Grid */}
           <div className="row">
             {filtered.map((vendor, i) => {
-              const accent = CATEGORY_COLORS[vendor.category] || "var(--tg-accent-color)";
+              const accent = categoryColor(vendor.category);
               const initial = (vendor.company || "?").trim().charAt(0).toUpperCase();
               const meta = [vendor.employees && `${vendor.employees} employees`, vendor.yearEstablished && `Est. ${vendor.yearEstablished}`]
                 .filter(Boolean)
@@ -269,11 +238,11 @@ const VendorsPage = () => {
                         textTransform: "uppercase",
                         letterSpacing: "1px",
                         padding: "3px 10px",
-                        background: `${CATEGORY_COLORS[vendor.category] || "#C6A962"}15`,
+                        background: `${categoryColor(vendor.category)}15`,
                         color: accent,
                       }}
                     >
-                      {CATEGORY_LABELS[vendor.category] || vendor.category}
+                      {categoryLabel(vendor.category)}
                     </span>
 
                     {/* Description */}

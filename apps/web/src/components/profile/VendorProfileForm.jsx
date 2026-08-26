@@ -1,35 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PhotoUpload from "./PhotoUpload";
 import MultiPhotoUpload from "./MultiPhotoUpload";
 import ShareProfileSection from "./ShareProfileSection";
+import api from "../../services/api";
+import { DEFAULT_VENDOR_CATEGORIES } from "../../lib/vendorCategories";
 
-const VENDOR_CATEGORIES = [
-  "TECHNOLOGY",
-  "ARCHITECTURE",
-  "INTERIOR_DESIGN",
-  "HVAC",
-  "PROCUREMENT",
-  "SECURITY",
-  "MARKETING",
-  "RECRUITMENT",
-  "CONSULTING",
-  "LEGAL",
-  "FINANCE",
-];
-
-const CATEGORY_LABELS = {
-  TECHNOLOGY: "Technology",
-  ARCHITECTURE: "Architecture",
-  INTERIOR_DESIGN: "Interior Design",
-  HVAC: "HVAC",
-  PROCUREMENT: "Procurement",
-  SECURITY: "Security",
-  MARKETING: "Marketing",
-  RECRUITMENT: "Recruitment",
-  CONSULTING: "Consulting",
-  LEGAL: "Legal",
-  FINANCE: "Finance",
-};
 
 const TURNOVER_RANGES = [
   "Below ₹50L",
@@ -133,6 +108,14 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm, isAdminEdit })
     portfolio: false,
     compliance: false,
   });
+
+  const [categoryOptions, setCategoryOptions] = useState(DEFAULT_VENDOR_CATEGORIES);
+
+  useEffect(() => {
+    api.getHomepageConfig().then((data) => {
+      if (data?.categoryOptions?.length > 0) setCategoryOptions(data.categoryOptions);
+    }).catch(() => {});
+  }, []);
 
   const [formData, setFormData] = useState(() => {
     if (initialData) {
@@ -471,9 +454,9 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm, isAdminEdit })
                 style={inputStyle}
               >
                 <option value="">Select Category</option>
-                {VENDOR_CATEGORIES.map((cat) => (
+                {categoryOptions.map((cat) => (
                   <option key={cat} value={cat}>
-                    {CATEGORY_LABELS[cat]}
+                    {cat}
                   </option>
                 ))}
               </select>
@@ -634,9 +617,9 @@ const VendorProfileForm = ({ onSubmit, initialData, isSharedForm, isAdminEdit })
                     style={inputStyle}
                   >
                     <option value="">Select Category</option>
-                    {VENDOR_CATEGORIES.map((cat) => (
+                    {categoryOptions.map((cat) => (
                       <option key={cat} value={cat}>
-                        {CATEGORY_LABELS[cat]}
+                        {cat}
                       </option>
                     ))}
                   </select>
