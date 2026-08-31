@@ -4,6 +4,28 @@ import api from "../../services/api";
 import PhotoUpload from "../../components/profile/PhotoUpload";
 import { DEFAULT_VENDOR_CATEGORIES, categoryChip, categoryLabel } from "../../lib/vendorCategories";
 
+const inputStyle = {
+  width: "100%",
+  padding: "10px 14px",
+  border: "1px solid #E2E8F0",
+  borderRadius: "8px",
+  fontSize: "14px",
+  outline: "none",
+  background: "#FFFFFF",
+  color: "#0A1628",
+  boxSizing: "border-box",
+};
+
+const labelStyle = {
+  display: "block",
+  fontSize: "12px",
+  fontWeight: 600,
+  color: "#475569",
+  textTransform: "uppercase",
+  letterSpacing: "0.5px",
+  marginBottom: "6px",
+};
+
 const EMPTY_FORM = {
   email: "", password: "", firstName: "", lastName: "",
   companyName: "", category: "", description: "", logo: "",
