@@ -48,7 +48,7 @@ const MarketplacePage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb={"Marketplace"} title={"Vendor Marketplace"}>
-      <section style={{ padding: "60px 0 100px", background: "#FFFFFF" }}>
+      <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row" style={{ marginBottom: "40px" }}>
             <div className="col-lg-8">

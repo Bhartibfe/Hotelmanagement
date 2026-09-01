@@ -66,7 +66,7 @@ const VendorsPage = () => {
 
   return (
     <Layout breadcrumb="Partners" title="Verified Partners">
-      <section style={{ padding: "60px 0 100px", background: "#FFFFFF" }}>
+      <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Search & Filters */}
           <div style={{ marginBottom: "32px" }}>

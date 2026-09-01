@@ -10,7 +10,7 @@ const InvestmentsPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb={"Investments"} title={"Investment Opportunities"}>
-      <section style={{ padding: "60px 0 100px", background: "#FFFFFF" }}>
+      <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Filters */}
           <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "40px" }}>

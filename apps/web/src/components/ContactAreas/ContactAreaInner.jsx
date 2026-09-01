@@ -2,7 +2,7 @@ import React from "react";
 
 export const ContactAreaInner = () => {
   return (
-    <section className="inner-contact-area pt-120 pb-120">
+    <section className="inner-contact-area pt-30 pb-120">
       <div className="container">
         <div className="row align-items-center">
           <div className="col-lg-6">

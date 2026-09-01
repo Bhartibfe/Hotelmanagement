@@ -30,7 +30,7 @@ const TestimonialsPage = () => {
     <Layout breadcrumb="Testimonials" title="What Our Members Say">
       {/* Hero Quote Section */}
       {testimonials.length > 0 && (
-        <section style={{ padding: "100px 0", background: "var(--tg-primary-color)", position: "relative", overflow: "hidden" }}>
+        <section style={{ padding: "48px 0", background: "var(--tg-primary-color)", position: "relative", overflow: "hidden" }}>
           <div
             style={{
               position: "absolute",

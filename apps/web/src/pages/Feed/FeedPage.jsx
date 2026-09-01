@@ -222,7 +222,7 @@ const FeedPage = () => {
 
   return (
     <Layout breadcrumb="Feed" title="Industry Feed">
-      <section style={{ padding: "60px 0 100px", background: "#FFFFFF" }}>
+      <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Membership notice for non-approved users */}
           {user && !isApprovedMember && (

@@ -81,7 +81,7 @@ const EventDetailPage = () => {
   if (loading) {
     return (
       <Layout breadcrumb="Events" title="Event Details">
-        <section style={{ padding: "100px 0", textAlign: "center" }}>
+        <section style={{ padding: "48px 0", textAlign: "center" }}>
           <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "28px", color: "#C6A962" }}></i>
           <p style={{ marginTop: "12px", color: "#64748B", fontSize: "14px" }}>Loading event...</p>
         </section>
@@ -92,7 +92,7 @@ const EventDetailPage = () => {
   if (!event) {
     return (
       <Layout breadcrumb="Events" title="Event Not Found">
-        <section style={{ padding: "100px 0", textAlign: "center" }}>
+        <section style={{ padding: "48px 0", textAlign: "center" }}>
           <i className="fas fa-calendar-times" style={{ fontSize: "48px", color: "#CBD5E1", marginBottom: "16px" }}></i>
           <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", color: "#0A1628", marginBottom: "12px" }}>Event Not Found</h3>
           <p style={{ color: "#64748B", fontSize: "14px", marginBottom: "24px" }}>This event may have been removed or doesn't exist.</p>

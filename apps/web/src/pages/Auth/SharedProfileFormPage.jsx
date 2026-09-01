@@ -38,7 +38,7 @@ const SharedProfileFormPage = () => {
   if (loading) {
     return (
       <Layout header={1} footer={1}>
-        <section style={{ padding: "80px 0", background: "#FFFFFF" }}>
+        <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
           <div className="container text-center">
             <p style={{ fontSize: "16px", color: "#6B7280" }}>Validating link...</p>
           </div>
@@ -50,7 +50,7 @@ const SharedProfileFormPage = () => {
   if (error) {
     return (
       <Layout header={1} footer={1}>
-        <section style={{ padding: "80px 0", background: "#FFFFFF" }}>
+        <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
           <div className="container">
             <div className="row justify-content-center">
               <div className="col-lg-6 text-center">
@@ -98,7 +98,7 @@ const SharedProfileFormPage = () => {
   if (submitted) {
     return (
       <Layout header={1} footer={1}>
-        <section style={{ padding: "80px 0", background: "#FFFFFF" }}>
+        <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
           <div className="container">
             <div className="row justify-content-center">
               <div className="col-lg-6 text-center">
@@ -147,7 +147,7 @@ const SharedProfileFormPage = () => {
 
   return (
     <Layout header={1} footer={1}>
-      <section style={{ padding: "80px 0", background: "#FFFFFF" }}>
+      <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-10">

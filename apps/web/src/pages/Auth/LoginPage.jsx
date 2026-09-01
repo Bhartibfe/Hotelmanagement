@@ -40,7 +40,7 @@ const LoginPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb="Sign In" title="Sign In">
-      <section style={{ padding: "80px 0", background: "var(--tg-section-background)" }}>
+      <section style={{ padding: "40px 0", background: "var(--tg-section-background)" }}>
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-5 col-md-8">

@@ -35,7 +35,7 @@ const AboutPage = () => {
     <Layout header={1} footer={1} breadcrumb={"About"} title={"About Hotel Sircle"}>
 
       {/* Hero / Mission */}
-      <section style={{ padding: "100px 0", background: "#FFFFFF" }}>
+      <section style={{ padding: "48px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row align-items-center">
             <div className="col-lg-6" data-aos="fade-right">

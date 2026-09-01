@@ -170,7 +170,7 @@ const MyProfilePage = () => {
   if (loading || loadingProfile) {
     return (
       <Layout header={1} footer={1}>
-        <section style={{ padding: "100px 0", background: "#FFFFFF" }}>
+        <section style={{ padding: "48px 0", background: "#FFFFFF" }}>
           <div className="container">
             <div className="row justify-content-center">
               <div className="col-lg-8 text-center">
@@ -189,7 +189,7 @@ const MyProfilePage = () => {
   if (isIncomplete) {
     return (
       <Layout header={1} footer={1} breadcrumb="My Profile" title="My Profile">
-        <section style={{ padding: "80px 0", background: "#FFFFFF" }}>
+        <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
           <div className="container">
             <div className="row justify-content-center">
               <div className="col-lg-8">
@@ -572,7 +572,7 @@ const MyProfilePage = () => {
     return (
       <Layout header={1} footer={1} breadcrumb="My Profile" title="My Profile">
         {/* HERO */}
-        <section style={{ position: "relative", background: "#0A1628", overflow: "hidden", color: "#FFFFFF", padding: "70px 0 60px" }}>
+        <section style={{ position: "relative", background: "#0A1628", overflow: "hidden", color: "#FFFFFF", padding: "32px 0 60px" }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, #0A1628 0%, rgba(10,22,40,0.96) 100%)" }} />
           <div className="container" style={{ position: "relative", zIndex: 2 }}>
             <div className="row align-items-center">
@@ -766,7 +766,7 @@ const MyProfilePage = () => {
   return (
     <Layout header={1} footer={1} breadcrumb="My Profile" title="My Profile">
       {/* Header Banner */}
-      <section style={{ padding: "60px 0 40px", background: "#0A1628" }}>
+      <section style={{ padding: "28px 0 40px", background: "#0A1628" }}>
         <div className="container">
           <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
             {avatar ? (

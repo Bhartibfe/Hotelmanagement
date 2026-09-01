@@ -21,7 +21,7 @@ const RoleSelectionPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb="Join the Network" title="Join the Network">
-      <section style={{ padding: "80px 0", background: "#FFFFFF" }}>
+      <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-8 col-md-10">

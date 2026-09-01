@@ -58,7 +58,7 @@ const MembershipPendingPage = () => {
     <Layout header={1} footer={1}>
       <section
         style={{
-          padding: "120px 0",
+          padding: "48px 0",
           background: "linear-gradient(180deg, var(--tg-section-background) 0%, #FFFFFF 100%)",
           minHeight: "70vh",
           display: "flex",
