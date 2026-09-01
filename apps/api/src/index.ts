@@ -23,6 +23,7 @@ import notificationRoutes from "./routes/notifications.routes";
 import adminRoutes from "./routes/admin.routes";
 import testimonialRoutes from "./routes/testimonials.routes";
 import expertRoutes from "./routes/experts.routes";
+import advisoryRoutes from "./routes/advisory.routes";
 import profileRoutes from "./routes/profile.routes";
 import shareRoutes from "./routes/share.routes";
 
@@ -57,6 +58,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/experts", expertRoutes);
+app.use("/api/advisory", advisoryRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/share", shareRoutes);
 

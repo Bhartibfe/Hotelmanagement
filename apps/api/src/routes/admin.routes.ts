@@ -590,17 +590,25 @@ router.delete("/vendors/:id", async (req: Request, res: Response) => {
   }
 });
 
-// ─── INDUSTRY EXPERTS ───
+// ─── INDUSTRY EXPERTS & ADVISORY BOARD ───
 
-// GET /api/admin/experts - List industry experts for admin
+// Experts and advisory members share the IndustryExpert table and every field
+// on it; only `kind` says which directory a record belongs to. These handlers
+// serve both, so the two admin screens stay in step by construction.
+const expertKind = (value: unknown): "EXPERT" | "ADVISORY" =>
+  value === "ADVISORY" ? "ADVISORY" : "EXPERT";
+
+// GET /api/admin/experts?kind= - List industry experts / advisory members
 router.get("/experts", async (req: Request, res: Response) => {
   try {
     const { page = "1", limit = "20" } = req.query;
+    const kind = expertKind(req.query.kind);
     const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
     const take = parseInt(limit as string);
 
     const [experts, total] = await Promise.all([
       prisma.industryExpert.findMany({
+        where: { kind },
         include: {
           user: {
             select: {
@@ -620,7 +628,7 @@ router.get("/experts", async (req: Request, res: Response) => {
         take,
         orderBy: [{ isPinned: "desc" }, { isFeatured: "desc" }, { displayOrder: "asc" }],
       }),
-      prisma.industryExpert.count(),
+      prisma.industryExpert.count({ where: { kind } }),
     ]);
 
     return res.json({
@@ -635,9 +643,10 @@ router.get("/experts", async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/experts - Create expert with new user account
+// POST /api/admin/experts - Create expert / advisory member with a new user account
 router.post("/experts", async (req: Request, res: Response) => {
   try {
+    const kind = expertKind(req.body.kind);
     const {
       email, password, firstName, lastName, title, phone, city, state,
       organizationName, organizationRole, bio,
@@ -690,6 +699,7 @@ router.post("/experts", async (req: Request, res: Response) => {
       const expert = await tx.industryExpert.create({
         data: {
           userId: user.id,
+          kind,
           expertise,
           bio,
           currentOrganization: currentOrganization || organizationName,
@@ -1413,6 +1423,7 @@ router.get("/stats", async (req: Request, res: Response) => {
       suspendedMembers,
       totalVendors,
       totalExperts,
+      totalAdvisory,
       totalEvents,
       upcomingEvents,
       totalPosts,
@@ -1425,7 +1436,8 @@ router.get("/stats", async (req: Request, res: Response) => {
       prisma.user.count({ where: { membershipStatus: "APPROVED" } }),
       prisma.user.count({ where: { membershipStatus: "SUSPENDED" } }),
       prisma.vendorProfile.count(),
-      prisma.industryExpert.count(),
+      prisma.industryExpert.count({ where: { kind: "EXPERT" } }),
+      prisma.industryExpert.count({ where: { kind: "ADVISORY" } }),
       prisma.event.count(),
       prisma.event.count({ where: { startDate: { gte: new Date() } } }),
       prisma.feedPost.count(),
@@ -1458,6 +1470,7 @@ router.get("/stats", async (req: Request, res: Response) => {
       suspendedMembers,
       totalVendors,
       totalExperts,
+      totalAdvisory,
       totalEvents,
       upcomingEvents,
       totalPosts,

@@ -7,6 +7,7 @@ const EMPTY_STATS = {
   pendingRequests: 0,
   totalVendors: 0,
   totalExperts: 0,
+  totalAdvisory: 0,
   totalEvents: 0,
   upcomingEvents: 0,
   totalTestimonials: 0,
@@ -155,6 +156,7 @@ const AdminDashboard = () => {
   ];
 
   const secondaryCards = [
+    { label: "Advisory Board", value: s.totalAdvisory || 0, icon: "fas fa-user-shield", color: "#8B5CF6", link: "/admin/advisory" },
     { label: "Events", value: s.totalEvents || 0, icon: "fas fa-calendar-alt", color: "#EC4899", link: "/admin/events" },
     { label: "Upcoming", value: s.upcomingEvents || 0, icon: "fas fa-calendar-check", color: "#06B6D4", link: "/admin/events" },
     { label: "Testimonials", value: s.totalTestimonials || 0, icon: "fas fa-quote-right", color: "#F59E0B", link: "/admin/testimonials" },

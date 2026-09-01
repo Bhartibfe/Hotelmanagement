@@ -117,14 +117,6 @@ const MembersPage = () => {
           background: rgba(198, 169, 98, 0.06);
         }
 
-        .owner-card__scrim {
-          position: absolute;
-          inset: 0;
-          background:
-            linear-gradient(to top, #08111F 0%, rgba(8, 17, 31, 0.86) 26%, rgba(8, 17, 31, 0.28) 52%, rgba(8, 17, 31, 0.05) 72%),
-            radial-gradient(120% 80% at 50% 0%, transparent 40%, rgba(8, 17, 31, 0.45) 100%);
-          transition: opacity 0.45s ease;
-        }
 
         /* Slow diagonal highlight on hover. */
         .owner-card__sheen {
@@ -192,37 +184,69 @@ const MembersPage = () => {
         }
         .owner-card:hover .owner-card__cta { opacity: 1; transform: translateY(0); }
 
+        /* A fade rather than a plate: no edge, and it only darkens as far up
+           as the name needs, so the portrait above it stays clear. */
         .owner-card__body {
           position: absolute;
           left: 0;
           right: 0;
           bottom: 0;
-          padding: 0 26px 26px;
+          padding: 52px 24px 14px;
+          background: linear-gradient(
+            to top,
+            rgba(8, 17, 31, 0.94) 0%,
+            rgba(8, 17, 31, 0.82) 38%,
+            rgba(8, 17, 31, 0.42) 72%,
+            rgba(8, 17, 31, 0) 100%
+          );
+          transition: padding-bottom 0.45s ease;
+        }
+        .owner-card:hover .owner-card__body { padding-bottom: 18px; }
+
+        /* Everything under the name is held back until hover. */
+        .owner-card__detail {
+          max-height: 0;
+          opacity: 0;
+          overflow: hidden;
+          transition: max-height 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+        }
+        .owner-card:hover .owner-card__detail { max-height: 150px; opacity: 1; }
+
+        /* Touch devices never fire hover, so nothing may hide behind it. */
+        @media (hover: none) {
+          .owner-card__detail { max-height: 150px; opacity: 1; }
+          .owner-card__cta { opacity: 1; transform: translateY(0); }
         }
 
         .owner-card__name {
           font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(21px, 1.8vw, 26px);
+          font-size: clamp(19px, 1.6vw, 23px);
           font-weight: 600;
-          line-height: 1.15;
+          line-height: 1.2;
           color: #FFFFFF;
           margin: 0;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .owner-card__rule {
           display: block;
           width: 38px;
           height: 2px;
-          margin: 12px 0;
+          margin: 8px 0;
           background: linear-gradient(90deg, #E8D5A3, #C6A962);
           transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
         }
         .owner-card:hover .owner-card__rule { width: 72px; }
 
         .owner-card__role {
-          font-size: 13px;
+          font-size: 12px;
           color: rgba(255, 255, 255, 0.82);
-          margin: 0 0 6px;
+          margin: 0 0 5px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .owner-card__org {
@@ -231,7 +255,10 @@ const MembersPage = () => {
           letter-spacing: 1.6px;
           text-transform: uppercase;
           color: #C6A962;
-          margin: 0 0 8px;
+          margin: 0 0 6px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .owner-card__place {
@@ -242,7 +269,7 @@ const MembersPage = () => {
         .owner-card__place i { margin-right: 6px; font-size: 11px; }
 
         @media (max-width: 991.98px) {
-          .owner-card__body { padding: 0 22px 22px; }
+          .owner-card__body { padding: 44px 20px 14px; }
           .owner-card__cta { top: 18px; right: 18px; }
         }
       `}</style>
@@ -342,7 +369,6 @@ const MembersPage = () => {
                       </div>
                     )}
 
-                    <div className="owner-card__scrim" />
                     <div className="owner-card__sheen" />
                     <div className="owner-card__frame" />
                     <span className="owner-card__corner owner-card__corner--tl" />
@@ -352,17 +378,19 @@ const MembersPage = () => {
 
                     <div className="owner-card__body">
                       <h3 className="owner-card__name">{name}</h3>
-                      <span className="owner-card__rule" />
-                      {member.title && <p className="owner-card__role">{member.title}</p>}
-                      {member.organizationName && (
-                        <p className="owner-card__org">{member.organizationName}</p>
-                      )}
-                      {location && (
-                        <p className="owner-card__place">
-                          <i className="flaticon-pin" aria-hidden="true" />
-                          {location}
-                        </p>
-                      )}
+                      <div className="owner-card__detail">
+                        <span className="owner-card__rule" />
+                        {member.title && <p className="owner-card__role">{member.title}</p>}
+                        {member.organizationName && (
+                          <p className="owner-card__org">{member.organizationName}</p>
+                        )}
+                        {location && (
+                          <p className="owner-card__place">
+                            <i className="flaticon-pin" aria-hidden="true" />
+                            {location}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </Link>
                 </div>

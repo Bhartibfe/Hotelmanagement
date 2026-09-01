@@ -44,6 +44,14 @@ enum MemberType {
   OTHER
 }
 
+// Industry experts and advisory board members share one table: the profile
+// fields are identical and only the directory they appear in differs. Experts
+// can self-register; advisory members exist only when an admin creates them.
+enum ExpertKind {
+  EXPERT
+  ADVISORY
+}
+
 enum ConnectionStatus {
   PENDING
   ACCEPTED
@@ -408,7 +416,8 @@ model Product {
 }
 
 model IndustryExpert {
-  id                  String   @id @default(cuid())
+  id                  String     @id @default(cuid())
+  kind                ExpertKind @default(EXPERT)
   expertise           String[]
   bio                 String?  @db.Text
   currentOrganization String?
@@ -429,6 +438,7 @@ model IndustryExpert {
   user   User   @relation(fields: [userId], references: [id])
 
   @@index([isFeatured])
+  @@index([kind, displayOrder])
 }
 
 model ProfileRevision {

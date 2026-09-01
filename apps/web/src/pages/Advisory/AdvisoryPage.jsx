@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { PersonCard, PersonCardStyles } from "../../components/common/PersonCard";
+
+// Advisory members are the same records as experts behind an ExpertKind flag,
+// so this page mirrors ExpertsPage — including the admin-editable expertise
+// filter — with a gold-framed, badged card so the two directories never read
+// as the same list. There is deliberately no join CTA: advisory members are
+// appointed from the admin panel only.
 
 const DEFAULT_EXPERTISE_OPTIONS = [
   "General Management",
@@ -51,32 +56,28 @@ const DEFAULT_EXPERTISE_OPTIONS = [
   "Public Relations (PR)",
 ];
 
-
-const ExpertsPage = () => {
-  const [experts, setExperts] = useState([]);
+const AdvisoryPage = () => {
+  const [members, setMembers] = useState([]);
   const [expertiseOptions, setExpertiseOptions] = useState(DEFAULT_EXPERTISE_OPTIONS);
   const [activeExpertise, setActiveExpertise] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
-  const [showAllFilters, setShowAllFilters] = useState(false);
-
-  const VISIBLE_FILTER_COUNT = 8;
 
   useEffect(() => {
-    const fetchExperts = async () => {
+    const fetchMembers = async () => {
       setLoading(true);
       try {
-        const data = await api.getExperts({ limit: 100 });
+        const data = await api.getAdvisory({ limit: 100 });
         if (data?.experts?.length > 0) {
-          setExperts(data.experts);
+          setMembers(data.experts);
         }
       } catch (err) {
-        setExperts([]);
+        setMembers([]);
       } finally {
         setLoading(false);
       }
     };
-    fetchExperts();
+    fetchMembers();
 
     api.getHomepageConfig().then((data) => {
       if (data?.expertiseOptions?.length > 0) {
@@ -85,8 +86,7 @@ const ExpertsPage = () => {
     }).catch(() => {});
   }, []);
 
-  // Helper to get fields from both API and mock format
-  const getName = (e) => e.user ? `${e.user.firstName} ${e.user.lastName}` : (e.name || "");
+  const getName = (e) => (e.user ? `${e.user.firstName} ${e.user.lastName}` : e.name || "");
   const getTitle = (e) => e.user?.title || e.title || "";
   const getCompany = (e) => e.user?.organizationName || e.company || "";
   const getCity = (e) => e.user?.city || e.city || "";
@@ -94,7 +94,7 @@ const ExpertsPage = () => {
 
   useAosRefresh(!loading);
 
-  const filtered = experts.filter((e) => {
+  const filtered = members.filter((e) => {
     const matchExpertise =
       activeExpertise === "ALL" || (e.expertise && e.expertise.includes(activeExpertise));
     const matchSearch =
@@ -106,11 +106,8 @@ const ExpertsPage = () => {
     return matchExpertise && matchSearch;
   });
 
-  const visibleFilters = showAllFilters ? expertiseOptions : expertiseOptions.slice(0, VISIBLE_FILTER_COUNT);
-  const hasMoreFilters = expertiseOptions.length > VISIBLE_FILTER_COUNT;
-
   return (
-    <Layout breadcrumb="Experts" title="Industry Experts">
+    <Layout breadcrumb="Advisory" title="Advisory Board">
       <PersonCardStyles />
       <section style={{ padding: "28px 0 72px", background: "#FFFFFF" }}>
         <div className="container">
@@ -129,7 +126,7 @@ const ExpertsPage = () => {
                     marginBottom: "8px",
                   }}
                 >
-                  Expert Network
+                  Advisory Board
                 </span>
                 <h3
                   style={{
@@ -140,7 +137,7 @@ const ExpertsPage = () => {
                     margin: 0,
                   }}
                 >
-                  Connect with Industry Leaders
+                  Guiding the Network
                 </h3>
               </div>
             </div>
@@ -149,7 +146,7 @@ const ExpertsPage = () => {
             <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
               <input
                 type="text"
-                placeholder="Search experts..."
+                placeholder="Search advisory board..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -180,7 +177,7 @@ const ExpertsPage = () => {
                   appearance: "auto",
                 }}
               >
-                <option value="ALL">All Experts</option>
+                <option value="ALL">All Advisory Members</option>
                 {expertiseOptions.map((exp) => (
                   <option key={exp} value={exp}>{exp}</option>
                 ))}
@@ -188,7 +185,7 @@ const ExpertsPage = () => {
             </div>
 
             <p style={{ fontSize: "14px", color: "var(--tg-gray-three)", margin: 0 }}>
-              {loading ? "Loading experts..." : `Showing ${filtered.length} industry experts`}
+              {loading ? "Loading advisory board..." : `Showing ${filtered.length} advisory board members`}
             </p>
           </div>
 
@@ -196,15 +193,15 @@ const ExpertsPage = () => {
           {loading && (
             <div style={{ textAlign: "center", padding: "80px 0" }}>
               <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "28px", color: "#C6A962" }}></i>
-              <p style={{ marginTop: "16px", color: "var(--tg-gray-three)", fontSize: "14px" }}>Loading experts...</p>
+              <p style={{ marginTop: "16px", color: "var(--tg-gray-three)", fontSize: "14px" }}>Loading advisory board...</p>
             </div>
           )}
 
-          {/* Experts Grid */}
+          {/* Advisory Grid */}
           {!loading && <div className="row">
-            {filtered.map((expert, index) => (
+            {filtered.map((member, index) => (
               <div
-                key={expert.id}
+                key={member.id}
                 className="col-lg-3 col-md-6"
                 data-aos="fade-up"
                 data-aos-duration="800"
@@ -212,12 +209,14 @@ const ExpertsPage = () => {
                 style={{ marginBottom: "20px" }}
               >
                 <PersonCard
-                  to={`/experts/${expert.id}`}
-                  name={getName(expert)}
-                  title={getTitle(expert)}
-                  company={getCompany(expert)}
-                  bio={expert.bio}
-                  avatar={getAvatar(expert)}
+                  to={`/advisory/${member.id}`}
+                  name={getName(member)}
+                  title={getTitle(member)}
+                  company={getCompany(member)}
+                  bio={member.bio}
+                  avatar={getAvatar(member)}
+                  variant="advisory"
+                  badge="Advisory Board"
                 />
               </div>
             ))}
@@ -227,7 +226,7 @@ const ExpertsPage = () => {
           {!loading && filtered.length === 0 && (
             <div className="text-center" style={{ padding: "80px 0" }}>
               <i
-                className="far fa-user"
+                className="fas fa-award"
                 style={{
                   fontSize: "48px",
                   color: "var(--tg-border-color)",
@@ -244,7 +243,7 @@ const ExpertsPage = () => {
                   marginBottom: "8px",
                 }}
               >
-                No Experts Found
+                No Advisory Members Found
               </h4>
               <p style={{ fontSize: "15px", color: "var(--tg-gray-three)" }}>
                 Try adjusting your search or expertise filter.
@@ -253,79 +252,55 @@ const ExpertsPage = () => {
           )}
         </div>
 
-          {/* Join as Expert CTA */}
+        {/* Appointment note — advisory members cannot apply, so this replaces
+            the "Join as Expert" CTA the experts directory carries. */}
+        <div
+          style={{
+            background: "#0A1628",
+            padding: "40px 36px",
+            marginTop: "40px",
+            textAlign: "center",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
           <div
             style={{
-              background: "#0A1628",
-              padding: "48px 36px",
-              marginTop: "40px",
-              textAlign: "center",
-              position: "relative",
-              overflow: "hidden",
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              height: "3px",
+              background: "linear-gradient(90deg, transparent, #C6A962, transparent)",
+            }}
+          ></div>
+          <h3
+            style={{
+              fontFamily: "'Cormorant Garamond', serif",
+              fontSize: "30px",
+              fontWeight: 600,
+              color: "#FFFFFF",
+              marginBottom: "12px",
             }}
           >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                height: "3px",
-                background: "linear-gradient(90deg, transparent, #C6A962, transparent)",
-              }}
-            ></div>
-            <h3
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: "32px",
-                fontWeight: 600,
-                color: "#FFFFFF",
-                marginBottom: "12px",
-              }}
-            >
-              Are You a Hospitality Expert?
-            </h3>
-            <p
-              style={{
-                fontSize: "16px",
-                color: "rgba(255, 255, 255, 0.7)",
-                maxWidth: "500px",
-                margin: "0 auto 32px",
-                lineHeight: 1.6,
-              }}
-            >
-              Share your expertise, build your profile, and connect with industry leaders.
-            </p>
-            <Link
-              to="/register/expert"
-              style={{
-                display: "inline-block",
-                padding: "14px 40px",
-                background: "#C6A962",
-                color: "#0A1628",
-                fontSize: "13px",
-                fontWeight: 700,
-                letterSpacing: "2px",
-                textTransform: "uppercase",
-                textDecoration: "none",
-                transition: "all 0.3s ease",
-                border: "2px solid #C6A962",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.color = "#C6A962";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#C6A962";
-                e.currentTarget.style.color = "#0A1628";
-              }}
-            >
-              Join as Expert
-            </Link>
-          </div>
+            An Appointed Council
+          </h3>
+          <p
+            style={{
+              fontSize: "15px",
+              color: "rgba(255, 255, 255, 0.7)",
+              maxWidth: "560px",
+              margin: "0 auto",
+              lineHeight: 1.6,
+            }}
+          >
+            Advisory board members are appointed by invitation to guide the network's
+            direction. To nominate someone, please get in touch with us.
+          </p>
+        </div>
       </section>
     </Layout>
   );
 };
 
-export default ExpertsPage;
+export default AdvisoryPage;

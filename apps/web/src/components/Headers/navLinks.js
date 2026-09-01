@@ -2,6 +2,7 @@
 // mobile drawer so the two can never drift apart.
 export const NAV_LINKS = [
   { to: "/about", title: "About" },
+  { to: "/advisory", title: "Advisory" },
   { to: "/members", title: "Owners" },
   { to: "/hospitality-partners", title: "Partners" },
   { to: "/experts", title: "Experts" },

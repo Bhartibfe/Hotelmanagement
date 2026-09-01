@@ -182,6 +182,10 @@ const api = {
   getExpert: (id) => request("GET", `/experts/${id}`, { auth: false }),
   getFeaturedExperts: () => cachedGet("/experts/featured"),
 
+  // Advisory board — same record shape as experts, admin-created only
+  getAdvisory: (params) => request("GET", `/advisory?${new URLSearchParams(params || {})}`, { auth: false }),
+  getAdvisoryMember: (id) => request("GET", `/advisory/${id}`, { auth: false }),
+
   // Testimonials
   getTestimonials: (params) => cachedGet(`/testimonials?${new URLSearchParams(params || {})}`),
   getFeaturedTestimonials: () => request("GET", "/testimonials/featured", { auth: false }),

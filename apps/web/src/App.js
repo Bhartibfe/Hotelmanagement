@@ -23,6 +23,8 @@ const FeedPage = React.lazy(() => import("./pages/Feed/FeedPage"));
 const VendorsPage = React.lazy(() => import("./pages/Vendors/VendorsPage"));
 const ExpertsPage = React.lazy(() => import("./pages/Experts/ExpertsPage"));
 const ExpertProfilePage = React.lazy(() => import("./pages/Experts/ExpertProfilePage"));
+const AdvisoryPage = React.lazy(() => import("./pages/Advisory/AdvisoryPage"));
+const AdvisoryProfilePage = React.lazy(() => import("./pages/Advisory/AdvisoryProfilePage"));
 const TestimonialsPage = React.lazy(() => import("./pages/Testimonials/TestimonialsPage"));
 const MemberProfilePage = React.lazy(() => import("./pages/Members/MemberProfilePage"));
 const EventsPage = React.lazy(() => import("./pages/Events/EventsPage"));
@@ -53,6 +55,7 @@ const AdminMembershipRequests = React.lazy(() => import("./pages/Admin/AdminMemb
 const AdminMembers = React.lazy(() => import("./pages/Admin/AdminMembers"));
 const AdminVendors = React.lazy(() => import("./pages/Admin/AdminVendors"));
 const AdminExperts = React.lazy(() => import("./pages/Admin/AdminExperts"));
+const AdminAdvisory = React.lazy(() => import("./pages/Admin/AdminAdvisory"));
 const AdminEvents = React.lazy(() => import("./pages/Admin/AdminEvents"));
 const AdminTestimonials = React.lazy(() => import("./pages/Admin/AdminTestimonials"));
 const AdminFeed = React.lazy(() => import("./pages/Admin/AdminFeed"));
@@ -106,6 +109,8 @@ function App() {
             <Route path="/hospitality-partners" element={<VendorsPage />} />
             <Route path="/experts" element={<ExpertsPage />} />
             <Route path="/experts/:id" element={<ExpertProfilePage />} />
+            <Route path="/advisory" element={<AdvisoryPage />} />
+            <Route path="/advisory/:id" element={<AdvisoryProfilePage />} />
             <Route path="/testimonials" element={<TestimonialsPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/events/:slug" element={<EventDetailPage />} />
@@ -143,6 +148,7 @@ function App() {
             <Route path="membership-requests" element={<AdminMembershipRequests />} />
             <Route path="members" element={<AdminMembers />} />
             <Route path="vendors" element={<AdminVendors />} />
+            <Route path="advisory" element={<AdminAdvisory />} />
             <Route path="experts" element={<AdminExperts />} />
             <Route path="events" element={<AdminEvents />} />
             <Route path="testimonials" element={<AdminTestimonials />} />

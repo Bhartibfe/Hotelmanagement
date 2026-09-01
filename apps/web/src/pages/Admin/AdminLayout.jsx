@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { path: "/admin/membership-requests", label: "Membership Requests", icon: "fas fa-user-clock" },
   { path: "/admin/members", label: "Owners", icon: "fas fa-hotel" },
   { path: "/admin/vendors", label: "Partners", icon: "fas fa-building" },
+  { path: "/admin/advisory", label: "Advisory Board", icon: "fas fa-user-shield" },
   { path: "/admin/experts", label: "Experts", icon: "fas fa-user-tie" },
   { path: "/admin/events", label: "Events", icon: "fas fa-calendar-alt" },
   { path: "/admin/testimonials", label: "Testimonials", icon: "fas fa-quote-right" },

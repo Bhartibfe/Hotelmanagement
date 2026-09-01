@@ -67,7 +67,7 @@ const MemberProfilePage = () => {
   if (loading) {
     return (
       <Layout breadcrumb="Members" title="Member Profile">
-        <section style={{ padding: "120px 0", textAlign: "center" }}>
+        <section style={{ padding: "48px 0", textAlign: "center" }}>
           <div className="container">
             <div
               style={{
@@ -93,7 +93,7 @@ const MemberProfilePage = () => {
   if (error || !member) {
     return (
       <Layout breadcrumb="Members" title="Member Profile">
-        <section style={{ padding: "120px 0", textAlign: "center" }}>
+        <section style={{ padding: "48px 0", textAlign: "center" }}>
           <div className="container">
             <div
               style={{
@@ -163,17 +163,17 @@ const MemberProfilePage = () => {
   const vendorProducts = vendorProfile.products || [];
   const expertProfile = member.expertProfile || {};
   const achievements = member.achievements || [];
-  // Owners only expose LinkedIn; email/phone/website stay private
+  // LinkedIn is collected on the profile form but never shown publicly, and
+  // owners keep email/phone/website private — so owners expose no contact
+  // details at all and this block does not render for them.
   const hasContactInfo = Boolean(
-    member.linkedinUrl ||
-      member.linkedin ||
-      (!isHotelOwner && (member.email || member.phone || member.websiteUrl || member.website))
+    !isHotelOwner && (member.email || member.phone || member.websiteUrl || member.website)
   );
 
   return (
     <Layout breadcrumb="Members" title="Member Profile">
       {/* Profile Header */}
-      <section style={{ padding: "80px 0 60px", background: "#0A1628", position: "relative" }}>
+      <section style={{ padding: "40px 0 60px", background: "#0A1628", position: "relative" }}>
         <div className="container">
           <div className="row align-items-center">
             <div className="col-lg-8" data-aos="fade-right">
@@ -716,19 +716,6 @@ const MemberProfilePage = () => {
                           <div>
                             <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>Website</span>
                             <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.websiteUrl || member.website}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    {(member.linkedinUrl || member.linkedin) && (
-                      <div className="col-md-6" style={{ marginBottom: "24px" }}>
-                        <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-                          <div style={{ width: "44px", height: "44px", background: "#0A1628", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                            <i className="fab fa-linkedin-in" style={{ color: "#C6A962", fontSize: "16px" }}></i>
-                          </div>
-                          <div>
-                            <span style={{ fontSize: "12px", color: "#6B7280", textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: "2px" }}>LinkedIn</span>
-                            <span style={{ fontSize: "14px", color: "#0A1628", fontWeight: 500 }}>{member.linkedinUrl || member.linkedin}</span>
                           </div>
                         </div>
                       </div>
