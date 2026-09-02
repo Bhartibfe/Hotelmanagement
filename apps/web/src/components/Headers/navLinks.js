@@ -7,7 +7,10 @@ export const NAV_LINKS = [
   { to: "/experts", title: "Experts" },
   { to: "/hospitality-partners", title: "Partners" },
   { to: "/events", title: "Events" },
-  { to: "/feed", title: "Feed" },
+  // Feed is hidden from the navigation for now. The /feed route itself is
+  // still live, so anything already linking to it keeps working — uncomment
+  // this line to put it back in the bar and the mobile drawer.
+  // { to: "/feed", title: "Feed" },
   { to: "/contact", title: "Contact" },
 ];
 

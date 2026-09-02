@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import HotelOwnerProfileForm from "../../components/profile/HotelOwnerProfileForm";
 import VendorProfileForm from "../../components/profile/VendorProfileForm";
 import ExpertProfileForm from "../../components/profile/ExpertProfileForm";
@@ -10,7 +11,7 @@ import ExpertProfileForm from "../../components/profile/ExpertProfileForm";
 const CompleteProfilePage = () => {
   const { user, loading, checkAuth } = useAuth();
   const navigate = useNavigate();
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(false);
@@ -57,7 +58,7 @@ const CompleteProfilePage = () => {
   }
 
   const handleSubmit = async (data) => {
-    setError("");
+    setError(null);
     try {
       if (isRevision) {
         await api.resubmitProfile(data);
@@ -71,7 +72,7 @@ const CompleteProfilePage = () => {
         navigate("/membership-pending");
       }, 1500);
     } catch (err) {
-      setError(err.message || "Failed to submit profile. Please try again.");
+      setError(err);
       throw err;
     }
   };
@@ -388,19 +389,10 @@ const CompleteProfilePage = () => {
 
               {/* Error Message */}
               {error && (
-                <div
-                  style={{
-                    background: "#FEE2E2",
-                    color: "#C53030",
-                    padding: "14px 20px",
-                    marginBottom: "24px",
-                    fontSize: "14px",
-                    border: "1px solid #FCA5A5",
-                  }}
-                >
-                  {error}
-                </div>
-              )}
+              <div style={{ marginBottom: "20px" }}>
+                <ErrorNotice error={error} title="Your profile could not be submitted" />
+              </div>
+            )}
 
               {/* Success Message */}
               {success && (

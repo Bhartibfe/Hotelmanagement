@@ -12,8 +12,12 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Set when we could not verify the session for a reason worth telling the
+  // member about — offline, server down. Never set for a plain rejected token.
+  const [authError, setAuthError] = useState("");
 
   const checkAuth = useCallback(async () => {
+    setAuthError("");
     const token = localStorage.getItem("accessToken");
     if (!token) {
       setLoading(false);
@@ -23,13 +27,16 @@ export const AuthProvider = ({ children }) => {
       const data = await api.getMe();
       setUser(data);
     } catch (err) {
-      // Only clear tokens on auth errors, not network errors
-      if (err.message?.includes("401") || err.message?.includes("Unauthorized") || err.message?.includes("Refresh failed")) {
+      // Only clear tokens when the server actually rejected the session. A
+      // dropped connection must leave the signed-in state alone, otherwise a
+      // train tunnel logs the member out.
+      if (err.status === 401 || err.status === 403) {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         setUser(null);
+      } else {
+        setAuthError(err.message);
       }
-      // On network errors, keep existing state
     } finally {
       setLoading(false);
     }
@@ -68,8 +75,8 @@ export const AuthProvider = ({ children }) => {
   const isApprovedMember = user?.membershipStatus === "APPROVED";
 
   const value = useMemo(() => ({
-    user, loading, isAdmin, isApprovedMember, login, register, logout, checkAuth,
-  }), [user, loading, isAdmin, isApprovedMember, login, register, logout, checkAuth]);
+    user, loading, authError, isAdmin, isApprovedMember, login, register, logout, checkAuth,
+  }), [user, loading, authError, isAdmin, isApprovedMember, login, register, logout, checkAuth]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

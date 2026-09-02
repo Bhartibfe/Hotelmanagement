@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma, Prisma } from "@hospitality/database";
 import { authenticate } from "../middleware/auth";
+import { attachMediaUrls } from "../utils/media";
 
 const router: Router = Router();
 
@@ -71,7 +72,6 @@ router.get("/", async (req: Request, res: Response) => {
           role: true,
           memberType: true,
           title: true,
-          avatar: true,
           city: true,
           state: true,
           organizationName: true,
@@ -86,6 +86,13 @@ router.get("/", async (req: Request, res: Response) => {
       }),
       prisma.user.count({ where }),
     ]);
+
+    // `avatar` is deliberately absent from the select above and filled in here
+    // as a URL — see utils/media.ts for why.
+    await attachMediaUrls(req, users as any[], "user-avatar", {
+      idOf: (u) => u.id,
+      set: (u, url) => { u.avatar = url; },
+    });
 
     return res.json({ users, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
   } catch (error) {

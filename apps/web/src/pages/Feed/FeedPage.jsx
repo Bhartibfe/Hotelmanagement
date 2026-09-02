@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
@@ -197,18 +198,23 @@ const FeedPage = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPostId, setSelectedPostId] = useState(null);
+  const [error, setError] = useState(null);
   const { user, isApprovedMember } = useAuth();
 
   const fetchFeed = async (showLoader = true) => {
     if (showLoader) setLoading(true);
+    setError(null);
     try {
       const params = {};
       if (activeFilter !== "All") params.type = activeFilter;
       const data = await api.getFeed(params);
-      if (data?.posts) setPosts(data.posts);
-      else setPosts([]);
-    } catch {
+      setPosts(data?.posts || []);
+      setError(null);
+    } catch (err) {
       setPosts([]);
+      // Otherwise a failed fetch renders "Be the first to share an industry
+      // insight" over a feed that is actually full.
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -270,7 +276,13 @@ const FeedPage = () => {
               )}
 
               {/* Empty State */}
-              {!loading && filtered.length === 0 && (
+              {error && (
+                <div style={{ marginBottom: "24px" }}>
+                  <ErrorNotice error={error} title="The feed could not be loaded" onRetry={() => fetchFeed()} />
+                </div>
+              )}
+
+              {!loading && !error && filtered.length === 0 && (
                 <div style={{ textAlign: "center", padding: "80px 20px" }}>
                   <div style={{
                     width: "72px", height: "72px", borderRadius: "50%", background: "#F8FAFC",

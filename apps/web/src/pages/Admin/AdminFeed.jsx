@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
 import CreatePostForm from "../../components/profile/CreatePostForm";
 import FormDialog from "../../components/profile/FormDialog";
+import { useAdminToast } from "../../components/admin/AdminToast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 
 const TYPE_COLORS = {
   ANNOUNCEMENT: { bg: "#FEF9E7", color: "#C6A962" },
@@ -28,23 +30,26 @@ const AdminFeed = () => {
   const [error, setError] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const { toastError, toastSuccess } = useAdminToast();
+
+  const fetchPosts = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await api.getAdminFeed();
+      setPosts(data?.posts || []);
+    } catch (err) {
+      setLoadError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    const fetchPosts = async () => {
-      try {
-        const data = await api.getAdminFeed();
-        if (data?.posts) {
-          setPosts(data.posts);
-        }
-      } catch (err) {
-        // keep empty array on failure
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchPosts();
-  }, []);
+  }, [fetchPosts]);
 
   const filters = [
     { key: "ALL", label: "All" },
@@ -64,35 +69,45 @@ const AdminFeed = () => {
   const pinnedCount = posts.filter((p) => p.isPinned).length;
 
   const handleModerate = async (id, action) => {
+    // Names the post in the message; a feed of near-identical rows is exactly
+    // where "Operation failed" is least useful.
+    const post = posts.find((p) => p.id === id);
+    const label = post?.title ? `"${post.title}"` : "this post";
+
     let newStatus = "active";
     if (action === "hide") newStatus = "hidden";
     if (action === "pin") newStatus = "pinned";
     if (action === "unpin") newStatus = "active";
     if (action === "restore") newStatus = "active";
+
     if (action === "delete") {
-      if (!window.confirm("Are you sure you want to delete this post permanently?")) return;
+      if (!window.confirm(`Delete ${label} permanently? Its comments and likes go with it. This cannot be undone.`)) return;
       try {
         await api.moderatePost(id, { action: "delete" });
         setPosts((prev) => prev.filter((p) => p.id !== id));
-        setError(null);
+        toastSuccess(`Deleted ${label}.`);
       } catch (err) {
-        setError(err.message || "Operation failed");
+        toastError(err, `delete ${label}`);
       }
       return;
     }
+
     try {
       await api.moderatePost(id, { action });
       setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, isHidden: newStatus === "hidden", isPinned: newStatus === "pinned" } : p)));
-      setError(null);
+      toastSuccess(`${action.charAt(0).toUpperCase()}${action.slice(1)}d ${label}.`);
     } catch (err) {
-      setError(err.message || "Operation failed");
+      toastError(err, `${action} ${label}`);
     }
   };
 
+  // Deliberately uncaught: CreatePostForm renders the failure inside the dialog
+  // and keeps the draft, so toasting it here would repeat it.
   const handleAdminCreatePost = async (postData) => {
     const newPost = await api.adminCreatePost(postData);
     setPosts((prev) => [newPost, ...prev]);
     setShowCreateForm(false);
+    toastSuccess(`Published "${newPost?.title || postData.title}".`);
   };
 
   const getInitials = (first, last) => {
@@ -197,8 +212,14 @@ const AdminFeed = () => {
       )}
 
       {error && (
-        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
-          {error}
+        <div style={{ marginBottom: "16px" }}>
+          <ErrorNotice error={error} onDismiss={() => setError(null)} />
+        </div>
+      )}
+
+      {loadError && (
+        <div style={{ marginBottom: "16px", maxWidth: "640px" }}>
+          <ErrorNotice error={loadError} title="Feed posts could not be loaded" onRetry={fetchPosts} />
         </div>
       )}
 
@@ -340,7 +361,7 @@ const AdminFeed = () => {
           </div>
 
           {/* Empty State */}
-          {filtered.length === 0 && (
+          {!loadError && filtered.length === 0 && (
             <div style={{ padding: "64px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px" }}>
               <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <i className="fas fa-rss" style={{ fontSize: "24px", color: "#CBD5E1" }}></i>

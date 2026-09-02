@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
+import { useToast } from "../common/Toast";
+import { getErrorMessage } from "../../lib/errors";
 
 const TYPE_COLORS = {
   HOTEL_OWNER: "#C6A962",
@@ -41,6 +43,8 @@ const PostDetailModal = ({ postId, onClose }) => {
   const { user } = useAuth();
   const [post, setPost] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const { toastError } = useToast();
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [liked, setLiked] = useState(false);
@@ -65,8 +69,10 @@ const PostDetailModal = ({ postId, onClose }) => {
         setPost(data);
         setLikeCount(data._count?.likes || 0);
         if (data.isLiked) setLiked(true);
-      } catch {
-        // error
+      } catch (err) {
+        // The modal renders its not-found branch when `post` stays null; this
+        // gives that branch the actual reason to show.
+        setLoadError(err);
       } finally {
         setLoading(false);
       }
@@ -86,8 +92,8 @@ const PostDetailModal = ({ postId, onClose }) => {
         setLiked(true);
         setLikeCount((c) => c + 1);
       }
-    } catch {
-      // toggle failed silently
+    } catch (err) {
+      toastError(err, liked ? "remove your like" : "like this post");
     }
   };
 
@@ -103,8 +109,9 @@ const PostDetailModal = ({ postId, onClose }) => {
         _count: { ...prev?._count, comments: (prev?._count?.comments || 0) + 1 },
       }));
       setCommentText("");
-    } catch {
-      // error
+    } catch (err) {
+      // The draft is deliberately left in the box so nothing typed is lost.
+      toastError(err, "post your comment");
     } finally {
       setSubmittingComment(false);
     }
@@ -191,7 +198,7 @@ const PostDetailModal = ({ postId, onClose }) => {
           </div>
         ) : !post ? (
           <div style={{ padding: "48px 20px", textAlign: "center", color: "#64748B", fontSize: "13px" }}>
-            Post not found or unavailable.
+            {getErrorMessage(loadError, "This post is no longer available.")}
           </div>
         ) : (
           <div style={{ overflowY: "auto", flex: 1 }} className="post-detail-scrollable">

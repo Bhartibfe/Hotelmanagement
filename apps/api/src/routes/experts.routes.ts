@@ -1,11 +1,38 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "@hospitality/database";
+import { attachMediaUrls } from "../utils/media";
 
 type ExpertKind = "EXPERT" | "ADVISORY";
 
 // Industry experts and advisory board members are the same record, split only
 // by `kind`, so one builder serves both public directories. Advisory members
 // are created from the admin panel alone — there is no write route here.
+/*
+  The directory user fields, minus `avatar`. Every card in these two
+  directories shows a photo, and selecting the base64 for all of them made the
+  experts list 2MB. The photo now arrives as a /api/media URL, which the
+  browser fetches in parallel and caches.
+*/
+const DIRECTORY_USER_FIELDS = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  title: true,
+  memberType: true,
+  organizationName: true,
+  organizationRole: true,
+  city: true,
+  state: true,
+  linkedinUrl: true,
+} as const;
+
+// Hangs the photo URL off each row's nested user, in one extra id-only query.
+const withAvatars = (req: Request, rows: any[]) =>
+  attachMediaUrls(req, rows, "user-avatar", {
+    idOf: (r) => r.user?.id,
+    set: (r, url) => { if (r.user) r.user.avatar = url; },
+  });
+
 export const createExpertDirectoryRouter = (kind: ExpertKind) => {
   const router = Router();
   const label = kind === "ADVISORY" ? "Advisory member" : "Expert";
@@ -19,29 +46,15 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
       const [experts, total] = await Promise.all([
         prisma.industryExpert.findMany({
           where: { kind },
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                avatar: true,
-                title: true,
-                memberType: true,
-                organizationName: true,
-                organizationRole: true,
-                city: true,
-                state: true,
-                linkedinUrl: true,
-              },
-            },
-          },
+          include: { user: { select: DIRECTORY_USER_FIELDS } },
           skip,
           take: parseInt(limit as string),
           orderBy: { displayOrder: "asc" },
         }),
         prisma.industryExpert.count({ where: { kind } }),
       ]);
+
+      await withAvatars(req, experts);
 
       return res.json({ experts, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
     } catch (error) {
@@ -50,20 +63,12 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
   });
 
   // GET /featured - Featured entries for homepage (pinned first, then random starred)
-  router.get("/featured", async (_req: Request, res: Response) => {
+  router.get("/featured", async (req: Request, res: Response) => {
     try {
       // Get pinned experts (always shown)
       const pinned = await prisma.industryExpert.findMany({
         where: { kind, isPinned: true },
-        include: {
-          user: {
-            select: {
-              id: true, firstName: true, lastName: true, avatar: true,
-              title: true, memberType: true, organizationName: true,
-              organizationRole: true, city: true, state: true, linkedinUrl: true,
-            },
-          },
-        },
+        include: { user: { select: DIRECTORY_USER_FIELDS } },
         orderBy: { displayOrder: "asc" },
       });
 
@@ -71,15 +76,7 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
       const pinnedIds = pinned.map((p) => p.id);
       const starred = await prisma.industryExpert.findMany({
         where: { kind, isFeatured: true, id: { notIn: pinnedIds } },
-        include: {
-          user: {
-            select: {
-              id: true, firstName: true, lastName: true, avatar: true,
-              title: true, memberType: true, organizationName: true,
-              organizationRole: true, city: true, state: true, linkedinUrl: true,
-            },
-          },
-        },
+        include: { user: { select: DIRECTORY_USER_FIELDS } },
       });
 
       // Shuffle starred experts for random display
@@ -90,6 +87,7 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
 
       // Pinned first, then random starred
       const experts = [...pinned, ...starred];
+      await withAvatars(req, experts);
 
       return res.json(experts);
     } catch (error) {

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
+import { useAdminToast } from "../../components/admin/AdminToast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import PhotoUpload from "../../components/profile/PhotoUpload";
 import { DEFAULT_VENDOR_CATEGORIES, categoryChip, categoryLabel } from "../../lib/vendorCategories";
 
@@ -49,29 +51,37 @@ const AdminVendors = () => {
   const [formError, setFormError] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const { toastError, toastSuccess } = useAdminToast();
+  const [loadError, setLoadError] = useState(null);
+
+  const fetchVendors = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await api.getAdminVendors();
+      setVendors(data?.vendors || []);
+    } catch (err) {
+      // Previously indistinguishable from "no partners yet", which sent
+      // admins looking for a data problem that did not exist.
+      setLoadError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    const fetchVendors = async () => {
-      try {
-        const data = await api.getAdminVendors();
-        if (data?.vendors) {
-          setVendors(data.vendors);
-        }
-      } catch (err) {
-        // keep empty array on failure
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchVendors();
-  }, []);
+  }, [fetchVendors]);
 
-  // Categories are admin-managed in Admin -> Homepage, same as expertise.
+  // Categories are admin-managed in Admin -> Homepage, same as expertise. The
+  // seed list is a working fallback, so a failure here is only a console note.
   useEffect(() => {
-    api.getHomepageConfig().then((data) => {
-      if (data?.categoryOptions?.length > 0) setCategoryOptions(data.categoryOptions);
-    }).catch(() => {});
+    api.getHomepageConfig()
+      .then((data) => {
+        if (data?.categoryOptions?.length > 0) setCategoryOptions(data.categoryOptions);
+      })
+      .catch((err) => console.warn("Partner categories fell back to defaults:", err.message));
   }, []);
 
   // Lock body scroll when dialog is open
@@ -107,9 +117,15 @@ const AdminVendors = () => {
   const handleCreateVendor = async (e) => {
     e.preventDefault();
     setFormError(null);
-    if (!editingId && (!form.email || !form.password || !form.firstName || !form.lastName)) {
-      setFormError("Email, password, first name, and last name are required for new partners.");
-      return;
+    if (!editingId) {
+      // Names the boxes that are actually empty rather than reciting all four.
+      const required = { "email": form.email, "password": form.password, "first name": form.firstName, "last name": form.lastName };
+      const missing = Object.entries(required).filter(([, v]) => !String(v || "").trim()).map(([label]) => label);
+      if (missing.length > 0) {
+        const list = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+        setFormError(`Fill in the ${list} before creating this partner.`);
+        return;
+      }
     }
     setFormLoading(true);
     try {
@@ -124,11 +140,14 @@ const AdminVendors = () => {
         const res = await api.createVendor(form);
         setVendors((prev) => [{ ...res, user: { firstName: form.firstName, lastName: form.lastName, email: form.email } }, ...prev]);
       }
+      toastSuccess(editingId ? `Saved changes to ${form.companyName}.` : `Added ${form.companyName}.`);
       setForm(EMPTY_FORM);
       setEditingId(null);
       setShowForm(false);
     } catch (err) {
-      setFormError(err.message || "Failed to save partner");
+      // Kept as the error object so the per-field detail the server sent is
+      // broken out under the summary.
+      setFormError(err);
     } finally {
       setFormLoading(false);
     }
@@ -155,28 +174,30 @@ const AdminVendors = () => {
   };
 
   const handleDeleteVendor = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to remove "${name}"? This will also delete all their products.`)) return;
+    if (!window.confirm(`Remove "${name}"? Their account, public listing and all their products will be deleted. This cannot be undone.`)) return;
     try {
       await api.deleteVendor(id);
       setVendors((prev) => prev.filter((v) => v.id !== id));
-      setError(null);
+      toastSuccess(`Removed ${name}.`);
     } catch (err) {
-      setError(err.message || "Failed to remove partner");
+      toastError(err, `remove ${name}`);
     }
   };
 
   const handleToggleFeatured = async (id) => {
     setStarAnimating(id);
+    const vendor = vendors.find((v) => v.id === id);
+    const name = vendor?.companyName || "this partner";
+    const verb = vendor?.isFeatured ? "unfeature" : "feature";
     try {
       await api.toggleVendorFeatured(id);
       setTimeout(() => {
         setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, isFeatured: !v.isFeatured } : v)));
         setStarAnimating(null);
       }, 300);
-      setError(null);
     } catch (err) {
       setStarAnimating(null);
-      setError(err.message || "Operation failed");
+      toastError(err, `${verb} ${name}`);
     }
   };
 
@@ -253,8 +274,8 @@ const AdminVendors = () => {
             <button onClick={() => { setShowForm(false); setForm(EMPTY_FORM); setEditingId(null); }} style={{ background: "none", border: "none", fontSize: "20px", color: "#94A3B8", cursor: "pointer" }}><i className="fas fa-times"></i></button>
           </div>
           {formError && (
-            <div style={{ padding: "10px 16px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "13px" }}>
-              {formError}
+            <div style={{ marginBottom: "16px" }}>
+              <ErrorNotice error={formError} compact onDismiss={() => setFormError(null)} />
             </div>
           )}
           <form onSubmit={handleCreateVendor}>
@@ -332,8 +353,14 @@ const AdminVendors = () => {
       )}
 
       {error && (
-        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
-          {error}
+        <div style={{ marginBottom: "16px" }}>
+          <ErrorNotice error={error} onDismiss={() => setError(null)} />
+        </div>
+      )}
+
+      {loadError && (
+        <div style={{ marginBottom: "16px", maxWidth: "640px" }}>
+          <ErrorNotice error={loadError} title="Partners could not be loaded" onRetry={fetchVendors} />
         </div>
       )}
 
@@ -431,6 +458,7 @@ const AdminVendors = () => {
 
           {/* Table */}
           <div
+            className="admin-table-wrap"
             style={{
               background: "#FFFFFF",
               border: "1px solid #E2E8F0",
@@ -439,7 +467,7 @@ const AdminVendors = () => {
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
             }}
           >
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F8FAFC" }}>
                   <th style={thStyle}>Company</th>
@@ -580,7 +608,7 @@ const AdminVendors = () => {
               </tbody>
             </table>
 
-            {filtered.length === 0 && (
+            {!loadError && filtered.length === 0 && (
               <div style={{ padding: "64px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                 <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <i className="fas fa-building" style={{ fontSize: "24px", color: "#CBD5E1" }}></i>

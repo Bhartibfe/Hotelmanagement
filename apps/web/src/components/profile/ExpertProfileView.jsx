@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import { getErrorMessage } from "../../lib/errors";
 
 
 // Experts and advisory board members are one record split by ExpertKind, so
@@ -33,10 +34,13 @@ const ExpertProfileView = ({ copy }) => {
         if (data) {
           setExpert(data);
         } else {
-          setError(copy.notFoundError);
+          setError(new Error(copy.notFoundError));
         }
-      } catch {
-        setError(copy.notFoundError);
+      } catch (err) {
+        // Not the same as "no such profile": a dropped connection or a 500 has
+        // a different answer, and the reason is shown below rather than the
+        // catch-all not-found copy.
+        setError(err);
       } finally {
         setLoading(false);
       }
@@ -109,10 +113,10 @@ const ExpertProfileView = ({ copy }) => {
               <i className="fas fa-exclamation-triangle" style={{ fontSize: "28px", color: "#EF4444" }}></i>
             </div>
             <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "30px", fontWeight: 600, color: "#0A1628", marginBottom: "12px" }}>
-              {copy.notFoundTitle}
+              {error && error.status && error.status !== 404 ? "This profile could not be loaded" : copy.notFoundTitle}
             </h3>
-            <p style={{ color: "#6B7280", fontSize: "15px", marginBottom: "24px" }}>
-              {error || copy.notFoundBody}
+            <p style={{ color: "#6B7280", fontSize: "15px", marginBottom: "24px", maxWidth: "480px", marginLeft: "auto", marginRight: "auto" }}>
+              {getErrorMessage(error, copy.notFoundBody)}
             </p>
             <Link
               to={copy.directoryPath}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../../services/api";
+import { useAdminToast } from "../../components/admin/AdminToast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import PhotoUpload from "../../components/profile/PhotoUpload";
 import { DEFAULT_VENDOR_CATEGORIES } from "../../lib/vendorCategories";
 
@@ -210,6 +212,11 @@ const AdminHomepage = () => {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // Distinct from `error`: a failed load means the form below is showing the
+  // built-in defaults, not the saved settings, and saving would overwrite them.
+  const [loadError, setLoadError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { toastError, toastSuccess } = useAdminToast();
   const [expandedSections, setExpandedSections] = useState({
     hero: true,
     vendors: true,
@@ -308,17 +315,20 @@ const AdminHomepage = () => {
   useEffect(() => {
     setMounted(true);
     const loadConfig = async () => {
+      setLoadError(null);
       try {
         const data = await api.getHomepageConfig();
         if (data && Object.keys(data).length > 0) {
           setConfig((prev) => ({ ...prev, ...data }));
         }
-      } catch {
-        // Use defaults if no saved config
+      } catch (err) {
+        // Critical to surface: the form silently falls back to the built-in
+        // defaults, so saving would overwrite the real settings with them.
+        setLoadError(err);
       }
     };
     loadConfig();
-  }, []);
+  }, [reloadKey]);
 
   const handleChange = (field, value) => {
     setConfig((prev) => ({ ...prev, [field]: value }));
@@ -335,8 +345,10 @@ const AdminHomepage = () => {
     try {
       await api.saveHomepageConfig(config);
       setSaved(true);
+      toastSuccess("Homepage settings saved.");
     } catch (err) {
-      setError(err.message || "Failed to save");
+      setError(err);
+      toastError(err, "save the homepage settings");
     } finally {
       setSaving(false);
     }
@@ -427,6 +439,22 @@ const AdminHomepage = () => {
           )}
         </button>
       </div>
+
+      {loadError && (
+        <div style={{ marginBottom: "20px", maxWidth: "720px" }}>
+          <ErrorNotice
+            error={loadError}
+            title="Saved settings could not be loaded — the form below shows the defaults"
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
+        </div>
+      )}
+
+      {error && (
+        <div style={{ marginBottom: "20px", maxWidth: "720px" }}>
+          <ErrorNotice error={error} title="Your changes were not saved" onDismiss={() => setError(null)} />
+        </div>
+      )}
 
       {/* Hero Section */}
       <SectionCard
@@ -968,6 +996,7 @@ const AdminHomepage = () => {
             </div>
             <div style={{ marginBottom: "12px" }}>
               <PhotoUpload
+                crop
                 value={member.photo}
                 onChange={(url) => {
                   const updated = [...config.leadershipTeam];

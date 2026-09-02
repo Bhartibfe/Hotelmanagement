@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { downscaleImage } from "../../lib/downscaleImage";
 
 const extractYouTubeId = (url) => {
   if (!url) return null;
@@ -44,9 +45,12 @@ const PostMediaUpload = ({ imageValue, youtubeUrl, thumbnailUrl, onImageChange, 
 
     setImgError("");
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      onImageChange(ev.target.result);
+    // Downscaled before storing: feed images are rendered at a few hundred
+    // pixels, and the original is carried in the database as base64.
+    reader.onload = async (ev) => {
+      onImageChange(await downscaleImage(ev.target.result, "photo"));
     };
+    reader.onerror = () => setImgError("That file could not be read. Try selecting it again.");
     reader.readAsDataURL(file);
   };
 

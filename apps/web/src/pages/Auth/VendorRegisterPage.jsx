@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 
 const VendorRegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -11,7 +12,7 @@ const VendorRegisterPage = () => {
     password: "",
     memberType: "VENDOR",
   });
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -22,13 +23,14 @@ const VendorRegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(null);
     setLoading(true);
     try {
       await register(formData);
       navigate("/complete-profile");
     } catch (err) {
-      setError(err.message || "Registration failed");
+      // Kept as the error object so per-field validation detail is listed.
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -128,18 +130,10 @@ const VendorRegisterPage = () => {
                 </div>
 
                 {error && (
-                  <div
-                    style={{
-                      background: "#FEE2E2",
-                      color: "#C53030",
-                      padding: "12px 16px",
-                      marginBottom: "20px",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {error}
-                  </div>
-                )}
+                <div style={{ marginBottom: "20px" }}>
+                  <ErrorNotice error={error} title="Your partner account could not be created" />
+                </div>
+              )}
 
                 <form onSubmit={handleSubmit}>
                   {/* Personal Info */}

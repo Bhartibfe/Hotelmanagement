@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import api from "../../services/api";
+import { useAdminToast } from "../../components/admin/AdminToast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 
 // Ordering modes for the public Owners directory. "manual" is the drag & drop
 // sequence stored per owner; the rest are computed by the API at query time, so
@@ -55,6 +57,10 @@ const AdminMembers = () => {
   const [orderNotice, setOrderNotice] = useState(null);
   // The pre-drag list, so a failed save can be rolled back.
   const preDragOrder = useRef(null);
+  const { toastError, toastSuccess } = useAdminToast();
+  const [loadError, setLoadError] = useState(null);
+  // Bumped to re-run the members fetch when the admin asks to retry.
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -64,7 +70,12 @@ const AdminMembers = () => {
         const config = await api.getAdminHomepageConfig();
         if (!cancelled) setSortMode(isSortMode(config?.ownersSort) ? config.ownersSort : "manual");
       } catch (err) {
-        if (!cancelled) setSortMode("manual");
+        // Manual is the safe default, so this is recoverable — but say so,
+        // because the admin's saved choice is silently not being honoured.
+        if (!cancelled) {
+          setSortMode("manual");
+          toastError(err, "read the saved owner display order (falling back to manual)");
+        }
       }
     };
     loadSortMode();
@@ -84,18 +95,22 @@ const AdminMembers = () => {
         if (!cancelled && data?.users) {
           setMembers(data.users);
           setTotal(typeof data.total === "number" ? data.total : data.users.length);
+          setLoadError(null);
         }
       } catch (err) {
-        // keep the current list on failure
+        // The current list stays on screen; the notice above it explains why
+        // it did not change, rather than the page looking simply stale.
+        if (!cancelled) setLoadError(err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
+    setLoadError(null);
     fetchMembers();
     return () => {
       cancelled = true;
     };
-  }, [sortMode]);
+  }, [sortMode, reloadKey]);
 
   useEffect(() => {
     if (!orderNotice) return undefined;
@@ -129,7 +144,7 @@ const AdminMembers = () => {
       setOrderNotice("Visitor order updated");
     } catch (err) {
       setSortMode(previous);
-      setError("Could not save the display order. Please try again.");
+      toastError(err, `switch the visitor order to "${mode}"`);
     }
   };
 
@@ -169,7 +184,7 @@ const AdminMembers = () => {
       setOrderNotice("Order saved");
     } catch (err) {
       setMembers(snapshot);
-      setError("Could not save the new order. The previous order has been restored.");
+      toastError(err, "save the new order (the previous order has been restored)");
     }
   };
 
@@ -192,13 +207,16 @@ const AdminMembers = () => {
 
   const handleSuspend = async (id) => {
     const member = members.find((m) => m.id === id);
-    const newStatus = member.membershipStatus === "SUSPENDED" ? "APPROVED" : "SUSPENDED";
+    if (!member) return;
+    const who = `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email || "this owner";
+    const suspending = member.membershipStatus !== "SUSPENDED";
+    const newStatus = suspending ? "SUSPENDED" : "APPROVED";
     try {
       await api.updateMember(id, { membershipStatus: newStatus });
       setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, membershipStatus: newStatus } : m)));
-      setError(null);
+      toastSuccess(suspending ? `Suspended ${who}.` : `Restored ${who}.`);
     } catch (err) {
-      setError(err.message || "Operation failed");
+      toastError(err, `${suspending ? "suspend" : "restore"} ${who}`);
     }
   };
 
@@ -292,8 +310,18 @@ const AdminMembers = () => {
       )}
 
       {error && (
-        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
-          {error}
+        <div style={{ marginBottom: "16px" }}>
+          <ErrorNotice error={error} onDismiss={() => setError(null)} />
+        </div>
+      )}
+
+      {loadError && (
+        <div style={{ marginBottom: "16px", maxWidth: "640px" }}>
+          <ErrorNotice
+            error={loadError}
+            title="Hotel owners could not be loaded"
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
         </div>
       )}
 
@@ -480,6 +508,7 @@ const AdminMembers = () => {
 
           {/* Table */}
           <div
+            className="admin-table-wrap"
             style={{
               background: "#FFFFFF",
               border: "1px solid #E2E8F0",
@@ -488,7 +517,7 @@ const AdminMembers = () => {
               boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
             }}
           >
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F8FAFC" }}>
                   {sortMode === "manual" && <th style={{ ...thStyle, width: "64px" }}>#</th>}
@@ -673,7 +702,7 @@ const AdminMembers = () => {
               </tbody>
             </table>
 
-            {filtered.length === 0 && (
+            {!loadError && filtered.length === 0 && (
               <div
                 style={{
                   padding: "64px 20px",

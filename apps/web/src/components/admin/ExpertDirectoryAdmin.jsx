@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
 import PhotoUpload from "../profile/PhotoUpload";
+import { useAdminToast } from "./AdminToast";
+import { ErrorNotice } from "../common/ErrorNotice";
 
 // Industry experts and advisory board members are the same record behind an
 // ExpertKind discriminator, so both admin screens are this one component with
@@ -48,7 +50,11 @@ const labelStyle = {
 };
 
 const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
+  const { toastError, toastSuccess } = useAdminToast();
   const [experts, setExperts] = useState([]);
+  // The list failing to load and the list being genuinely empty need
+  // different words, and the second must not be shown for the first.
+  const [loadError, setLoadError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [mounted, setMounted] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -77,9 +83,14 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
   useEffect(() => {
     setMounted(true);
     fetchExperts();
-    api.getHomepageConfig().then((data) => {
-      if (data?.expertiseOptions?.length > 0) setExpertiseOptions(data.expertiseOptions);
-    }).catch(() => {});
+
+    // The seed list is a working fallback, so this failure is a console note
+    // rather than something to interrupt the admin over.
+    api.getHomepageConfig()
+      .then((data) => {
+        if (data?.expertiseOptions?.length > 0) setExpertiseOptions(data.expertiseOptions);
+      })
+      .catch((err) => console.warn("Expertise options fell back to defaults:", err.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kind]);
 
@@ -93,13 +104,18 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
     return () => { document.body.style.overflow = ""; };
   }, [showForm]);
 
-  const fetchExperts = async () => {
+  const fetchExperts = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await api.getAdminExperts({ kind });
-      if (data?.experts) setExperts(data.experts);
-    } catch (err) { /* keep empty */ }
-    finally { setLoading(false); }
-  };
+      setExperts(data?.experts || []);
+    } catch (err) {
+      setLoadError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [kind]);
 
   const filtered = experts.filter((e) => {
     const fullName = ((e.user?.firstName || "") + " " + (e.user?.lastName || "")).trim();
@@ -112,39 +128,51 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
     );
   });
 
+  // Names the person in every message: on a screen of near-identical cards,
+  // "Could not feature Priya Nair" is the difference between a usable report
+  // and "Operation failed".
+  const nameOf = (id) => {
+    const expert = experts.find((e) => e.id === id);
+    const full = `${expert?.user?.firstName || ""} ${expert?.user?.lastName || ""}`.trim();
+    return full || copy.singular || "this entry";
+  };
+
   const handleToggleFeatured = async (id) => {
     setStarAnimating(id);
+    const expert = experts.find((e) => e.id === id);
+    const verb = expert?.isFeatured ? "unfeature" : "feature";
     try {
       await api.toggleExpertFeatured(id);
       setTimeout(() => {
         setExperts((prev) => prev.map((e) => (e.id === id ? { ...e, isFeatured: !e.isFeatured } : e)));
         setStarAnimating(null);
       }, 300);
-      setError(null);
     } catch (err) {
       setStarAnimating(null);
-      setError(err.message || "Operation failed");
+      toastError(err, `${verb} ${nameOf(id)}`);
     }
   };
 
   const handleTogglePinned = async (id) => {
+    const expert = experts.find((e) => e.id === id);
+    const verb = expert?.isPinned ? "unpin" : "pin";
     try {
       await api.toggleExpertPinned(id);
       setExperts((prev) => prev.map((e) => (e.id === id ? { ...e, isPinned: !e.isPinned } : e)));
-      setError(null);
     } catch (err) {
-      setError(err.message || "Operation failed");
+      toastError(err, `${verb} ${nameOf(id)}`);
     }
   };
 
   const handleDelete = async (id) => {
+    const who = nameOf(id);
     if (!window.confirm(copy.deleteConfirm)) return;
     try {
       await api.deleteExpert(id);
       setExperts((prev) => prev.filter((e) => e.id !== id));
-      setError(null);
+      toastSuccess(`Removed ${who}.`);
     } catch (err) {
-      setError(err.message || "Operation failed");
+      toastError(err, `remove ${who}`);
     }
   };
 
@@ -194,9 +222,17 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
   };
 
   const handleSubmit = async () => {
-    if (!editingId && (!form.email || !form.password || !form.firstName || !form.lastName)) {
-      setError("Email, password, first name, and last name are required");
-      return;
+    // Names the empty boxes rather than listing all four every time.
+    if (!editingId) {
+      const required = { "email": form.email, "password": form.password, "first name": form.firstName, "last name": form.lastName };
+      const missing = Object.entries(required)
+        .filter(([, v]) => !String(v || "").trim())
+        .map(([label]) => label);
+      if (missing.length > 0) {
+        const list = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+        setError(`Fill in the ${list} before saving.`);
+        return;
+      }
     }
     setSaving(true);
     setError(null);
@@ -206,13 +242,16 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
       } else {
         await api.createExpert({ ...form, kind });
       }
+      const who = `${form.firstName} ${form.lastName}`.trim();
+      toastSuccess(editingId ? `Saved changes to ${who}.` : `Added ${who}.`);
       setShowForm(false);
       setForm(emptyForm);
       setEditingId(null);
-      setLoading(true);
       fetchExperts();
     } catch (err) {
-      setError(err.message || copy.saveError);
+      // Stays on the error object, not just its message, so ErrorNotice can
+      // break out the per-field detail the server sent.
+      setError(err);
     } finally {
       setSaving(false);
     }
@@ -258,9 +297,18 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
         </button>
       </div>
 
-      {error && (
-        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
-          {error}
+      {/* Hidden while the dialog is open: the modal covers this spot, so a
+          failed save used to render its message underneath the overlay where
+          nobody could see it. The dialog carries its own copy instead. */}
+      {error && !showForm && (
+        <div style={{ marginBottom: "16px" }}>
+          <ErrorNotice error={error} onDismiss={() => setError(null)} />
+        </div>
+      )}
+
+      {loadError && (
+        <div style={{ marginBottom: "16px", maxWidth: "640px" }}>
+          <ErrorNotice error={loadError} title={copy.loadError || "This list could not be loaded"} onRetry={fetchExperts} />
         </div>
       )}
 
@@ -331,7 +379,7 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
                 <input type="text" value={form.state} onChange={(e) => handleFormChange("state", e.target.value)} style={inputStyle} />
               </div>
             </div>
-            <PhotoUpload value={form.avatar} onChange={(val) => handleFormChange("avatar", val)} label={copy.photoLabel} />
+            <PhotoUpload crop value={form.avatar} onChange={(val) => handleFormChange("avatar", val)} label={copy.photoLabel} />
           </div>
 
           {/* Professional Info */}
@@ -438,6 +486,14 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
               </label>
             </div>
           </div>
+
+          {/* The save failure belongs here, beside the button that triggered
+              it — the page-level banner is behind this overlay. */}
+          {error && (
+            <div style={{ marginBottom: "16px" }}>
+              <ErrorNotice error={error} title="This could not be saved" onDismiss={() => setError(null)} />
+            </div>
+          )}
 
           {/* Submit */}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
@@ -645,8 +701,9 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
             })}
           </div>
 
-          {/* Empty State */}
-          {filtered.length === 0 && (
+          {/* Empty State. Suppressed after a failed load, which is not the
+              same thing as nobody being in the directory. */}
+          {!loadError && filtered.length === 0 && (
             <div style={{ padding: "64px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px" }}>
               <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <i className={copy.emptyIcon} style={{ fontSize: "24px", color: "#CBD5E1" }}></i>

@@ -6,8 +6,32 @@ import { sendEmail } from "../services/email.service";
 import * as emailTemplates from "../templates/email.templates";
 import { isOwnerSortMode, resolveOwnerOrderBy } from "./users.routes";
 import { normalizeProfileFields } from "../utils/profileFields";
+import { attachMediaUrls, mediaUrl, oversizedImageError } from "../utils/media";
 
 const router = Router();
+
+/*
+  Names the fields that were actually left blank instead of saying "missing
+  required fields". Admins fill long forms here; a message that does not point
+  at the empty box costs a round of guessing every time.
+*/
+const missingFields = (values: Record<string, unknown>) =>
+  Object.entries(values)
+    .filter(([, v]) => v === undefined || v === null || (typeof v === "string" && v.trim() === ""))
+    .map(([label]) => label);
+
+const missingFieldsError = (values: Record<string, unknown>, subject: string) => {
+  const missing = missingFields(values);
+  if (missing.length === 0) return null;
+  const list = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}`;
+  return {
+    error: `Cannot ${subject}: ${list} ${missing.length === 1 ? "is" : "are"} required.`,
+    errors: missing.map((field) => ({
+      field,
+      message: `${field.charAt(0).toUpperCase()}${field.slice(1)} is required.`,
+    })),
+  };
+};
 
 // All admin routes require authentication + admin role
 router.use(authenticate, requireAdmin);
@@ -31,6 +55,15 @@ router.get("/membership-requests", async (req: Request, res: Response) => {
 
     // Always fetch per-status counts so the frontend tabs show accurate numbers
     const [users, total, pendingCount, approvedCount, rejectedCount, revisionCount, allCount] = await Promise.all([
+      /*
+        Scalars only. This list previously pulled `avatar` plus the hotel,
+        vendor-product and expert relations for every row — none of which the
+        table renders. Avatars are stored as base64 text, so with the database
+        in Oregon and this app in India the endpoint was shipping ~5MB and
+        taking 45-68 seconds for thirteen rows, which is what tripped the
+        client's 30-second timeout. The review modal fetches the full record
+        from /admin/profile-review/:userId when it opens.
+      */
       prisma.user.findMany({
         where,
         select: {
@@ -44,21 +77,11 @@ router.get("/membership-requests", async (req: Request, res: Response) => {
           profileStatus: true,
           title: true,
           phone: true,
-          avatar: true,
-          bio: true,
           city: true,
           state: true,
           organizationName: true,
           organizationRole: true,
-          achievements: true,
-          industryContributions: true,
-          businessOverview: true,
-          yearsInIndustry: true,
-          linkedinUrl: true,
           createdAt: true,
-          hotels: { select: { id: true, name: true, city: true, state: true, rooms: true, starRating: true, propertyType: true, photos: true, description: true } },
-          vendorProfile: { include: { products: true } },
-          expertProfile: true,
         },
         skip,
         take,
@@ -98,7 +121,7 @@ router.put("/membership-requests/:id", async (req: Request, res: Response) => {
     const { action, reason } = req.body;
 
     if (!action || !["APPROVE", "REJECT"].includes(action)) {
-      return res.status(400).json({ error: "Action must be APPROVE or REJECT" });
+      return res.status(400).json({ error: `Unrecognised action "${String(action)}". It must be either APPROVE or REJECT.` });
     }
 
     const user = await prisma.user.findUnique({ where: { id } });
@@ -275,7 +298,7 @@ router.put("/owners-sort", async (req: Request, res: Response) => {
   try {
     const { mode } = req.body;
     if (!isOwnerSortMode(mode)) {
-      return res.status(400).json({ error: "Invalid sort mode" });
+      return res.status(400).json({ error: `Unrecognised sort mode "${String(mode)}". Choose one of the modes offered on the members page.` });
     }
 
     const existing = await prisma.homepageConfig.findUnique({ where: { id: "singleton" } });
@@ -445,19 +468,15 @@ router.post("/vendors", async (req: Request, res: Response) => {
       employeeCount, yearEstablished, isFeatured,
     } = req.body;
 
-    if (!email || !password || !firstName || !lastName) {
-      return res.status(400).json({ error: "Email, password, first name, and last name are required" });
-    }
-    if (!companyName) {
-      return res.status(400).json({ error: "Company name is required" });
-    }
-    if (!category) {
-      return res.status(400).json({ error: "Category is required" });
-    }
+    const vendorMissing = missingFieldsError(
+      { "email": email, "password": password, "first name": firstName, "last name": lastName, "company name": companyName, "category": category },
+      "create this partner"
+    );
+    if (vendorMissing) return res.status(400).json(vendorMissing);
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: "Email already registered" });
+      return res.status(409).json({ error: `The email ${email} already belongs to an account. Use a different address, or edit the existing account instead.` });
     }
 
     const bcrypt = require("bcryptjs");
@@ -655,16 +674,21 @@ router.post("/experts", async (req: Request, res: Response) => {
       isFeatured, isPinned, avatar,
     } = req.body;
 
-    if (!email || !password || !firstName || !lastName) {
-      return res.status(400).json({ error: "Email, password, first name, and last name are required" });
-    }
+    const expertMissing = missingFieldsError(
+      { "email": email, "password": password, "first name": firstName, "last name": lastName },
+      "create this expert"
+    );
+    if (expertMissing) return res.status(400).json(expertMissing);
     if (!expertise || !Array.isArray(expertise) || expertise.length === 0) {
-      return res.status(400).json({ error: "At least one expertise/specialization is required" });
+      return res.status(400).json({
+        error: "Cannot create this expert: add at least one area of expertise.",
+        errors: [{ field: "expertise", message: "Add at least one area of expertise." }],
+      });
     }
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: "Email already registered" });
+      return res.status(409).json({ error: `The email ${email} already belongs to an account. Use a different address, or edit the existing account instead.` });
     }
 
     const bcrypt = require("bcryptjs");
@@ -959,7 +983,7 @@ router.post("/events/:id/notify-registrant", async (req: Request, res: Response)
     const { userId, subject, message } = req.body;
 
     if (!subject || !message) {
-      return res.status(400).json({ error: "Subject and message are required" });
+      return res.status(400).json({ error: "Cannot send this email: both a subject and a message body are required." });
     }
 
     const event = await prisma.event.findUnique({
@@ -1015,9 +1039,11 @@ router.post("/events", async (req: Request, res: Response) => {
       organizerName, organizerAvatar, agenda, highlights,
     } = req.body;
 
-    if (!title || !type || !description || !city || !state || !startDate || !endDate) {
-      return res.status(400).json({ error: "Missing required fields" });
-    }
+    const eventMissing = missingFieldsError(
+      { "title": title, "type": type, "description": description, "city": city, "state": state, "start date": startDate, "end date": endDate },
+      "save this event"
+    );
+    if (eventMissing) return res.status(400).json(eventMissing);
 
     const slug = slugify(title) + "-" + Date.now().toString(36);
 
@@ -1182,7 +1208,13 @@ router.post("/testimonials", async (req: Request, res: Response) => {
     } = req.body;
 
     if (!content || !authorName) {
-      return res.status(400).json({ error: "Content and authorName are required" });
+      return res.status(400).json({
+        error: "Cannot save this testimonial: both the quote and the author name are required.",
+        errors: [
+          ...(content?.trim() ? [] : [{ field: "content", message: "The testimonial quote is required." }]),
+          ...(authorName?.trim() ? [] : [{ field: "authorName", message: "The author name is required." }]),
+        ],
+      });
     }
 
     const testimonial = await prisma.testimonial.create({
@@ -1537,6 +1569,14 @@ router.get("/profile-review/:userId", async (req: Request, res: Response) => {
     // Strip sensitive data
     const { passwordHash, googleId, ...safeUser } = user as any;
     const response: any = { ...safeUser };
+
+    /*
+      The avatar is the single largest thing in this response — one applicant's
+      was 2.5MB of base64, which took 34 seconds to open their review panel.
+      Swapped for a URL so the panel renders immediately and the photo arrives
+      alongside it.
+    */
+    response.avatar = user.avatar ? mediaUrl(req, "user-avatar", user.id, user.updatedAt) : null;
     if (user.memberType !== "HOTEL_OWNER") {
       response.hotels = [];
     }
@@ -1558,7 +1598,7 @@ router.put("/profile-review/:userId", async (req: Request, res: Response) => {
     const { action, reason } = req.body;
 
     if (!action || !["APPROVE", "REJECT"].includes(action)) {
-      return res.status(400).json({ error: "Action must be APPROVE or REJECT" });
+      return res.status(400).json({ error: `Unrecognised action "${String(action)}". It must be either APPROVE or REJECT.` });
     }
 
     const user = await prisma.user.findUnique({
@@ -1765,7 +1805,7 @@ router.put("/product-approvals/:productId", async (req: Request, res: Response) 
     const { action, note } = req.body;
 
     if (!action || !["APPROVE", "REJECT"].includes(action)) {
-      return res.status(400).json({ error: "Action must be APPROVE or REJECT" });
+      return res.status(400).json({ error: `Unrecognised action "${String(action)}". It must be either APPROVE or REJECT.` });
     }
 
     const product = await prisma.product.findUnique({
@@ -1863,7 +1903,7 @@ router.put("/profile-edits/:draftId", async (req: Request, res: Response) => {
     const { action, note } = req.body;
 
     if (!action || !["APPROVE", "REJECT"].includes(action)) {
-      return res.status(400).json({ error: "Action must be APPROVE or REJECT" });
+      return res.status(400).json({ error: `Unrecognised action "${String(action)}". It must be either APPROVE or REJECT.` });
     }
 
     const draft = await prisma.profileEditDraft.findUnique({

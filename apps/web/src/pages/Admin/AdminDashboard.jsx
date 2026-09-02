@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../services/api";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 
 const EMPTY_STATS = {
   totalMembers: 0,
@@ -116,10 +117,16 @@ const AdminDashboard = () => {
   const [memberTypeData, setMemberTypeData] = useState([]);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Every tile falls back to 0. A silent failure therefore reported a
+  // completely empty network, which is the most misleading answer available.
+  const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     setMounted(true);
     const fetchStats = async () => {
+      setLoading(true);
+      setError(null);
       try {
         const data = await api.getAdminStats();
         if (data) {
@@ -137,14 +144,14 @@ const AdminDashboard = () => {
             );
           }
         }
-      } catch {
-        // empty state
+      } catch (err) {
+        setError(err);
       } finally {
         setLoading(false);
       }
     };
     fetchStats();
-  }, []);
+  }, [reloadKey]);
 
   const s = stats || EMPTY_STATS;
 
@@ -199,6 +206,16 @@ const AdminDashboard = () => {
 
   return (
     <div>
+      {error && (
+        <div style={{ marginBottom: "24px", maxWidth: "640px" }}>
+          <ErrorNotice
+            error={error}
+            title="Dashboard figures could not be loaded"
+            onRetry={() => setReloadKey((k) => k + 1)}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
         <div>

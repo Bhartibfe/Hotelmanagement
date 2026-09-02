@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { downscaleImage } from "../../lib/downscaleImage";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -31,19 +32,28 @@ const MultiPhotoUpload = ({ value = [], onChange, label = "Photos", max = 10 }) 
     const toProcess = allFiles.filter((f) => ALLOWED_TYPES.includes(f.type) && f.size <= MAX_FILE_SIZE);
     if (toProcess.length === 0) return;
 
-    let processed = 0;
-    const newPhotos = [];
+    /*
+      Read and downscale each file, then add them in one go. Galleries are the
+      easiest place to put tens of megabytes into the database by accident —
+      several phone photos at once, each stored as base64.
 
-    toProcess.forEach((file) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        newPhotos.push(reader.result);
-        processed++;
-        if (processed === toProcess.length) {
-          onChange([...photos, ...newPhotos]);
-        }
-      };
-      reader.readAsDataURL(file);
+      Promise.all rather than the previous counter so the order of the added
+      photos matches the order they were picked in, regardless of which
+      finishes decoding first.
+    */
+    Promise.all(
+      toProcess.map(
+        (file) =>
+          new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = async () => resolve(await downscaleImage(reader.result, "photo"));
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then((results) => {
+      const added = results.filter(Boolean);
+      if (added.length > 0) onChange([...photos, ...added]);
     });
   };
 

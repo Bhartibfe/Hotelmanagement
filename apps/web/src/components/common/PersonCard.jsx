@@ -8,8 +8,10 @@ import { Link } from "react-router-dom";
 // the name alone at rest, the rest of the detail expanding on hover.
 //
 // Hover is CSS, not React state, so the grid does not re-render on every mouse
-// move. Where hover does not exist — phones, tablets — the plate is expanded
-// permanently, otherwise those details would be unreachable.
+// move. Where hover does not exist — phones, tablets — the plate stays closed
+// rather than expanding permanently: an always-open plate is tall enough to
+// cover the face, which defeats the point of the card. The role, company and
+// bio are one tap away on the profile itself.
 export const PersonCardStyles = () => (
   <style>{`
     .person-card {
@@ -149,9 +151,28 @@ export const PersonCardStyles = () => (
       overflow: hidden;
     }
 
-    /* No hover here, so the detail cannot be behind one. */
+    /* No hover to open the plate with, and no room to leave it open — see the
+       note at the top of this file. Name only; the card links to the rest.
+
+       Each :hover rule is repeated here rather than just reset on the base
+       selector. Phones still apply :hover on tap, and it can stick to the last
+       element touched; without the same specificity on the left the plate
+       would spring open over the face on the way out of the page. */
     @media (hover: none) {
-      .person-card__more { max-height: 150px; opacity: 1; }
+      .person-card__more,
+      .person-card:hover .person-card__more { max-height: 0; opacity: 0; }
+
+      .person-card__plate,
+      .person-card:hover .person-card__plate { padding-bottom: 12px; }
+
+      .person-card__media,
+      .person-card:hover .person-card__media { transform: none; }
+
+      .person-card,
+      .person-card:hover {
+        transform: none;
+        box-shadow: 0 1px 3px rgba(10, 22, 40, 0.08);
+      }
     }
   `}</style>
 );

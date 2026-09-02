@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
+import { ErrorNotice } from "../common/ErrorNotice";
+import { downscaleImage } from "../../lib/downscaleImage";
 import RichTextEditor from "./RichTextEditor";
 
 const EVENT_TYPES = [
@@ -44,7 +46,7 @@ const CreateEventForm = ({ onSubmit, initialData, onCancel }) => {
   const [highlightInput, setHighlightInput] = useState("");
   const [agenda, setAgenda] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const fileRef = useRef(null);
 
   useEffect(() => {
@@ -71,8 +73,12 @@ const CreateEventForm = ({ onSubmit, initialData, onCancel }) => {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { setError("Image must be under 5MB."); return; }
     const reader = new FileReader();
-    reader.onload = (ev) => setCoverImage(ev.target.result);
+    // Downscaled before it is stored: cover images were the largest things in
+    // the database at 0.8-1.8MB each, and they are never shown above 1600px.
+    reader.onload = async (ev) => setCoverImage(await downscaleImage(ev.target.result, "cover"));
+    reader.onerror = () => setError("That file could not be read. Try selecting it again.");
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   const addHighlight = () => {
@@ -88,13 +94,21 @@ const CreateEventForm = ({ onSubmit, initialData, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(null);
     if (!title.trim()) { setError("Title is required."); return; }
     if (!description.trim() && description !== "<br>") { setError("Description is required."); return; }
     if (!city.trim()) { setError("City is required."); return; }
     if (!state.trim()) { setError("State is required."); return; }
     if (!startDate) { setError("Start date is required."); return; }
     if (!endDate) { setError("End date is required."); return; }
+    if (new Date(endDate) < new Date(startDate)) {
+      setError("The end date is before the start date. Swap them, or set both to the same day for a single-day event.");
+      return;
+    }
+    if (maxAttendees && (!/^\d+$/.test(String(maxAttendees)) || parseInt(maxAttendees, 10) < 1)) {
+      setError("Maximum attendees must be a whole number of 1 or more. Leave it blank for no limit.");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -122,7 +136,7 @@ const CreateEventForm = ({ onSubmit, initialData, onCancel }) => {
         setOrganizerName(""); setHighlights([]); setAgenda("");
       }
     } catch (err) {
-      setError(err.message || "Failed to save event.");
+      setError(err);
     } finally {
       setSaving(false);
     }
@@ -131,8 +145,8 @@ const CreateEventForm = ({ onSubmit, initialData, onCancel }) => {
   return (
     <form onSubmit={handleSubmit}>
       {error && (
-        <div style={{ padding: "12px 16px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", fontSize: "14px" }}>
-          {error}
+        <div style={{ marginBottom: "16px" }}>
+          <ErrorNotice error={error} onDismiss={() => setError(null)} compact />
         </div>
       )}
 

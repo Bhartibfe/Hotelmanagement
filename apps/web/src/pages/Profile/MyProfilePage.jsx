@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
+import { useToast } from "../../components/common/Toast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { Layout } from "../../layouts/Layout";
 import CreatePostForm from "../../components/profile/CreatePostForm";
 import PostDetailModal from "../../components/profile/PostDetailModal";
@@ -57,13 +59,16 @@ const MyProfilePage = () => {
   const { user, loading, isApprovedMember } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
+  const { toastError, toastSuccess } = useToast();
   const [myPosts, setMyPosts] = useState([]);
+  const [postsError, setPostsError] = useState(null);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [editingPost, setEditingPost] = useState(null);
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [myEvents, setMyEvents] = useState([]);
+  const [eventsError, setEventsError] = useState(null);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -81,7 +86,7 @@ const MyProfilePage = () => {
         const data = await api.getMyProfile();
         setProfile(data);
       } catch (err) {
-        setError(err.message || "Failed to load profile");
+        setError(err);
       } finally {
         setLoadingProfile(false);
       }
@@ -97,9 +102,12 @@ const MyProfilePage = () => {
       setLoadingPosts(true);
       try {
         const data = await api.getMyPosts();
-        if (data?.posts) setMyPosts(data.posts);
-      } catch {
-        // silent fail
+        setMyPosts(data?.posts || []);
+        setPostsError(null);
+      } catch (err) {
+        // "You have not posted yet" and "we could not fetch your posts" are
+        // very different messages to show somebody looking for their own work.
+        setPostsError(err);
       } finally {
         setLoadingPosts(false);
       }
@@ -113,9 +121,10 @@ const MyProfilePage = () => {
       setLoadingEvents(true);
       try {
         const data = await api.getMyEvents();
-        if (data?.events) setMyEvents(data.events);
-      } catch {
-        // silent
+        setMyEvents(data?.events || []);
+        setEventsError(null);
+      } catch (err) {
+        setEventsError(err);
       } finally {
         setLoadingEvents(false);
       }
@@ -123,25 +132,32 @@ const MyProfilePage = () => {
     fetchMyEvents();
   }, [user, isIncomplete, activeTab]);
 
+  // Failures here are deliberately uncaught: the form dialog keeps the draft on
+  // screen and shows the message beside the fields that caused it.
   const handleCreateEvent = async (eventData) => {
     if (editingEvent) {
       const updated = await api.updateUserEvent(editingEvent.id, eventData);
       setMyEvents((prev) => prev.map((e) => (e.id === editingEvent.id ? updated : e)));
+      toastSuccess(`Saved changes to "${updated?.title || eventData.title}".`);
     } else {
       const newEvent = await api.createUserEvent(eventData);
       setMyEvents((prev) => [newEvent, ...prev]);
+      toastSuccess(`Created "${newEvent?.title || eventData.title}".`);
     }
     setShowCreateEvent(false);
     setEditingEvent(null);
   };
 
   const handleDeleteEvent = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this event?")) return;
+    const event = myEvents.find((e) => e.id === id);
+    const label = event?.title ? `"${event.title}"` : "this event";
+    if (!window.confirm(`Delete ${label}? Anyone registered for it will lose their place. This cannot be undone.`)) return;
     try {
       await api.deleteUserEvent(id);
       setMyEvents((prev) => prev.filter((e) => e.id !== id));
-    } catch {
-      // error
+      toastSuccess(`Deleted ${label}.`);
+    } catch (err) {
+      toastError(err, `delete ${label}`);
     }
   };
 
@@ -149,21 +165,26 @@ const MyProfilePage = () => {
     if (editingPost) {
       const updated = await api.updatePost(editingPost.id, postData);
       setMyPosts((prev) => prev.map((p) => (p.id === editingPost.id ? updated : p)));
+      toastSuccess("Post updated.");
     } else {
       const newPost = await api.createPost(postData);
       setMyPosts((prev) => [newPost, ...prev]);
+      toastSuccess("Post published.");
     }
     setShowCreatePost(false);
     setEditingPost(null);
   };
 
   const handleDeletePost = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
+    const post = myPosts.find((p) => p.id === id);
+    const label = post?.title ? `"${post.title}"` : "this post";
+    if (!window.confirm(`Delete ${label}? Its comments and likes go with it. This cannot be undone.`)) return;
     try {
       await api.deletePost(id);
       setMyPosts((prev) => prev.filter((p) => p.id !== id));
-    } catch {
-      // error
+      toastSuccess(`Deleted ${label}.`);
+    } catch (err) {
+      toastError(err, `delete ${label}`);
     }
   };
 
@@ -414,6 +435,8 @@ const MyProfilePage = () => {
       </div>
       {loadingPosts ? (
         <div style={{ textAlign: "center", padding: "40px 0" }}><i className="fas fa-circle-notch fa-spin" style={{ fontSize: "20px", color: "#C6A962" }}></i></div>
+      ) : postsError ? (
+        <ErrorNotice error={postsError} title="Your posts could not be loaded" />
       ) : myPosts.length > 0 ? (
         <div className="row">
           {myPosts.map((post) => (
@@ -488,6 +511,8 @@ const MyProfilePage = () => {
       </div>
       {loadingEvents ? (
         <div style={{ textAlign: "center", padding: "40px 0" }}><i className="fas fa-circle-notch fa-spin" style={{ fontSize: "20px", color: "#C6A962" }}></i></div>
+      ) : eventsError ? (
+        <ErrorNotice error={eventsError} title="Your events could not be loaded" />
       ) : myEvents.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {myEvents.map((event) => (
@@ -796,7 +821,11 @@ const MyProfilePage = () => {
         <div className="container">
           <div className="row">
             <div className="col-lg-8">
-              {error && <div style={{ background: "#FEE2E2", color: "#C53030", padding: "12px 16px", marginBottom: "20px", fontSize: "14px" }}>{error}</div>}
+              {error && (
+                <div style={{ marginBottom: "20px" }}>
+                  <ErrorNotice error={error} title="Your profile could not be loaded" />
+                </div>
+              )}
 
               <TabBar />
 

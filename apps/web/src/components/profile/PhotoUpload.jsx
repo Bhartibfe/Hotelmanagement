@@ -1,11 +1,23 @@
 import React, { useRef, useState } from "react";
+import ImageCropper from "./ImageCropper";
+import { downscaleImage } from "../../lib/downscaleImage";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
-const PhotoUpload = ({ value, onChange, label = "Profile Photo" }) => {
+/*
+  `crop` is opt-in rather than the default. It squares the image off through
+  ImageCropper, which is right for a person's photo — every one of those is
+  shown in a circle — and wrong for a company logo, which must not be cropped
+  at all. Opting in per call site means a logo field added later cannot
+  accidentally inherit a circular crop.
+*/
+const PhotoUpload = ({ value, onChange, label = "Profile Photo", crop = false }) => {
   const fileInputRef = useRef(null);
   const [error, setError] = useState("");
+  // The image handed to the cropper: a freshly picked file, or the stored
+  // photo when someone reopens it to re-frame what is already saved.
+  const [cropping, setCropping] = useState(null);
 
   const handleClick = () => {
     fileInputRef.current?.click();
@@ -29,10 +41,24 @@ const PhotoUpload = ({ value, onChange, label = "Profile Photo" }) => {
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      onChange(reader.result);
+    reader.onloadend = async () => {
+      // With cropping on, the file is only a starting point — what gets saved
+      // is the square the cropper returns, already downscaled by it.
+      if (crop) setCropping(reader.result);
+      // Without it (logos), still cap the size: a multi-megabyte logo is
+      // stored as base64 and dragged across the wire on every request.
+      else onChange(await downscaleImage(reader.result, "logo"));
     };
+    reader.onerror = () => setError("That file could not be read. Try selecting it again.");
     reader.readAsDataURL(file);
+
+    // Cleared so re-picking the same file still fires a change event.
+    e.target.value = "";
+  };
+
+  const handleCropConfirm = (cropped) => {
+    setCropping(null);
+    onChange(cropped);
   };
 
   const handleRemove = (e) => {
@@ -137,6 +163,33 @@ const PhotoUpload = ({ value, onChange, label = "Profile Photo" }) => {
             <i className="fas fa-upload" style={{ marginRight: "6px" }}></i>
             {value ? "Change Photo" : "Select Photo"}
           </button>
+
+          {/* Re-frames the photo already saved, without needing the original
+              file again — this is how existing photos get fixed. */}
+          {crop && value && (
+            <button
+              type="button"
+              onClick={() => setCropping(value)}
+              style={{
+                display: "block",
+                background: "none",
+                border: "1px solid #0A1628",
+                color: "#0A1628",
+                padding: "8px 20px",
+                fontSize: "12px",
+                fontWeight: 600,
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                transition: "all 0.2s",
+                marginBottom: "8px",
+              }}
+            >
+              <i className="fas fa-crop-simple" style={{ marginRight: "6px" }}></i>
+              Adjust
+            </button>
+          )}
+
           {value && (
             <button
               type="button"
@@ -185,6 +238,15 @@ const PhotoUpload = ({ value, onChange, label = "Profile Photo" }) => {
         onChange={handleFileChange}
         style={{ display: "none" }}
       />
+
+      {cropping && (
+        <ImageCropper
+          src={cropping}
+          title={label}
+          onConfirm={handleCropConfirm}
+          onCancel={() => setCropping(null)}
+        />
+      )}
     </div>
   );
 };

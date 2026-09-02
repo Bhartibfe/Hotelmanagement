@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
@@ -157,24 +158,25 @@ const EventsPage = () => {
   const [activeType, setActiveType] = useState("ALL");
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchEvents = async () => {
-      setLoading(true);
-      try {
-        const params = {};
-        if (activeType !== "ALL") params.type = activeType;
-        const data = await api.getEvents(params);
-        if (data?.events) setEvents(data.events);
-        else setEvents([]);
-      } catch {
-        setEvents([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchEvents();
+  const loadEvents = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {};
+      if (activeType !== "ALL") params.type = activeType;
+      const data = await api.getEvents(params);
+      setEvents(data?.events || []);
+    } catch (err) {
+      setEvents([]);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
   }, [activeType]);
+
+  useEffect(() => { loadEvents(); }, [loadEvents]);
 
   useAosRefresh(!loading);
 
@@ -307,8 +309,14 @@ const EventsPage = () => {
                 </div>
               )}
 
+              {error && (
+                <div style={{ maxWidth: "640px", margin: "0 auto 32px" }}>
+                  <ErrorNotice error={error} title="Events could not be loaded" onRetry={loadEvents} />
+                </div>
+              )}
+
               {/* Empty State */}
-              {events.length === 0 && (
+              {!error && events.length === 0 && (
                 <div style={{ textAlign: "center", padding: "80px 20px" }}>
                   <i className="fas fa-calendar-alt" style={{ fontSize: "48px", color: "#CBD5E1", marginBottom: "16px", display: "block" }}></i>
                   <h5 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", color: "#0A1628", marginBottom: "8px" }}>No events found</h5>

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import { prisma } from "@hospitality/database";
+import { oversizedImageError } from "../utils/media";
 import { authenticate } from "../middleware/auth";
 import { slugify } from "../utils/slugify";
 import { normalizeProfileFields } from "../utils/profileFields";
@@ -146,6 +147,12 @@ router.post("/submit/:token", async (req: Request, res: Response) => {
       vendorProfile,
       products,
     } = normalizeProfileFields(req.body);
+
+    // Backstop for the client-side downscale — see utils/media.ts. The client
+    // resizes before sending; this makes sure nothing multi-megabyte lands in
+    // the database if that ever fails or is bypassed.
+    const oversized = oversizedImageError([{ label: "Profile photo", value: avatar }]);
+    if (oversized) return res.status(413).json({ error: oversized });
 
     const result = await prisma.$transaction(async (tx) => {
       // Update user profile fields

@@ -9,6 +9,7 @@ import { useWow } from "./lib/hooks/useWow";
 import { useAos } from "./lib/hooks/useAos";
 import { useJarallax } from "./lib/hooks/useJarallax";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ToastProvider } from "./components/common/Toast";
 
 // Route Guards
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -96,6 +97,9 @@ function App() {
 
   return (
     <AuthProvider>
+      {/* One toast stack for the whole site, so any page can report a failed
+          write instead of swallowing it. */}
+      <ToastProvider>
       {!isAdminRoute && <AnimationInitializer />}
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
@@ -162,6 +166,7 @@ function App() {
           <Route path="*" element={<ErrorPage />} />
         </Routes>
       </Suspense>
+      </ToastProvider>
     </AuthProvider>
   );
 }

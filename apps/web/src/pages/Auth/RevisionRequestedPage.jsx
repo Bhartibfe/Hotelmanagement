@@ -3,6 +3,7 @@ import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import HotelOwnerProfileForm from "../../components/profile/HotelOwnerProfileForm";
 import VendorProfileForm from "../../components/profile/VendorProfileForm";
 import ExpertProfileForm from "../../components/profile/ExpertProfileForm";
@@ -12,7 +13,7 @@ const RevisionRequestedPage = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
@@ -21,7 +22,7 @@ const RevisionRequestedPage = () => {
         const data = await api.getMyProfile();
         setProfile(data);
       } catch (err) {
-        setError("Failed to load profile data. Please try again.");
+        setError(err);
       } finally {
         setLoadingProfile(false);
       }
@@ -40,7 +41,7 @@ const RevisionRequestedPage = () => {
   }
 
   const handleSubmit = async (data) => {
-    setError("");
+    setError(null);
     try {
       await api.resubmitProfile(data);
       setSuccess(true);
@@ -49,7 +50,7 @@ const RevisionRequestedPage = () => {
         navigate("/membership-pending");
       }, 1500);
     } catch (err) {
-      setError(err.message || "Failed to resubmit profile. Please try again.");
+      setError(err);
       throw err;
     }
   };
@@ -248,19 +249,10 @@ const RevisionRequestedPage = () => {
 
               {/* Error Message */}
               {error && (
-                <div
-                  style={{
-                    background: "#FEE2E2",
-                    color: "#C53030",
-                    padding: "14px 20px",
-                    marginBottom: "24px",
-                    fontSize: "14px",
-                    border: "1px solid #FCA5A5",
-                  }}
-                >
-                  {error}
-                </div>
-              )}
+              <div style={{ marginBottom: "20px" }}>
+                <ErrorNotice error={error} title="Your profile could not be resubmitted" />
+              </div>
+            )}
 
               {/* Success Message */}
               {success && (

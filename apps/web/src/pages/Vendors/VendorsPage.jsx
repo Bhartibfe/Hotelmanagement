@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { DEFAULT_VENDOR_CATEGORIES, categoryColor, categoryLabel } from "../../lib/vendorCategories";
@@ -13,10 +14,14 @@ const VendorsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [categoryOptions, setCategoryOptions] = useState(DEFAULT_VENDOR_CATEGORIES);
+  // Separates "nobody has joined yet" from "the request failed", which the
+  // shared empty state used to render identically.
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const loadVendors = useCallback(() => {
     const fetchVendors = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await api.getVendors({ limit: "100" });
         // The API answers with { vendors, total, ... } and its own field names
@@ -36,18 +41,26 @@ const VendorsPage = () => {
         );
       } catch (err) {
         setVendors([]);
+        setError(err);
       } finally {
         setLoading(false);
       }
     };
     fetchVendors();
+  }, []);
+
+  useEffect(() => {
+    loadVendors();
 
     // Categories are admin-managed, same source as the experts page's
-    // expertise list. Fall back to the seed list if the call fails.
-    api.getHomepageConfig().then((data) => {
-      if (data?.categoryOptions?.length > 0) setCategoryOptions(data.categoryOptions);
-    }).catch(() => {});
-  }, []);
+    // expertise list. Falling back to the seed list is the whole point, so a
+    // failure here is not worth interrupting the page for.
+    api.getHomepageConfig()
+      .then((data) => {
+        if (data?.categoryOptions?.length > 0) setCategoryOptions(data.categoryOptions);
+      })
+      .catch((err) => console.warn("Partner categories fell back to defaults:", err.message));
+  }, [loadVendors]);
 
   useAosRefresh(!loading);
 
@@ -155,8 +168,9 @@ const VendorsPage = () => {
                 .filter(Boolean)
                 .join("  ·  ");
               return (
-                <div key={vendor.id} className="col-lg-3 col-md-4 col-sm-6 d-flex" data-aos="fade-up" data-aos-delay={i * 50} style={{ marginBottom: "20px" }}>
+                <div key={vendor.id} className="col-6 col-md-4 col-lg-3 d-flex" data-aos="fade-up" data-aos-delay={i * 50} style={{ marginBottom: "20px" }}>
                   <div
+                    className="partner-card"
                     style={{
                       background: "#FFFFFF",
                       border: "1px solid var(--tg-border-color)",
@@ -177,8 +191,9 @@ const VendorsPage = () => {
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
-                    {/* Logo + name */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    {/* Logo + name. Wraps to two rows on a phone, where a
+                        half-width column has no room for them side by side. */}
+                    <div className="partner-card__head" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                       <div
                         style={{
                           width: "48px",
@@ -283,8 +298,14 @@ const VendorsPage = () => {
             })}
           </div>
 
+          {error && (
+            <div style={{ maxWidth: "640px", margin: "0 auto 32px" }}>
+              <ErrorNotice error={error} title="Partners could not be loaded" onRetry={loadVendors} />
+            </div>
+          )}
+
           {/* Empty State */}
-          {!loading && filtered.length === 0 && (
+          {!loading && !error && filtered.length === 0 && (
             <div className="text-center" style={{ padding: "80px 0" }}>
               <i
                 className="far fa-building"

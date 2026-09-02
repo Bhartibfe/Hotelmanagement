@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
@@ -20,28 +21,31 @@ const MembersPage = () => {
   const [sort, setSort] = useState("");
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  useEffect(() => {
-    const fetchMembers = async () => {
-      try {
-        const params = { memberType: "HOTEL_OWNER", limit: "100" };
-        if (debouncedSearch) params.search = debouncedSearch;
-        if (sort) params.sort = sort;
-        const data = await api.getUsers(params);
-        setMembers((data?.users || []).filter((u) => u.memberType === "HOTEL_OWNER"));
-      } catch {
-        // leave the current list in place
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMembers();
+  const loadMembers = useCallback(async () => {
+    setError(null);
+    try {
+      const params = { memberType: "HOTEL_OWNER", limit: "100" };
+      if (debouncedSearch) params.search = debouncedSearch;
+      if (sort) params.sort = sort;
+      const data = await api.getUsers(params);
+      setMembers((data?.users || []).filter((u) => u.memberType === "HOTEL_OWNER"));
+    } catch (err) {
+      // The previous list stays on screen so a failed search does not wipe
+      // the page; the notice above it says why nothing changed.
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
   }, [debouncedSearch, sort]);
+
+  useEffect(() => { loadMembers(); }, [loadMembers]);
 
   useAosRefresh(!loading);
 
@@ -398,7 +402,13 @@ const MembersPage = () => {
             })}
           </div>
 
-          {!loading && filtered.length === 0 && (
+          {error && (
+            <div style={{ maxWidth: "640px", margin: "0 auto 32px" }}>
+              <ErrorNotice error={error} title="Hotel owners could not be loaded" onRetry={loadMembers} />
+            </div>
+          )}
+
+          {!loading && !error && filtered.length === 0 && (
             <div className="text-center" style={{ padding: "60px 0" }}>
               <p style={{ fontSize: "16px", color: "var(--tg-gray-three)" }}>No hotel owners found matching your search.</p>
             </div>

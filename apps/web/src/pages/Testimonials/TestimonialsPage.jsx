@@ -1,28 +1,29 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 
 const TestimonialsPage = () => {
   const [testimonials, setTestimonials] = useState([]);
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchTestimonials = async () => {
-      setLoading(true);
-      try {
-        const data = await api.getTestimonials();
-        if (data && data.length > 0) {
-          setTestimonials(data);
-        }
-      } catch (err) {
-        setTestimonials([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTestimonials();
+  const loadTestimonials = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getTestimonials();
+      setTestimonials(Array.isArray(data) ? data : data?.testimonials || []);
+    } catch (err) {
+      setTestimonials([]);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { loadTestimonials(); }, [loadTestimonials]);
 
   useAosRefresh(!loading);
 
@@ -148,6 +149,10 @@ const TestimonialsPage = () => {
             <div className="text-center" style={{ padding: "60px 0" }}>
               <i className="fas fa-circle-notch fa-spin" style={{ fontSize: "28px", color: "#C6A962" }}></i>
               <p style={{ marginTop: "12px", fontSize: "14px", color: "var(--tg-gray-three)" }}>Loading testimonials...</p>
+            </div>
+          ) : error ? (
+            <div style={{ maxWidth: "640px", margin: "40px auto" }}>
+              <ErrorNotice error={error} title="Testimonials could not be loaded" onRetry={loadTestimonials} />
             </div>
           ) : testimonials.length === 0 ? (
             <div style={{ textAlign: "center", padding: "80px 20px" }}>

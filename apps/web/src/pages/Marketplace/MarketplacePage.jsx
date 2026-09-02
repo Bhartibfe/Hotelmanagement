@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 
@@ -22,23 +23,26 @@ const MarketplacePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const loadVendors = useCallback(() => {
     const fetchVendors = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await api.getVendors();
-        if (data && data.length > 0) {
-          setVendors(data);
-        }
-      } catch {
+        setVendors(Array.isArray(data) ? data : data?.vendors || []);
+      } catch (err) {
         setVendors([]);
+        setError(err);
       } finally {
         setLoading(false);
       }
     };
     fetchVendors();
   }, []);
+
+  useEffect(() => { loadVendors(); }, [loadVendors]);
 
   const filtered = vendors.filter((v) => {
     const matchCat = activeCat === "ALL" || v.category === activeCat;
@@ -107,7 +111,13 @@ const MarketplacePage = () => {
             </div>
           )}
 
-          {!loading && filtered.length === 0 && (
+          {error && (
+            <div style={{ maxWidth: "640px", margin: "0 auto 32px" }}>
+              <ErrorNotice error={error} title="Vendors could not be loaded" onRetry={loadVendors} />
+            </div>
+          )}
+
+          {!loading && !error && filtered.length === 0 && (
             <div style={{ textAlign: "center", padding: "80px 20px" }}>
               <i className="fas fa-store" style={{ fontSize: "48px", color: "#CBD5E1", marginBottom: "16px", display: "block" }}></i>
               <h5 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "20px", color: "#0A1628", marginBottom: "8px" }}>No vendors found</h5>

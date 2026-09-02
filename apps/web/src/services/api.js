@@ -1,3 +1,5 @@
+import { ApiError, buildApiError } from "./apiError";
+
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 let isRefreshing = false;
@@ -13,24 +15,87 @@ const failQueue = (error) => {
   refreshQueue = [];
 };
 
+/*
+  Throws an ApiError whose `code` says whether the session is genuinely over.
+  The distinction matters: only a server that actually rejected the refresh
+  token should clear it. A refresh that fails because the connection dropped
+  mid-flight must leave the stored tokens alone, or a moment of bad signal
+  signs the member out and loses whatever they were part-way through.
+*/
 const refreshTokens = async () => {
   const refreshToken = localStorage.getItem("refreshToken");
-  if (!refreshToken) throw new Error("No refresh token");
-  const response = await fetch(`${API_URL}/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-  if (!response.ok) throw new Error("Refresh failed");
+  if (!refreshToken) {
+    throw new ApiError("You are not signed in. Please sign in to continue.", {
+      status: 401,
+      code: "SESSION_EXPIRED",
+    });
+  }
+
+  let response;
+  try {
+    response = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
+  } catch (err) {
+    throw new ApiError(
+      "We lost the connection while renewing your session. Check your connection and try again.",
+      { status: 0, code: "NETWORK", cause: err }
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiError("Your session has expired. Please sign in again to continue.", {
+      status: response.status,
+      code: "SESSION_EXPIRED",
+    });
+  }
+
   const data = await response.json();
   localStorage.setItem("accessToken", data.accessToken);
   if (data.refreshToken) localStorage.setItem("refreshToken", data.refreshToken);
   return data.accessToken;
 };
 
-const request = async (method, path, { body, auth = true, timeout = 30000 } = {}) => {
+// Describes what a request was trying to do, so a bare 500 or 403 can still
+// say "We could not update the event" instead of "Request failed with status
+// 500". Derived from the path rather than annotated on all hundred-odd
+// endpoints: the last segment that is not an id is the resource.
+const describeAction = (method, path) => {
+  const segments = path.split("?")[0].split("/").filter(Boolean);
+  const isId = (s) => /^[0-9]+$/.test(s) || /^[0-9a-f]{8}-/i.test(s) || s.length > 20;
+  const resource = [...segments].reverse().find((s) => !isId(s)) || "data";
+  const noun = resource.replace(/-/g, " ");
+  switch (method) {
+    case "GET": return `load the ${noun}`;
+    case "POST": return `save the ${noun}`;
+    case "PUT":
+    case "PATCH": return `update the ${noun}`;
+    case "DELETE": return `delete the ${noun}`;
+    default: return `complete that ${noun} request`;
+  }
+};
+
+const readBody = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+  if (response.status === 204) return { json: null, empty: true };
+  if (contentType.includes("application/json")) {
+    try {
+      return { json: await response.json(), empty: false };
+    } catch {
+      // A truncated or malformed JSON body is a server fault, not a user one.
+      return { json: null, empty: false, malformed: true };
+    }
+  }
+  const text = await response.text().catch(() => "");
+  return { json: null, empty: false, text };
+};
+
+const request = async (method, path, { body, auth = true, timeout = 30000, action, redirectOnSessionEnd = true } = {}) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
+  const what = action || describeAction(method, path);
 
   const headers = { "Content-Type": "application/json" };
   if (auth) {
@@ -38,26 +103,26 @@ const request = async (method, path, { body, auth = true, timeout = 30000 } = {}
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
-  try {
-    let response = await fetch(`${API_URL}${path}`, {
+  const send = () =>
+    fetch(`${API_URL}${path}`, {
       method,
       headers,
       signal: controller.signal,
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
 
-    // Handle 401 with token refresh
+  try {
+    let response = await send();
+
+    // Handle 401 with token refresh. The retry reuses `send`, so it keeps the
+    // same abort signal and cannot outlive the timeout.
     if (response.status === 401 && auth) {
       if (isRefreshing) {
         const newToken = await new Promise((resolve, reject) => {
           refreshQueue.push({ resolve, reject });
         });
         headers["Authorization"] = `Bearer ${newToken}`;
-        response = await fetch(`${API_URL}${path}`, {
-          method,
-          headers,
-          ...(body ? { body: JSON.stringify(body) } : {}),
-        });
+        response = await send();
       } else {
         isRefreshing = true;
         try {
@@ -65,17 +130,23 @@ const request = async (method, path, { body, auth = true, timeout = 30000 } = {}
           isRefreshing = false;
           processQueue(newToken);
           headers["Authorization"] = `Bearer ${newToken}`;
-          response = await fetch(`${API_URL}${path}`, {
-            method,
-            headers,
-            ...(body ? { body: JSON.stringify(body) } : {}),
-          });
+          response = await send();
         } catch (err) {
           isRefreshing = false;
           failQueue(err);
+
+          // A dropped connection is not an expired session. Keep the tokens so
+          // the next attempt can still use them, and report it as a network
+          // problem rather than throwing the member out.
+          if (err.code === "NETWORK") throw err;
+
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
-          window.location.href = "/login";
+          // Bounce to login, but only from pages that actually need an account —
+          // otherwise a stale token turns every public page into a redirect.
+          if (redirectOnSessionEnd && !window.location.pathname.startsWith("/login")) {
+            window.location.href = "/login";
+          }
           throw err;
         }
       }
@@ -86,21 +157,47 @@ const request = async (method, path, { body, auth = true, timeout = 30000 } = {}
     // Any write invalidates the public GET cache so fresh data is served next time
     if (method !== "GET" && response.ok) publicCache.clear();
 
-    // Handle non-JSON responses
-    const contentType = response.headers.get("content-type");
-    if (response.status === 204) return null;
-    if (!contentType || !contentType.includes("application/json")) {
-      if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
-      return null;
+    const { json, empty, malformed, text } = await readBody(response);
+
+    if (!response.ok) {
+      if (malformed || (json === null && text !== undefined)) {
+        // A proxy or a crashed server answers with HTML, not JSON. Quoting a
+        // fragment of a stack-trace page at a member helps nobody, so only a
+        // short plain-text body is passed through; anything else falls back to
+        // the status wording.
+        const plain = (text || "").trim();
+        const usable = plain && plain.length <= 200 && !plain.startsWith("<") ? plain : null;
+        throw buildApiError({ status: response.status, body: { error: usable }, path, action: what });
+      }
+      throw buildApiError({ status: response.status, body: json, path, action: what });
     }
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || `Request failed with status ${response.status}`);
-    return data;
+    if (empty) return null;
+    if (malformed) {
+      throw new ApiError(
+        `The server's reply to "${what}" was not readable. Please try again.`,
+        { status: response.status, code: "BAD_RESPONSE", path }
+      );
+    }
+    return json;
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err.name === "AbortError") throw new Error("Request timed out");
-    throw err;
+    if (err instanceof ApiError) throw err;
+    if (err.name === "AbortError") {
+      throw new ApiError(
+        `The server took longer than ${Math.round(timeout / 1000)} seconds to ${what}. It may be busy — please try again.`,
+        { status: 0, code: "TIMEOUT", path, cause: err }
+      );
+    }
+    // fetch() rejects with a TypeError for DNS failures, refused connections,
+    // offline devices and CORS rejections — all of which read as the useless
+    // "Failed to fetch" if passed straight through.
+    throw new ApiError(
+      navigator.onLine === false
+        ? "You appear to be offline. Reconnect to the internet and try again."
+        : `We could not reach the server to ${what}. Check your connection and try again.`,
+      { status: 0, code: "NETWORK", path, cause: err }
+    );
   }
 };
 
@@ -134,7 +231,9 @@ const api = {
   register: (data) => request("POST", "/auth/register", { body: data, auth: false }),
   login: (data) => request("POST", "/auth/login", { body: data, auth: false }),
   logout: () => request("POST", "/auth/logout"),
-  getMe: () => request("GET", "/auth/me"),
+  // Runs on every page load, public ones included, so a stale token must not
+  // yank a browsing visitor over to the sign-in screen.
+  getMe: () => request("GET", "/auth/me", { redirectOnSessionEnd: false, action: "confirm you are signed in" }),
 
   // Public stats
   getPublicStats: () => cachedGet("/public-stats"),

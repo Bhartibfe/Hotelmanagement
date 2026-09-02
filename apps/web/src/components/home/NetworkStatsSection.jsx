@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Odometer } from "../Odometer/Odometer";
 import api from "../../services/api";
+import { ErrorNotice } from "../common/ErrorNotice";
 
 const DEFAULT_STATS = [
   { id: 1, count: 0, suffix: "+", title: "Members", icon: "flaticon-piggy-bank", key: "members" },
@@ -11,10 +12,18 @@ const DEFAULT_STATS = [
 
 export const NetworkStatsSection = ({ config }) => {
   const [realStats, setRealStats] = useState(null);
+  // Zeros across the board are indistinguishable from a brand-new network, so
+  // a failed count says it failed rather than quietly reporting "0 Members".
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api.getPublicStats().then((data) => setRealStats(data)).catch(() => {});
+  const load = useCallback(() => {
+    setError(null);
+    api.getPublicStats()
+      .then((data) => setRealStats(data))
+      .catch((err) => setError(err));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const STATS = DEFAULT_STATS.map((stat) => {
     if (realStats && realStats[stat.key] !== undefined) {
@@ -42,17 +51,23 @@ export const NetworkStatsSection = ({ config }) => {
       }}
     >
       <div className="container">
-        <div className="row justify-content-center g-4">
+        {error && (
+          <div style={{ maxWidth: "640px", margin: "0 auto 24px" }}>
+            <ErrorNotice error={error} title="Network numbers could not be loaded" onRetry={load} compact />
+          </div>
+        )}
+
+        <div className="row justify-content-center g-3 g-md-4 home-stats-grid">
           {STATS.map((item, index) => (
             <div
               key={item.id}
-              className="col-lg-3 col-md-4 col-sm-6"
+              className="col-6 col-md-4 col-lg-3"
               data-aos="zoom-in-up"
               data-aos-duration="800"
               data-aos-delay={index * 150}
             >
               <div
-                className="counter-item-two text-center"
+                className="counter-item-two home-stat-card text-center"
                 onClick={() => handleClick(item.id)}
                 onMouseEnter={() => setHoveredId(item.id)}
                 onMouseLeave={() => setHoveredId(null)}

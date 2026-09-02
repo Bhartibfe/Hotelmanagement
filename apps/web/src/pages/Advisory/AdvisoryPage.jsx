@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { PersonCard, PersonCardStyles } from "../../components/common/PersonCard";
@@ -62,29 +63,34 @@ const AdvisoryPage = () => {
   const [activeExpertise, setActiveExpertise] = useState("ALL");
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const loadMembers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getAdvisory({ limit: 100 });
+      setMembers(data?.experts || []);
+    } catch (err) {
+      setMembers([]);
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchMembers = async () => {
-      setLoading(true);
-      try {
-        const data = await api.getAdvisory({ limit: 100 });
-        if (data?.experts?.length > 0) {
-          setMembers(data.experts);
-        }
-      } catch (err) {
-        setMembers([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchMembers();
+    loadMembers();
 
-    api.getHomepageConfig().then((data) => {
-      if (data?.expertiseOptions?.length > 0) {
-        setExpertiseOptions(data.expertiseOptions);
-      }
-    }).catch(() => {});
-  }, []);
+    // The seed list works as a fallback, so this only warrants a console note.
+    api.getHomepageConfig()
+      .then((data) => {
+        if (data?.expertiseOptions?.length > 0) {
+          setExpertiseOptions(data.expertiseOptions);
+        }
+      })
+      .catch((err) => console.warn("Expertise filters fell back to defaults:", err.message));
+  }, [loadMembers]);
 
   const getName = (e) => (e.user ? `${e.user.firstName} ${e.user.lastName}` : e.name || "");
   const getTitle = (e) => e.user?.title || e.title || "";
@@ -202,7 +208,7 @@ const AdvisoryPage = () => {
             {filtered.map((member, index) => (
               <div
                 key={member.id}
-                className="col-lg-3 col-md-6"
+                className="col-6 col-md-6 col-lg-3"
                 data-aos="fade-up"
                 data-aos-duration="800"
                 data-aos-delay={index * 50}
@@ -223,7 +229,13 @@ const AdvisoryPage = () => {
           </div>}
 
           {/* Empty State */}
-          {!loading && filtered.length === 0 && (
+          {error && (
+            <div style={{ maxWidth: "640px", margin: "0 auto 32px" }}>
+              <ErrorNotice error={error} title="The advisory board could not be loaded" onRetry={loadMembers} />
+            </div>
+          )}
+
+          {!loading && !error && filtered.length === 0 && (
             <div className="text-center" style={{ padding: "80px 0" }}>
               <i
                 className="fas fa-award"

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import api from "../../services/api";
+import { useAdminToast } from "../../components/admin/AdminToast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import AdminEditProfileModal from "./AdminEditProfileModal";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -81,7 +83,7 @@ const renderStars = (count) => {
 
 // ─── Modal Profile Panel ────────────────────────────────────────────────────
 
-const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, onEditProfile, actionLoading }) => {
+const ProfilePanel = ({ user, detailLoading, detailError, onRetryDetail, onClose, onApprove, onReject, onRevision, onEditProfile, actionLoading }) => {
   const [activeAction, setActiveAction] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
   const [revisionNote, setRevisionNote] = useState("");
@@ -102,15 +104,20 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, onEditPr
     return () => {
       document.body.style.overflow = "";
     };
-  }, [user]);
+    // Keyed on the id rather than the object: the panel is handed the list row
+    // first and the full record a moment later, and re-running this on that
+    // second render would replay the open animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
-  // Reset state when user changes
+  // Reset state when a different applicant is opened — not when the same one's
+  // detail arrives, which would discard a reason the admin had started typing.
   useEffect(() => {
     setActiveAction(null);
     setRejectReason("");
     setRevisionNote("");
     setFlaggedFields([]);
-  }, [user]);
+  }, [user?.id]);
 
   // Close on Escape
   useEffect(() => {
@@ -331,6 +338,30 @@ const ProfilePanel = ({ user, onClose, onApprove, onReject, onRevision, onEditPr
               padding: "24px 28px",
             }}
           >
+            {detailError && (
+              <div style={{ marginBottom: "20px" }}>
+                <ErrorNotice
+                  error={detailError}
+                  title="This applicant's full profile could not be loaded"
+                  onRetry={onRetryDetail}
+                />
+              </div>
+            )}
+
+            {detailLoading && (
+              <div
+                style={{
+                  display: "flex", alignItems: "center", gap: "10px",
+                  marginBottom: "20px", padding: "10px 14px",
+                  background: "#F8FAFC", border: "1px solid #E2E8F0",
+                  borderRadius: "8px", fontSize: "13px", color: "#64748B",
+                }}
+              >
+                <i className="fas fa-circle-notch fa-spin" style={{ color: "#C6A962" }}></i>
+                Loading the rest of this profile...
+              </div>
+            )}
+
             {/* Profile Card Header */}
             <div
               style={{
@@ -996,6 +1027,12 @@ const AdminMembershipRequests = () => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hoveredBtn, setHoveredBtn] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  // The applicant's full profile is fetched when their panel opens, so the
+  // panel has its own loading and failure state separate from the list's.
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(null);
+  const { toastError, toastSuccess } = useAdminToast();
 
   // Modal state
   const [selectedUser, setSelectedUser] = useState(null);
@@ -1009,6 +1046,7 @@ const AdminMembershipRequests = () => {
 
   const fetchRequests = useCallback(async (filterStatus) => {
     setLoading(true);
+    setLoadError(null);
     try {
       const params = { limit: "100" };
       if (filterStatus && filterStatus !== "ALL") {
@@ -1024,7 +1062,9 @@ const AdminMembershipRequests = () => {
         setAllCounts(data.statusCounts);
       }
     } catch (err) {
-      // keep existing data on failure
+      // The list on screen is kept — it is better than a blank table — but the
+      // banner above it now says it is stale and why.
+      setLoadError(err);
     } finally {
       setLoading(false);
     }
@@ -1063,12 +1103,35 @@ const AdminMembershipRequests = () => {
 
   // ─── Modal Actions ─────────────────────────────────────────────────────────
 
-  const openModal = (user) => {
+  /*
+    The list rows are scalars only — no avatar, no hotels, no vendor products —
+    because pulling those for every row made the list itself take the better
+    part of a minute. The full record is fetched here, for one applicant, at
+    the moment their panel opens.
+
+    The row is shown immediately so the panel never opens blank; the detail
+    fills in behind a spinner when it lands.
+  */
+  const openModal = async (user) => {
     setSelectedUser(user);
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const full = await api.getProfileForReview(user.id);
+      // Guarded: an admin can close the panel, or open another applicant,
+      // while this is still in flight.
+      setSelectedUser((current) => (current && current.id === user.id ? { ...current, ...full } : current));
+    } catch (err) {
+      setDetailError(err);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const closeModal = () => {
     setSelectedUser(null);
+    setDetailError(null);
+    setDetailLoading(false);
   };
 
   const refreshAfterAction = useCallback(() => {
@@ -1076,42 +1139,57 @@ const AdminMembershipRequests = () => {
     fetchRequests(activeFilter);
   }, [activeFilter, fetchRequests]);
 
+  // These three decide whether somebody gets into the network. Failing them
+  // silently — the previous behaviour — left the admin believing an approval
+  // had gone through when the server had rejected it.
+  const applicantName = (id) => {
+    const user = requests.find((r) => r.id === id) || (selectedUser?.id === id ? selectedUser : null);
+    return `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.email || "this applicant";
+  };
+
   const handleApprove = async (id) => {
+    const who = applicantName(id);
     setActionLoading(true);
     try {
       await api.approveMembership(id, { action: "APPROVE" });
       setSelectedUser((prev) => (prev && prev.id === id ? { ...prev, membershipStatus: "APPROVED" } : prev));
+      toastSuccess(`Approved ${who}. They have been notified by email.`);
       setTimeout(() => refreshAfterAction(), 600);
     } catch (err) {
-      // silently fail
+      // Modal stays open with the applicant loaded so the action can be retried.
+      toastError(err, `approve ${who}`);
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleReject = async (id, reason) => {
+    const who = applicantName(id);
     setActionLoading(true);
     try {
       await api.approveMembership(id, { action: "REJECT", reason });
       setSelectedUser((prev) => (prev && prev.id === id ? { ...prev, membershipStatus: "REJECTED" } : prev));
+      toastSuccess(`Rejected ${who}.`);
       setTimeout(() => refreshAfterAction(), 600);
     } catch (err) {
-      // silently fail
+      toastError(err, `reject ${who}`);
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleRevision = async (userId, data) => {
+    const who = applicantName(userId);
     setActionLoading(true);
     try {
       await api.requestRevision(userId, data);
       setSelectedUser((prev) =>
         prev && prev.id === userId ? { ...prev, membershipStatus: "REVISION_REQUESTED" } : prev
       );
+      toastSuccess(`Asked ${who} to revise their profile.`);
       setTimeout(() => refreshAfterAction(), 600);
     } catch (err) {
-      // silently fail
+      toastError(err, `request a revision from ${who}`);
     } finally {
       setActionLoading(false);
     }
@@ -1352,6 +1430,16 @@ const AdminMembershipRequests = () => {
             )}
           </div>
 
+          {loadError && (
+            <div style={{ marginBottom: "16px", maxWidth: "640px" }}>
+              <ErrorNotice
+                error={loadError}
+                title="The request list could not be refreshed"
+                onRetry={() => fetchRequests(activeFilter)}
+              />
+            </div>
+          )}
+
           {/* Table */}
           <div
             style={{
@@ -1579,7 +1667,7 @@ const AdminMembershipRequests = () => {
             </div>
 
             {/* Empty State */}
-            {filtered.length === 0 && (
+            {!loadError && filtered.length === 0 && (
               <div
                 style={{
                   padding: "64px 20px",
@@ -1651,6 +1739,9 @@ const AdminMembershipRequests = () => {
       {selectedUser && (
         <ProfilePanel
           user={selectedUser}
+          detailLoading={detailLoading}
+          detailError={detailError}
+          onRetryDetail={() => openModal(selectedUser)}
           onClose={closeModal}
           onApprove={handleApprove}
           onReject={handleReject}

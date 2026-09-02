@@ -2,18 +2,19 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(null);
     setLoading(true);
     // Clear any stale tokens before fresh login
     localStorage.removeItem("accessToken");
@@ -32,7 +33,7 @@ const LoginPage = () => {
         navigate("/");
       }
     } catch (err) {
-      setError(err.message || "Invalid credentials");
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -69,18 +70,10 @@ const LoginPage = () => {
                 </div>
 
                 {error && (
-                  <div
-                    style={{
-                      background: "#FEE2E2",
-                      color: "#C53030",
-                      padding: "12px 16px",
-                      marginBottom: "20px",
-                      fontSize: "14px",
-                    }}
-                  >
-                    {error}
-                  </div>
-                )}
+                <div style={{ marginBottom: "20px" }}>
+                  <ErrorNotice error={error} title="Could not sign you in" />
+                </div>
+              )}
 
                 <form onSubmit={handleSubmit}>
                   <div style={{ marginBottom: "20px" }}>

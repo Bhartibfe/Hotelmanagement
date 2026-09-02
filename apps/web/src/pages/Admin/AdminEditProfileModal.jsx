@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import api from "../../services/api";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import HotelOwnerProfileForm from "../../components/profile/HotelOwnerProfileForm";
 import VendorProfileForm from "../../components/profile/VendorProfileForm";
 import ExpertProfileForm from "../../components/profile/ExpertProfileForm";
 
 const AdminEditProfileModal = ({ user, onClose, onSaved }) => {
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
   // Prevent body scroll when modal is open
@@ -138,14 +139,16 @@ const AdminEditProfileModal = ({ user, onClose, onSaved }) => {
 
   const handleSubmit = async (formData) => {
     setSaving(true);
-    setError("");
+    setError(null);
     try {
       await api.adminEditProfile(user.id, formData);
       setSuccess(true);
       if (onSaved) onSaved();
       setTimeout(() => onClose(), 1500);
     } catch (err) {
-      setError(err.message || "Failed to save profile");
+      // Kept as the error object so any per-field detail the server sent is
+      // listed under the summary rather than collapsed into one line.
+      setError(err);
       throw err;
     } finally {
       setSaving(false);
@@ -226,16 +229,8 @@ const AdminEditProfileModal = ({ user, onClose, onSaved }) => {
         </div>
 
         {error && (
-          <div
-            style={{
-              background: "#FEE2E2",
-              color: "#C53030",
-              padding: "12px 16px",
-              marginBottom: "16px",
-              fontSize: "14px",
-            }}
-          >
-            {error}
+          <div style={{ marginBottom: "16px" }}>
+            <ErrorNotice error={error} title="This profile could not be saved" onDismiss={() => setError(null)} />
           </div>
         )}
 

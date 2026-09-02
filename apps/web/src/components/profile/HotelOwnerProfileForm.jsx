@@ -289,6 +289,7 @@ const HotelOwnerProfileForm = ({ onSubmit, initialData, isSharedForm, isAdminEdi
           <div className="row">
             <div className="col-lg-12" style={{ marginBottom: "16px" }}>
               <PhotoUpload
+                crop
                 value={formData.avatar}
                 onChange={(val) =>
                   setFormData((prev) => ({ ...prev, avatar: val }))

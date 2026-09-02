@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import { getErrorMessage } from "../../lib/errors";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 
@@ -49,10 +50,12 @@ const MemberProfilePage = () => {
         if (data) {
           setMember(data);
         } else {
-          setError("Member not found.");
+          setError(new Error("That member profile does not exist. It may have been removed."));
         }
       } catch (err) {
-        setError("Failed to load member profile.");
+        // The reason matters: "no longer a member" and "you are offline" call
+        // for completely different reactions from the person reading it.
+        setError(err);
       } finally {
         setLoading(false);
       }
@@ -118,10 +121,10 @@ const MemberProfilePage = () => {
                 marginBottom: "12px",
               }}
             >
-              Profile Not Found
+              {error && error.status && error.status !== 404 ? "This profile could not be loaded" : "Profile Not Found"}
             </h3>
-            <p style={{ color: "#6B7280", fontSize: "15px", marginBottom: "24px" }}>
-              {error || "The member profile you are looking for does not exist."}
+            <p style={{ color: "#6B7280", fontSize: "15px", marginBottom: "24px", maxWidth: "480px", marginLeft: "auto", marginRight: "auto" }}>
+              {getErrorMessage(error, "The member profile you are looking for does not exist.")}
             </p>
             <Link
               to="/members"

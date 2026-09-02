@@ -1,17 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { SectionSkeleton, SkeletonRows } from "../common/Skeleton";
+import { ErrorNotice } from "../common/ErrorNotice";
 
 export const EventsPreview = ({ config }) => {
   const [clickedId, setClickedId] = useState(null);
   const [hoveredId, setHoveredId] = useState(null);
   const [events, setEvents] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const fetchEvents = async () => {
+      setLoaded(false);
+      setError(null);
       try {
         const data = await api.getEvents({ limit: "5" });
         const list = data?.events || [];
@@ -31,14 +35,16 @@ export const EventsPreview = ({ config }) => {
             };
           })
         );
-      } catch {
-        // keep empty
+      } catch (err) {
+        setError(err);
       } finally {
         setLoaded(true);
       }
     };
     fetchEvents();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   useAosRefresh(loaded);
 
@@ -52,6 +58,16 @@ export const EventsPreview = ({ config }) => {
       <SectionSkeleton padding="clamp(56px, 7vw, 84px) 0" background="#FFFFFF">
         <SkeletonRows count={config?.eventsCount || 3} height="104px" />
       </SectionSkeleton>
+    );
+  }
+
+  if (error) {
+    return (
+      <section style={{ padding: "clamp(56px, 7vw, 84px) 0", background: "#FFFFFF" }}>
+        <div className="container" style={{ maxWidth: "640px" }}>
+          <ErrorNotice error={error} title="Upcoming events could not be loaded" onRetry={load} />
+        </div>
+      </section>
     );
   }
 
@@ -112,7 +128,7 @@ export const EventsPreview = ({ config }) => {
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div className="home-events-list" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {events.slice(0, config?.eventsCount || 3).map((item, index) => (
             <Link
               key={item.id}
@@ -123,6 +139,7 @@ export const EventsPreview = ({ config }) => {
               data-aos-delay={index * 150}
             >
               <div
+                className="home-event-card"
                 onClick={() => handleClick(item.id)}
                 onMouseEnter={() => setHoveredId(item.id)}
                 onMouseLeave={() => setHoveredId(null)}
@@ -168,6 +185,7 @@ export const EventsPreview = ({ config }) => {
                   }}
                 />
                 <div
+                  className="home-event-date"
                   style={{
                     width: "68px",
                     height: "68px",
@@ -213,7 +231,7 @@ export const EventsPreview = ({ config }) => {
                     {item.date.month}
                   </span>
                 </div>
-                <div style={{ flex: 1 }}>
+                <div className="home-event-body" style={{ flex: 1 }}>
                   <h4
                     style={{
                       fontFamily: "var(--tg-heading-font-family)",
@@ -238,7 +256,7 @@ export const EventsPreview = ({ config }) => {
                     {item.location}
                   </p>
                 </div>
-                <div>
+                <div className="home-event-type">
                   <span
                     style={{
                       background: clickedId === item.id

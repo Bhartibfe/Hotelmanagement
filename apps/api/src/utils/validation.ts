@@ -102,16 +102,17 @@ export const eventCreateSchema = z.object({
   path: ["endDate"],
 });
 
+/*
+  Both middlewares hand the ZodError to the shared error handler rather than
+  answering themselves. That handler turns the field list into one readable
+  sentence — "Email: Invalid email format · Password must be at least 8
+  characters" — instead of the bare "Validation failed" that clients which only
+  read `error` used to show, while still sending the per-field `errors` array.
+*/
 export function validate(schema: z.ZodSchema) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
-    if (!result.success) {
-      const errors = result.error.errors.map((e) => ({
-        field: e.path.join("."),
-        message: e.message,
-      }));
-      return res.status(400).json({ error: "Validation failed", errors });
-    }
+    if (!result.success) return next(result.error);
     req.body = result.data;
     next();
   };
@@ -120,13 +121,7 @@ export function validate(schema: z.ZodSchema) {
 export function validateQuery(schema: z.ZodSchema) {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.query);
-    if (!result.success) {
-      const errors = result.error.errors.map((e) => ({
-        field: e.path.join("."),
-        message: e.message,
-      }));
-      return res.status(400).json({ error: "Invalid query parameters", errors });
-    }
+    if (!result.success) return next(result.error);
     (req as any).validatedQuery = result.data;
     next();
   };

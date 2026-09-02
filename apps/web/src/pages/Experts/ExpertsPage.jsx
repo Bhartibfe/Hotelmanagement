@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { PersonCard, PersonCardStyles } from "../../components/common/PersonCard";
@@ -59,31 +60,40 @@ const ExpertsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [showAllFilters, setShowAllFilters] = useState(false);
+  const [error, setError] = useState(null);
 
   const VISIBLE_FILTER_COUNT = 8;
 
-  useEffect(() => {
+  const loadExperts = useCallback(() => {
     const fetchExperts = async () => {
       setLoading(true);
+      setError(null);
       try {
         const data = await api.getExperts({ limit: 100 });
-        if (data?.experts?.length > 0) {
-          setExperts(data.experts);
-        }
+        setExperts(data?.experts || []);
       } catch (err) {
         setExperts([]);
+        setError(err);
       } finally {
         setLoading(false);
       }
     };
     fetchExperts();
-
-    api.getHomepageConfig().then((data) => {
-      if (data?.expertiseOptions?.length > 0) {
-        setExpertiseOptions(data.expertiseOptions);
-      }
-    }).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    loadExperts();
+
+    // The seed list is a working fallback, so a failure here only warrants a
+    // console note - the filters still work off the defaults.
+    api.getHomepageConfig()
+      .then((data) => {
+        if (data?.expertiseOptions?.length > 0) {
+          setExpertiseOptions(data.expertiseOptions);
+        }
+      })
+      .catch((err) => console.warn("Expertise filters fell back to defaults:", err.message));
+  }, [loadExperts]);
 
   // Helper to get fields from both API and mock format
   const getName = (e) => e.user ? `${e.user.firstName} ${e.user.lastName}` : (e.name || "");
@@ -205,7 +215,7 @@ const ExpertsPage = () => {
             {filtered.map((expert, index) => (
               <div
                 key={expert.id}
-                className="col-lg-3 col-md-6"
+                className="col-6 col-md-6 col-lg-3"
                 data-aos="fade-up"
                 data-aos-duration="800"
                 data-aos-delay={index * 50}
@@ -223,8 +233,14 @@ const ExpertsPage = () => {
             ))}
           </div>}
 
+          {error && (
+            <div style={{ maxWidth: "640px", margin: "0 auto 32px" }}>
+              <ErrorNotice error={error} title="Experts could not be loaded" onRetry={loadExperts} />
+            </div>
+          )}
+
           {/* Empty State */}
-          {!loading && filtered.length === 0 && (
+          {!loading && !error && filtered.length === 0 && (
             <div className="text-center" style={{ padding: "80px 0" }}>
               <i
                 className="far fa-user"

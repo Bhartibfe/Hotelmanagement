@@ -4,22 +4,53 @@ import { authenticate, requireAdmin, requireApproved } from "../middleware/auth"
 import { slugify } from "../utils/slugify";
 import { sendEmail } from "../services/email.service";
 import { eventRegistrationConfirmation, eventCreatedAdmin } from "../templates/email.templates";
+import { attachMediaUrls, oversizedImageError } from "../utils/media";
 
 const router = Router();
 
+/*
+  Selected explicitly rather than with `include`, which dragged in coverImage
+  and organizerAvatar — both base64 — for every row. Those two fields alone
+  made this endpoint 4.4MB and 26 seconds; they now come back as URLs into
+  /api/media and load alongside the page instead of blocking it.
+*/
+const EVENT_LIST_FIELDS = {
+  id: true, slug: true, title: true, type: true, description: true,
+  venue: true, city: true, state: true, country: true,
+  startDate: true, endDate: true, registrationUrl: true,
+  maxAttendees: true, isFeatured: true, isPublished: true, displayOrder: true,
+  organizerName: true, highlights: true, createdAt: true, updatedAt: true,
+  createdById: true,
+} as const;
+
+
 // GET /api/events/featured - Featured events
-router.get("/featured", async (_req: Request, res: Response) => {
+router.get("/featured", async (req: Request, res: Response) => {
   try {
     const events = await prisma.event.findMany({
       where: { isFeatured: true, isPublished: true },
-      include: {
-        createdBy: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+      select: {
+        ...EVENT_LIST_FIELDS,
+        createdBy: { select: { id: true, firstName: true, lastName: true } },
         _count: { select: { registrations: true } },
       },
       orderBy: { displayOrder: "asc" },
     });
 
-    return res.json(events);
+    const withMedia: any[] = events;
+    await Promise.all([
+      attachMediaUrls(req, withMedia, "event-cover", {
+        idOf: (e) => e.id,
+        versionOf: (e) => e.updatedAt,
+        set: (e, url) => { e.coverImage = url; },
+      }),
+      attachMediaUrls(req, withMedia, "user-avatar", {
+        idOf: (e) => e.createdBy?.id,
+        set: (e, url) => { if (e.createdBy) e.createdBy.avatar = url; },
+      }),
+    ]);
+
+    return res.json(withMedia);
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch featured events" });
   }
@@ -39,6 +70,7 @@ router.get("/my-events", authenticate, async (req: Request, res: Response) => {
   }
 });
 
+
 // GET /api/events - List events
 router.get("/", async (req: Request, res: Response) => {
   try {
@@ -52,8 +84,9 @@ router.get("/", async (req: Request, res: Response) => {
     const [events, total] = await Promise.all([
       prisma.event.findMany({
         where,
-        include: {
-          createdBy: { select: { id: true, firstName: true, lastName: true, avatar: true } },
+        select: {
+          ...EVENT_LIST_FIELDS,
+          createdBy: { select: { id: true, firstName: true, lastName: true } },
           _count: { select: { registrations: true } },
         },
         skip,
@@ -63,7 +96,30 @@ router.get("/", async (req: Request, res: Response) => {
       prisma.event.count({ where }),
     ]);
 
-    return res.json({ events, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
+    /*
+      In parallel, not in sequence: each of these is one small query, but the
+      database is a continent away, so three awaits in a row cost three round
+      trips of latency for no reason.
+    */
+    const withMedia: any[] = events;
+    await Promise.all([
+      attachMediaUrls(req, withMedia, "event-cover", {
+        idOf: (e) => e.id,
+        versionOf: (e) => e.updatedAt,
+        set: (e, url) => { e.coverImage = url; },
+      }),
+      attachMediaUrls(req, withMedia, "event-organizer", {
+        idOf: (e) => e.id,
+        versionOf: (e) => e.updatedAt,
+        set: (e, url) => { e.organizerAvatar = url; },
+      }),
+      attachMediaUrls(req, withMedia, "user-avatar", {
+        idOf: (e) => e.createdBy?.id,
+        set: (e, url) => { if (e.createdBy) e.createdBy.avatar = url; },
+      }),
+    ]);
+
+    return res.json({ events: withMedia, total, page: parseInt(page as string), totalPages: Math.ceil(total / parseInt(limit as string)) });
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch events" });
   }
@@ -78,6 +134,14 @@ router.post("/", authenticate, requireApproved, async (req: Request, res: Respon
       maxAttendees, isFeatured, displayOrder,
       organizerName, organizerAvatar, agenda, highlights,
     } = req.body;
+    // Backstop for the client-side downscale — see utils/media.ts.
+    const oversized = oversizedImageError([
+      { label: "Cover image", value: coverImage },
+      { label: "Organiser photo", value: organizerAvatar },
+    ]);
+    if (oversized) return res.status(413).json({ error: oversized });
+
+
 
     if (!title?.trim()) return res.status(400).json({ error: "Title is required" });
     if (!type) return res.status(400).json({ error: "Event type is required" });
@@ -181,6 +245,13 @@ router.put("/:id", authenticate, async (req: Request, res: Response) => {
       maxAttendees, isFeatured, isPublished, displayOrder,
       organizerName, organizerAvatar, agenda, highlights,
     } = req.body;
+
+    // Same backstop on update as on create.
+    const oversized = oversizedImageError([
+      { label: "Cover image", value: coverImage },
+      { label: "Organiser photo", value: organizerAvatar },
+    ]);
+    if (oversized) return res.status(413).json({ error: oversized });
 
     const data: any = {};
     if (title !== undefined) { data.title = title.trim(); data.slug = slugify(title) + "-" + Date.now().toString(36); }

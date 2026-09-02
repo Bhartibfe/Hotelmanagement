@@ -1,23 +1,29 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { SectionSkeleton, SkeletonCards } from "../common/Skeleton";
 import { PersonCard, PersonCardStyles } from "../common/PersonCard";
+import { ErrorNotice } from "../common/ErrorNotice";
 
 
 export const FeaturedExpertsSection = ({ config }) => {
   const [experts, setExperts] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  // A failed fetch and an empty list used to look identical: the section just
+  // disappeared. They mean very different things, so they are tracked apart.
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    api.getFeaturedExperts?.()
-      .then((data) => {
-        if (data && data.length > 0) setExperts(data);
-      })
-      .catch(() => {})
+  const load = useCallback(() => {
+    setLoaded(false);
+    setError(null);
+    api.getFeaturedExperts()
+      .then((data) => setExperts(Array.isArray(data) ? data : []))
+      .catch((err) => setError(err))
       .finally(() => setLoaded(true));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   useAosRefresh(loaded);
 
@@ -25,8 +31,18 @@ export const FeaturedExpertsSection = ({ config }) => {
   if (!loaded) {
     return (
       <SectionSkeleton padding="clamp(48px, 6vw, 72px) 0" background="#FFFFFF">
-        <SkeletonCards count={config?.featuredExpertsCount || 4} height="clamp(280px, 40vw, 380px)" />
+        <SkeletonCards count={config?.featuredExpertsCount || 4} columnClass="col-6 col-md-6 col-lg-3" height="clamp(200px, 46vw, 380px)" />
       </SectionSkeleton>
+    );
+  }
+
+  if (error) {
+    return (
+      <section style={{ padding: "clamp(48px, 6vw, 72px) 0", background: "#FFFFFF" }}>
+        <div className="container" style={{ maxWidth: "640px" }}>
+          <ErrorNotice error={error} title="Featured experts could not be loaded" onRetry={load} />
+        </div>
+      </section>
     );
   }
 
@@ -82,11 +98,11 @@ export const FeaturedExpertsSection = ({ config }) => {
         </div>
 
         {/* Expert Cards */}
-        {loaded && <div className="row">
+        {loaded && <div className="row home-card-grid">
           {experts.slice(0, config?.featuredExpertsCount || 4).map((expert, index) => (
             <div
               key={expert.id}
-              className="col-lg-3 col-md-6"
+              className="col-6 col-md-6 col-lg-3"
               data-aos="fade-up"
               data-aos-duration="800"
               data-aos-delay={index * 100}

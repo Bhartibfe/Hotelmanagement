@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { SectionSkeleton, SkeletonCards } from "../common/Skeleton";
+import { ErrorNotice } from "../common/ErrorNotice";
 
 export const FeaturedVendorsSection = ({ config }) => {
   const [logos, setLogos] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const fetchVendors = async () => {
+      setLoaded(false);
+      setError(null);
       try {
         const data = await api.getFeaturedVendors();
         const vendors = data?.vendors || data || [];
@@ -18,14 +22,16 @@ export const FeaturedVendorsSection = ({ config }) => {
         if (vendorLogos.length > 0) {
           setLogos(vendorLogos);
         }
-      } catch {
-        // no vendors available
+      } catch (err) {
+        setError(err);
       } finally {
         setLoaded(true);
       }
     };
     fetchVendors();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   useAosRefresh(loaded);
 
@@ -34,6 +40,16 @@ export const FeaturedVendorsSection = ({ config }) => {
       <SectionSkeleton padding="clamp(40px, 5vw, 60px) 0" background="#FFFFFF" centered>
         <SkeletonCards count={4} columnClass="col-6 col-md-3" height="50px" />
       </SectionSkeleton>
+    );
+  }
+
+  if (error) {
+    return (
+      <section style={{ padding: "clamp(40px, 5vw, 60px) 0", background: "#FFFFFF" }}>
+        <div className="container" style={{ maxWidth: "640px" }}>
+          <ErrorNotice error={error} title="Our partners could not be loaded" onRetry={load} />
+        </div>
+      </section>
     );
   }
 

@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, Navigate, Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { useAuth } from "../../contexts/AuthContext";
 
 const MembershipPendingPage = () => {
   const { user, loading, logout, checkAuth } = useAuth();
   const navigate = useNavigate();
   const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState(null);
 
   const isRevisionRequested = user?.membershipStatus === "REVISION_REQUESTED";
   const isIncomplete = user?.profileStatus === "INCOMPLETE";
@@ -16,8 +18,10 @@ const MembershipPendingPage = () => {
     const interval = setInterval(async () => {
       try {
         await checkAuth();
-      } catch {
-        // ignore
+      } catch (err) {
+        // A failed background poll is not worth interrupting anyone over; the
+        // next tick, or the manual button below, will report it properly.
+        console.warn("Membership status poll failed:", err.message);
       }
     }, 30000);
     return () => clearInterval(interval);
@@ -40,10 +44,13 @@ const MembershipPendingPage = () => {
 
   const handleCheckStatus = async () => {
     setChecking(true);
+    setCheckError(null);
     try {
       await checkAuth();
-    } catch {
-      // ignore
+    } catch (err) {
+      // Pressing "Check Status" and having nothing happen at all is the exact
+      // situation somebody waiting on approval does not need.
+      setCheckError(err);
     } finally {
       setChecking(false);
     }
@@ -314,6 +321,17 @@ const MembershipPendingPage = () => {
                     Sign Out
                   </button>
                 </div>
+
+                {checkError && (
+                  <div style={{ marginTop: "20px", maxWidth: "520px", marginLeft: "auto", marginRight: "auto", textAlign: "left" }}>
+                    <ErrorNotice
+                      error={checkError}
+                      title="Your status could not be checked"
+                      onRetry={handleCheckStatus}
+                      compact
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -276,7 +276,8 @@ const AdminLayout = () => {
           </div>
         </header>
 
-        {/* Page Content */}
+        {/* Page Content. The toast stack these screens report failures through
+            is mounted once in App.js, around every route. */}
         <div className="admin-content" style={{ padding: "28px 32px", flex: 1, minWidth: 0 }}>
           <Outlet />
         </div>

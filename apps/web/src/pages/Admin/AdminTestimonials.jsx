@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import api from "../../services/api";
+import { useAdminToast } from "../../components/admin/AdminToast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 
 const AdminTestimonials = () => {
   const [testimonials, setTestimonials] = useState([]);
@@ -11,23 +13,26 @@ const AdminTestimonials = () => {
   const [hoveredBtn, setHoveredBtn] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
+  const { toastError, toastSuccess } = useAdminToast();
+
+  const fetchTestimonials = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const data = await api.getAdminTestimonials();
+      setTestimonials(data?.testimonials || []);
+    } catch (err) {
+      setLoadError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    const fetchTestimonials = async () => {
-      try {
-        const data = await api.getAdminTestimonials();
-        if (data?.testimonials) {
-          setTestimonials(data.testimonials);
-        }
-      } catch (err) {
-        // keep empty array on failure
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchTestimonials();
-  }, []);
+  }, [fetchTestimonials]);
 
   const filtered = testimonials.filter(
     (t) =>
@@ -37,41 +42,46 @@ const AdminTestimonials = () => {
       t.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Quotes look alike in a grid, so every message names its author.
+  const authorOf = (id) => testimonials.find((t) => t.id === id)?.authorName || "this testimonial";
+
   const handleToggleFeatured = async (id) => {
     setStarAnimating(id);
+    const t = testimonials.find((x) => x.id === id);
+    if (!t) return;
     try {
-      const t = testimonials.find((x) => x.id === id);
       await api.updateTestimonial(id, { isFeatured: !t.isFeatured });
       setTimeout(() => {
-        setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, isFeatured: !t.isFeatured } : t)));
+        setTestimonials((prev) => prev.map((x) => (x.id === id ? { ...x, isFeatured: !x.isFeatured } : x)));
         setStarAnimating(null);
       }, 300);
-      setError(null);
     } catch (err) {
       setStarAnimating(null);
-      setError(err.message || "Operation failed");
+      toastError(err, `${t.isFeatured ? "unfeature" : "feature"} the testimonial from ${t.authorName}`);
     }
   };
 
   const handleTogglePublished = async (id) => {
+    const t = testimonials.find((x) => x.id === id);
+    if (!t) return;
     try {
-      const t = testimonials.find((x) => x.id === id);
       await api.updateTestimonial(id, { isPublished: !t.isPublished });
-      setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, isPublished: !t.isPublished } : t)));
-      setError(null);
+      setTestimonials((prev) => prev.map((x) => (x.id === id ? { ...x, isPublished: !x.isPublished } : x)));
+      toastSuccess(t.isPublished ? `Unpublished ${t.authorName}'s testimonial.` : `Published ${t.authorName}'s testimonial.`);
     } catch (err) {
-      setError(err.message || "Operation failed");
+      toastError(err, `${t.isPublished ? "unpublish" : "publish"} the testimonial from ${t.authorName}`);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this testimonial?")) return;
+    const who = authorOf(id);
+    if (!window.confirm(`Delete the testimonial from ${who}? This cannot be undone.`)) return;
     try {
       await api.deleteTestimonial(id);
       setTestimonials((prev) => prev.filter((t) => t.id !== id));
-      setError(null);
+      toastSuccess(`Deleted the testimonial from ${who}.`);
     } catch (err) {
-      setError(err.message || "Operation failed");
+      toastError(err, `delete the testimonial from ${who}`);
     }
   };
 
@@ -131,8 +141,14 @@ const AdminTestimonials = () => {
       )}
 
       {error && (
-        <div style={{ padding: "12px 20px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", borderRadius: "8px", fontSize: "14px" }}>
-          {error}
+        <div style={{ marginBottom: "16px" }}>
+          <ErrorNotice error={error} onDismiss={() => setError(null)} />
+        </div>
+      )}
+
+      {loadError && (
+        <div style={{ marginBottom: "16px", maxWidth: "640px" }}>
+          <ErrorNotice error={loadError} title="Testimonials could not be loaded" onRetry={fetchTestimonials} />
         </div>
       )}
 
@@ -337,7 +353,7 @@ const AdminTestimonials = () => {
           </div>
 
           {/* Empty State */}
-          {filtered.length === 0 && (
+          {!loadError && filtered.length === 0 && (
             <div style={{ padding: "64px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px" }}>
               <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <i className="fas fa-quote-right" style={{ fontSize: "24px", color: "#CBD5E1" }}></i>

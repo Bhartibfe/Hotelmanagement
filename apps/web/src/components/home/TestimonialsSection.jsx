@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { SectionSkeleton, SkeletonCards } from "../common/Skeleton";
+import { ErrorNotice } from "../common/ErrorNotice";
 
 const AOS_ANIMATIONS = [
   "fade-up",
@@ -21,11 +22,14 @@ export const TestimonialsSection = ({ config }) => {
   const [hoveredId, setHoveredId] = useState(null);
   const [testimonials, setTestimonials] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const fetchTestimonials = async () => {
+      setLoaded(false);
+      setError(null);
       try {
-        const data = await api.getTestimonials?.();
+        const data = await api.getTestimonials();
         if (data?.testimonials?.length > 0) {
           setTestimonials(data.testimonials.map((t) => ({
             id: t.id,
@@ -35,14 +39,16 @@ export const TestimonialsSection = ({ config }) => {
             company: t.authorCompany || "",
           })));
         }
-      } catch {
-        // no testimonials available
+      } catch (err) {
+        setError(err);
       } finally {
         setLoaded(true);
       }
     };
     fetchTestimonials();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   useAosRefresh(loaded);
 
@@ -51,6 +57,16 @@ export const TestimonialsSection = ({ config }) => {
       <SectionSkeleton padding="clamp(48px, 6vw, 72px) 0" background="#0A1628" dark centered>
         <SkeletonCards count={3} columnClass="col-lg-4 col-md-6" height="220px" dark />
       </SectionSkeleton>
+    );
+  }
+
+  if (error) {
+    return (
+      <section style={{ padding: "clamp(48px, 6vw, 72px) 0", background: "#0A1628" }}>
+        <div className="container" style={{ maxWidth: "640px" }}>
+          <ErrorNotice error={error} title="Testimonials could not be loaded" onRetry={load} />
+        </div>
+      </section>
     );
   }
 
@@ -137,7 +153,7 @@ export const TestimonialsSection = ({ config }) => {
           {columns.map((colItems, colIndex) => (
             <div
               key={colIndex}
-              className="col-lg-4 col-md-6"
+              className="col-lg-4 col-md-6 home-testimonial-col"
               style={{
                 marginTop: columnOffsets[colIndex],
               }}

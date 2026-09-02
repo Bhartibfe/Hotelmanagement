@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { ErrorNotice } from "../common/ErrorNotice";
 import PostMediaUpload from "./PostMediaUpload";
 import RichTextEditor from "./RichTextEditor";
 
@@ -40,7 +41,7 @@ const CreatePostForm = ({ onSubmit, initialData, isAdmin, onCancel }) => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (initialData) {
@@ -56,7 +57,7 @@ const CreatePostForm = ({ onSubmit, initialData, isAdmin, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(null);
 
     if (!title.trim()) { setError("Title is required."); return; }
     if (!brief.trim()) { setError("Brief description is required."); return; }
@@ -83,7 +84,7 @@ const CreatePostForm = ({ onSubmit, initialData, isAdmin, onCancel }) => {
       setYoutubeUrl("");
       setThumbnailUrl("");
     } catch (err) {
-      setError(err.message || "Failed to save post.");
+      setError(err);
     } finally {
       setSaving(false);
     }
@@ -92,8 +93,8 @@ const CreatePostForm = ({ onSubmit, initialData, isAdmin, onCancel }) => {
   return (
     <form onSubmit={handleSubmit}>
       {error && (
-        <div style={{ padding: "12px 16px", marginBottom: "16px", background: "#FEF2F2", color: "#EF4444", border: "1px solid #FECACA", fontSize: "14px" }}>
-          {error}
+        <div style={{ marginBottom: "16px" }}>
+          <ErrorNotice error={error} onDismiss={() => setError(null)} compact />
         </div>
       )}
 

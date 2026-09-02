@@ -30,7 +30,7 @@ router.post("/register", validate(registerSchema), async (req: Request, res: Res
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: "Email already registered" });
+      return res.status(409).json({ error: "An account already exists for this email address. Try signing in instead, or use a different email." });
     }
 
     const passwordHash = await bcrypt.hash(password, AUTH_CONFIG.saltRounds);
@@ -82,7 +82,7 @@ router.post("/register", validate(registerSchema), async (req: Request, res: Res
     return res.status(201).json({ user, ...tokens });
   } catch (error) {
     console.error("Register error:", error);
-    return res.status(500).json({ error: "Registration failed" });
+    return res.status(500).json({ error: "We could not create your account because of a server problem. Please try again in a moment." });
   }
 });
 
@@ -92,17 +92,22 @@ router.post("/login", validate(loginSchema), async (req: Request, res: Response)
     const { email, password } = req.body;
 
     const user = await prisma.user.findUnique({ where: { email } });
+    // Deliberately identical wording for "no such account" and "wrong
+    // password": naming which one was wrong lets anyone probe the site for
+    // registered addresses.
+    const REJECTED = "That email and password do not match an account. Check both and try again.";
+
     if (!user || !user.passwordHash) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: REJECTED });
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: REJECTED });
     }
 
     if (!user.isActive) {
-      return res.status(403).json({ error: "Account is deactivated" });
+      return res.status(403).json({ error: "This account has been deactivated. Contact an administrator to have it restored." });
     }
 
     await prisma.user.update({
@@ -136,7 +141,7 @@ router.post("/login", validate(loginSchema), async (req: Request, res: Response)
     });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ error: "Login failed" });
+    return res.status(500).json({ error: "We could not sign you in because of a server problem. Please try again in a moment." });
   }
 });
 
@@ -145,14 +150,14 @@ router.post("/refresh", async (req: Request, res: Response) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) {
-      return res.status(400).json({ error: "Refresh token required" });
+      return res.status(400).json({ error: "No session token was sent. Please sign in again." });
     }
 
     const payload = verifyRefreshToken(refreshToken);
     const user = await prisma.user.findUnique({ where: { id: payload.userId } });
 
     if (!user || !user.isActive) {
-      return res.status(401).json({ error: "Invalid token" });
+      return res.status(401).json({ error: "Your session is no longer valid. Please sign in again." });
     }
 
     const tokens = generateTokens({
@@ -164,7 +169,7 @@ router.post("/refresh", async (req: Request, res: Response) => {
 
     return res.json(tokens);
   } catch {
-    return res.status(401).json({ error: "Invalid refresh token" });
+    return res.status(401).json({ error: "Your session has expired. Please sign in again." });
   }
 });
 
@@ -213,7 +218,7 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
     return res.json(user);
   } catch (error) {
     console.error("Get me error:", error);
-    return res.status(500).json({ error: "Failed to fetch profile" });
+    return res.status(500).json({ error: "We could not load your profile because of a server problem. Please refresh the page." });
   }
 });
 

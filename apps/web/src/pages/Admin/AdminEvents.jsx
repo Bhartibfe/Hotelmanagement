@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
 import CreateEventForm from "../../components/profile/CreateEventForm";
 import FormDialog from "../../components/profile/FormDialog";
+import { useAdminToast } from "../../components/admin/AdminToast";
+import { ErrorNotice } from "../../components/common/ErrorNotice";
 
 const TYPE_COLORS = {
   SUMMIT: { bg: "#FEF9E7", color: "#C6A962" },
@@ -12,7 +14,9 @@ const TYPE_COLORS = {
 };
 
 const AdminEvents = () => {
+  const { toastError, toastSuccess } = useAdminToast();
   const [events, setEvents] = useState([]);
+  const [loadError, setLoadError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid");
   const [mounted, setMounted] = useState(false);
@@ -28,21 +32,25 @@ const AdminEvents = () => {
   const [emailForm, setEmailForm] = useState({ open: false, userId: null, userName: "", subject: "", message: "" });
   const [emailSending, setEmailSending] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    fetchEvents();
-  }, []);
-
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const data = await api.getAdminEvents();
-      if (data?.events) setEvents(data.events);
-    } catch {
-      // keep empty
+      setEvents(data?.events || []);
+    } catch (err) {
+      // An empty grid and a failed request looked the same here; the notice
+      // above the grid now says which one it is.
+      setLoadError(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+    fetchEvents();
+  }, [fetchEvents]);
 
   const filtered = events.filter(
     (e) =>
@@ -53,20 +61,27 @@ const AdminEvents = () => {
   );
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this event?")) return;
+    const event = events.find((e) => e.id === id);
+    const label = event?.title ? `"${event.title}"` : "this event";
+    if (!window.confirm(`Delete ${label}? Registrations for it will be removed too. This cannot be undone.`)) return;
     try {
       await api.deleteEvent(id);
       setEvents((prev) => prev.filter((e) => e.id !== id));
-    } catch {
-      // error
+      toastSuccess(`Deleted ${label}.`);
+    } catch (err) {
+      toastError(err, `delete ${label}`);
     }
   };
 
+  // Deliberately uncaught: the rejection propagates to CreateEventForm, which
+  // renders the failure inside the dialog beside the fields that caused it and
+  // keeps the draft. Catching it here to toast would say the same thing twice.
   const handleCreateEvent = async (eventData) => {
     const newEvent = await api.createEvent(eventData);
     setEvents((prev) => [newEvent, ...prev]);
     setShowCreateForm(false);
     setEditingEvent(null);
+    toastSuccess(`Created "${newEvent?.title || eventData.title}".`);
   };
 
   const handleUpdateEvent = async (eventData) => {
@@ -74,6 +89,7 @@ const AdminEvents = () => {
     setEvents((prev) => prev.map((e) => (e.id === editingEvent.id ? updated : e)));
     setShowCreateForm(false);
     setEditingEvent(null);
+    toastSuccess(`Saved changes to "${updated?.title || eventData.title}".`);
   };
 
   const openEditForm = (event) => {
@@ -87,8 +103,11 @@ const AdminEvents = () => {
     try {
       const data = await api.getEventRegistrations(eventId);
       setRegPanel({ eventId, eventTitle, registrations: data?.registrations || [] });
-    } catch {
-      setRegPanel({ eventId, eventTitle, registrations: [] });
+    } catch (err) {
+      // The panel stays open showing the failure, rather than an empty list
+      // that reads as "nobody has registered".
+      setRegPanel({ eventId, eventTitle, registrations: [], error: err });
+      toastError(err, `load the registrations for "${eventTitle}"`);
     } finally {
       setRegLoading(false);
     }
@@ -110,16 +129,25 @@ const AdminEvents = () => {
   };
 
   const handleSendEmail = async (sendToAll = false) => {
-    if (!emailForm.subject.trim() || !emailForm.message.trim()) return;
+    // Say which field is empty instead of the button doing nothing at all.
+    if (!emailForm.subject.trim()) {
+      toastError(new Error("Add a subject line before sending."), "send this email");
+      return;
+    }
+    if (!emailForm.message.trim()) {
+      toastError(new Error("Add a message body before sending."), "send this email");
+      return;
+    }
+    const recipient = sendToAll ? "all registrants" : emailForm.userName || "this registrant";
     setEmailSending(true);
     try {
       const payload = { subject: emailForm.subject, message: emailForm.message };
       if (!sendToAll) payload.userId = emailForm.userId;
       await api.notifyEventRegistrant(regPanel.eventId, payload);
-      alert(sendToAll ? "Email sent to all registrants!" : `Email sent to ${emailForm.userName}!`);
+      toastSuccess(`Email sent to ${recipient}.`);
       setEmailForm({ open: false, userId: null, userName: "", subject: "", message: "" });
-    } catch {
-      alert("Failed to send email");
+    } catch (err) {
+      toastError(err, `send this email to ${recipient}`);
     } finally {
       setEmailSending(false);
     }
@@ -224,6 +252,12 @@ const AdminEvents = () => {
             </div>
           </div>
 
+          {loadError && (
+            <div style={{ marginBottom: "20px", maxWidth: "640px" }}>
+              <ErrorNotice error={loadError} title="Events could not be loaded" onRetry={fetchEvents} />
+            </div>
+          )}
+
           {/* Grid View */}
           {viewMode === "grid" && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
@@ -316,8 +350,8 @@ const AdminEvents = () => {
 
           {/* List View */}
           {viewMode === "list" && (
-            <div style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <div className="admin-table-wrap" style={{ background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)" }}>
+              <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#F8FAFC" }}>
                     <th style={thStyle}>Event</th>
@@ -387,7 +421,7 @@ const AdminEvents = () => {
                   })}
                 </tbody>
               </table>
-              {filtered.length === 0 && (
+              {!loadError && filtered.length === 0 && (
                 <div style={{ padding: "64px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
                   <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <i className="fas fa-calendar-alt" style={{ fontSize: "24px", color: "#CBD5E1" }}></i>
@@ -399,7 +433,7 @@ const AdminEvents = () => {
           )}
 
           {/* Grid Empty State */}
-          {viewMode === "grid" && filtered.length === 0 && (
+          {viewMode === "grid" && !loadError && filtered.length === 0 && (
             <div style={{ padding: "64px 20px", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px" }}>
               <div style={{ width: "56px", height: "56px", borderRadius: "50%", background: "#F8FAFC", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <i className="fas fa-calendar-alt" style={{ fontSize: "24px", color: "#CBD5E1" }}></i>
@@ -438,7 +472,17 @@ const AdminEvents = () => {
               </div>
             )}
 
-            {!regLoading && regPanel.registrations.length === 0 && (
+            {!regLoading && regPanel.error && (
+              <div style={{ padding: "20px 0" }}>
+                <ErrorNotice
+                  error={regPanel.error}
+                  title="Registrations could not be loaded"
+                  onRetry={() => openRegistrations(regPanel.eventId, regPanel.eventTitle)}
+                />
+              </div>
+            )}
+
+            {!regLoading && !regPanel.error && regPanel.registrations.length === 0 && (
               <div style={{ textAlign: "center", padding: "40px 0", color: "#94A3B8" }}>
                 <i className="fas fa-user-slash" style={{ fontSize: "32px", marginBottom: "12px", display: "block" }}></i>
                 <p style={{ margin: 0 }}>No registrations yet</p>
@@ -446,7 +490,8 @@ const AdminEvents = () => {
             )}
 
             {!regLoading && regPanel.registrations.length > 0 && (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <div className="admin-table-wrap">
+              <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: "#F8FAFC" }}>
                     <th style={{ padding: "10px 16px", textAlign: "left", fontSize: "11px", fontWeight: 600, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.5px" }}>Name</th>
@@ -483,6 +528,7 @@ const AdminEvents = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
 
             {/* Email Form */}

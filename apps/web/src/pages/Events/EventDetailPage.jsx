@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import { useToast } from "../../components/common/Toast";
+import { getErrorMessage } from "../../lib/errors";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 
@@ -30,6 +32,10 @@ const EventDetailPage = () => {
   const { user } = useAuth();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Distinguishes "this event does not exist" from "we could not reach the
+  // server", which the single not-found screen used to conflate.
+  const [loadError, setLoadError] = useState(null);
+  const { toastError, toastSuccess } = useToast();
   const [registered, setRegistered] = useState(false);
   const [registering, setRegistering] = useState(false);
   const [checkingReg, setCheckingReg] = useState(true);
@@ -44,12 +50,15 @@ const EventDetailPage = () => {
           try {
             const regData = await api.checkEventRegistration(data.id);
             setRegistered(regData.registered);
-          } catch {
-            // not registered
+          } catch (err) {
+            // A failed check only means the button shows "Register"; the worst
+            // case is a duplicate attempt, which the server rejects clearly.
+            console.warn("Could not check event registration:", err.message);
           }
         }
-      } catch {
-        // event not found
+      } catch (err) {
+        // Rendered by the not-found branch below, with the reason.
+        setLoadError(err);
       } finally {
         setLoading(false);
         setCheckingReg(false);
@@ -71,8 +80,11 @@ const EventDetailPage = () => {
         setRegistered(true);
         setEvent((prev) => ({ ...prev, _count: { ...prev._count, registrations: (prev._count?.registrations || 0) + 1 } }));
       }
-    } catch {
-      // error
+      toastSuccess(registered ? `You are no longer registered for "${event.title}".` : `You are registered for "${event.title}".`);
+    } catch (err) {
+      // Silently failing here left the button unchanged and the member
+      // believing they had a place at the event.
+      toastError(err, registered ? `cancel your registration for "${event.title}"` : `register you for "${event.title}"`);
     } finally {
       setRegistering(false);
     }
@@ -90,12 +102,22 @@ const EventDetailPage = () => {
   }
 
   if (!event) {
+    const missing = !loadError || loadError.status === 404;
     return (
-      <Layout breadcrumb="Events" title="Event Not Found">
+      <Layout breadcrumb="Events" title={missing ? "Event Not Found" : "Event Unavailable"}>
         <section style={{ padding: "48px 0", textAlign: "center" }}>
-          <i className="fas fa-calendar-times" style={{ fontSize: "48px", color: "#CBD5E1", marginBottom: "16px" }}></i>
-          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", color: "#0A1628", marginBottom: "12px" }}>Event Not Found</h3>
-          <p style={{ color: "#64748B", fontSize: "14px", marginBottom: "24px" }}>This event may have been removed or doesn't exist.</p>
+          <i
+            className={missing ? "fas fa-calendar-times" : "fas fa-triangle-exclamation"}
+            style={{ fontSize: "48px", color: "#CBD5E1", marginBottom: "16px" }}
+          ></i>
+          <h3 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "24px", color: "#0A1628", marginBottom: "12px" }}>
+            {missing ? "Event Not Found" : "This event could not be loaded"}
+          </h3>
+          <p style={{ color: "#64748B", fontSize: "14px", marginBottom: "24px", maxWidth: "460px", marginLeft: "auto", marginRight: "auto" }}>
+            {missing
+              ? "This event may have been removed or doesn't exist."
+              : getErrorMessage(loadError)}
+          </p>
           <Link to="/events" className="btn" style={{ padding: "12px 28px", fontSize: "12px" }}>Browse Events</Link>
         </section>
       </Layout>

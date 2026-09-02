@@ -5,11 +5,12 @@ dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import helmet from "helmet";
 import morgan from "morgan";
 import rateLimit from "express-rate-limit";
 import { prisma } from "@hospitality/database";
-import { errorHandler } from "./middleware/errorHandler";
+import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/users.routes";
 import hotelRoutes from "./routes/hotels.routes";
@@ -26,15 +27,48 @@ import expertRoutes from "./routes/experts.routes";
 import advisoryRoutes from "./routes/advisory.routes";
 import profileRoutes from "./routes/profile.routes";
 import shareRoutes from "./routes/share.routes";
+import mediaRoutes from "./routes/media.routes";
 
 const app = express();
+// Render terminates TLS in front of this, so req.protocol must follow
+// X-Forwarded-Proto or every media URL would come back as http.
+app.set("trust proxy", 1);
 const PORT = process.env.API_PORT || 5000;
 
 app.use(helmet());
+
+/*
+  The database lives in Oregon and this is served to users in India, so every
+  kilobyte on the wire costs real latency. gzip is cheap here: the JSON these
+  routes return is highly repetitive, and it applies to every response without
+  any route needing to know about it.
+
+  The threshold keeps tiny bodies uncompressed, where the header overhead would
+  outweigh the saving.
+*/
+app.use(compression({
+  threshold: 1024,
+  // Images served by /api/media are already compressed formats; gzipping
+  // them again costs CPU and saves nothing.
+  filter: (req, res) => (req.path.startsWith("/api/media/") ? false : compression.filter(req, res)),
+}));
+
 app.use(morgan("combined"));
 
-const globalLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
-const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Too many attempts, please try again later" } });
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests from this device. Please wait a minute and try again." },
+});
+const authLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many sign-in attempts from this device. Please wait a minute and try again." },
+});
 
 app.use(globalLimiter);
 
@@ -61,14 +95,17 @@ app.use("/api/experts", expertRoutes);
 app.use("/api/advisory", advisoryRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/share", shareRoutes);
+// Images referenced by URL from list responses rather than inlined into them.
+app.use("/api/media", mediaRoutes);
 
 // Public homepage config (no auth needed)
 app.get("/api/homepage-config", async (_req, res) => {
   try {
     const row = await prisma.homepageConfig.findUnique({ where: { id: "singleton" } });
     res.json(row?.config || {});
-  } catch {
-    res.status(500).json({ error: "Failed to load config" });
+  } catch (error) {
+    console.error("Homepage config error:", error);
+    res.status(500).json({ error: "We could not load the homepage settings. Please refresh in a moment." });
   }
 });
 
@@ -87,8 +124,9 @@ app.get("/api/public-stats", async (_req, res) => {
       }),
     ]);
     res.json({ members, hotels, vendors, events, cities: cities.length });
-  } catch {
-    res.status(500).json({ error: "Failed to load stats" });
+  } catch (error) {
+    console.error("Public stats error:", error);
+    res.status(500).json({ error: "We could not load the network statistics. Please refresh in a moment." });
   }
 });
 
@@ -98,10 +136,13 @@ app.get("/api/health", async (_req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   } catch {
-    res.status(503).json({ status: "error", message: "Database connection failed" });
+    res.status(503).json({ status: "error", error: "The API is running but cannot reach the database." });
   }
 });
 
+
+// Unknown API routes answer in JSON, never Express's HTML page.
+app.use("/api", notFoundHandler);
 
 // Error handler
 app.use(errorHandler);

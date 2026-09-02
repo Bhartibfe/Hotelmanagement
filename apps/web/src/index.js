@@ -13,6 +13,10 @@ import "./assets/css/responsive.css"
 // Loaded last so its small-screen overrides win over style.css/responsive.css.
 import "./assets/css/mobile.css";
 import "bootstrap/dist/js/bootstrap.bundle.min";
+import { suppressTouchHover } from "./lib/suppressTouchHover";
+
+// Stops tapped cards from latching into a hover state they can never leave.
+suppressTouchHover();
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
