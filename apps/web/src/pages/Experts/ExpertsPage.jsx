@@ -5,6 +5,7 @@ import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { PersonCard, PersonCardStyles } from "../../components/common/PersonCard";
+import { matchesNameSearch } from "../../lib/nameSearch";
 
 const DEFAULT_EXPERTISE_OPTIONS = [
   "General Management",
@@ -99,7 +100,6 @@ const ExpertsPage = () => {
   const getName = (e) => e.user ? `${e.user.firstName} ${e.user.lastName}` : (e.name || "");
   const getTitle = (e) => e.user?.title || e.title || "";
   const getCompany = (e) => e.user?.organizationName || e.company || "";
-  const getCity = (e) => e.user?.city || e.city || "";
   const getAvatar = (e) => e.user?.avatar || e.avatar || "";
 
   useAosRefresh(!loading);
@@ -107,12 +107,9 @@ const ExpertsPage = () => {
   const filtered = experts.filter((e) => {
     const matchExpertise =
       activeExpertise === "ALL" || (e.expertise && e.expertise.includes(activeExpertise));
-    const matchSearch =
-      !searchTerm ||
-      getName(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getCompany(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getCity(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.expertise && e.expertise.some((ex) => ex.toLowerCase().includes(searchTerm.toLowerCase())));
+    // Name and organisation only — expertise has its own filter chips below,
+    // and matching it here made unrelated experts appear for a plain name.
+    const matchSearch = matchesNameSearch({ name: getName(e), company: getCompany(e) }, searchTerm);
     return matchExpertise && matchSearch;
   });
 
@@ -159,7 +156,7 @@ const ExpertsPage = () => {
             <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
               <input
                 type="text"
-                placeholder="Search experts..."
+                placeholder="Search by name or organisation..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{

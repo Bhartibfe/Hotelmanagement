@@ -109,14 +109,33 @@ app.get("/api/homepage-config", async (_req, res) => {
   }
 });
 
-// Public stats (real counts from database)
+/*
+  Public stats (real counts from database)
+
+  These are the numbers on the home page and the About page, so they have to
+  agree with what a visitor finds when they click through to a directory. That
+  is the whole reason for the filters below — `hotels` and `vendors` were bare
+  table counts, which included rows belonging to members who were still pending,
+  or had been rejected, suspended or deactivated. "Verified Partners" counted
+  every vendor profile ever created; VendorProfile has no verification column of
+  its own, so an approved and active member behind the profile is what the word
+  has to mean. Please do not simplify these back to `.count()`.
+
+  `members` deliberately spans every memberType — owners, vendors, consultants,
+  professionals. It is a whole-network figure, not the Owners directory, so it
+  is expected to be larger than the list at /members.
+*/
+const APPROVED_ACTIVE = { isActive: true, membershipStatus: "APPROVED" } as const;
+
 app.get("/api/public-stats", async (_req, res) => {
   try {
     const [members, hotels, vendors, events, cities] = await Promise.all([
-      prisma.user.count({ where: { role: "MEMBER", membershipStatus: "APPROVED" } }),
-      prisma.hotel.count(),
-      prisma.vendorProfile.count(),
+      prisma.user.count({ where: { role: "MEMBER", ...APPROVED_ACTIVE } }),
+      prisma.hotel.count({ where: { owner: APPROVED_ACTIVE } }),
+      prisma.vendorProfile.count({ where: { user: APPROVED_ACTIVE } }),
       prisma.event.count({ where: { isPublished: true } }),
+      // Left as it was on purpose: this one still counts deactivated members,
+      // and still treats "" and case variants as cities. Out of scope here.
       prisma.user.findMany({
         where: { role: "MEMBER", membershipStatus: "APPROVED", city: { not: null } },
         select: { city: true },

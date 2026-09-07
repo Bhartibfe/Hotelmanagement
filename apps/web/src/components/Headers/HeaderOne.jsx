@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { HeaderSearch } from "./HeaderSearch";
 import { MobileMenu } from "./MobileMenu";
 import { NavMenus } from "./NavMenus";
 import { LOGO_DARK, LOGO_LIGHT } from "../../lib/assets";
@@ -67,6 +66,8 @@ export const HeaderOne = ({ transparent }) => {
                           <i className="fab fa-linkedin-in"></i>
                         </a>
                       </li>
+                      {/* Twitter and Instagram are hidden until those accounts
+                          exist — add the URLs to SOCIAL_LINKS and uncomment.
                       <li>
                         <a href="#" aria-label="Twitter">
                           <i className="fab fa-twitter"></i>
@@ -77,6 +78,7 @@ export const HeaderOne = ({ transparent }) => {
                           <i className="fab fa-instagram"></i>
                         </a>
                       </li>
+                      */}
                     </ul>
                   </div>
                 )}
@@ -106,11 +108,6 @@ export const HeaderOne = ({ transparent }) => {
 
                   <div className="header-action d-none d-md-block">
                     <ul className="list-wrap">
-                      <li className="header-search">
-                        <a href="#">
-                          <i className="flaticon-search"></i>
-                        </a>
-                      </li>
                       {user ? (
                         <>
                           <li className="header-btn header-profile-link">
@@ -121,7 +118,6 @@ export const HeaderOne = ({ transparent }) => {
                                 alignItems: "center",
                                 gap: "10px",
                                 textDecoration: "none",
-                                padding: "8px 16px",
                               }}
                             >
                               <div
@@ -151,7 +147,6 @@ export const HeaderOne = ({ transparent }) => {
                               <Link
                                 to="/admin"
                                 className="btn btn-two"
-                                style={{ padding: "10px 18px", fontSize: "11px" }}
                               >
                                 Admin
                               </Link>
@@ -161,12 +156,7 @@ export const HeaderOne = ({ transparent }) => {
                             <button
                               onClick={handleLogout}
                               className="btn transparent-btn header-logout-btn"
-                              style={{
-                                padding: "10px 18px",
-                                fontSize: "11px",
-                                cursor: "pointer",
-                                background: "transparent",
-                              }}
+                              style={{ cursor: "pointer", background: "transparent" }}
                             >
                               Logout
                             </button>
@@ -196,8 +186,6 @@ export const HeaderOne = ({ transparent }) => {
           </div>
         </div>
       </div>
-
-      <HeaderSearch />
     </header>
   );
 };

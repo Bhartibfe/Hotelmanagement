@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { SkeletonKeyframes } from "../../components/common/Skeleton";
+import { matchesNameSearch } from "../../lib/nameSearch";
 
 // "" means: let the API apply the order the admin chose in the panel.
 const SORT_OPTIONS = [
@@ -50,9 +51,7 @@ const MembersPage = () => {
   useAosRefresh(!loading);
 
   const filtered = members.filter((m) => {
-    const name = `${m.firstName} ${m.lastName}`;
-    const matchSearch = !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase()) || (m.organizationName || "").toLowerCase().includes(searchTerm.toLowerCase()) || (m.city || "").toLowerCase().includes(searchTerm.toLowerCase());
-    return matchSearch;
+    return matchesNameSearch(m, searchTerm);
   });
 
   return (
@@ -293,7 +292,7 @@ const MembersPage = () => {
               <div className="col-lg-4">
                 <input
                   type="text"
-                  placeholder="Search by name, hotel, or city..."
+                  placeholder="Search by name or hotel..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{

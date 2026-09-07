@@ -550,8 +550,14 @@ label {
 }
 /* Overlay: profile name, logout, signin text white on dark hero */
 .header-profile-name {
-  fontSize: 13px;
+  /* Was `fontSize: 13px`, which is JS spelling and so was dropped outright. */
+  font-size: 13px;
   font-weight: 600;
+  /* A long name is elided rather than allowed to push Logout off the row. */
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .header-overlay .menu-area:not(.sticky-menu) .header-profile-name {
   color: #FFFFFF;
@@ -712,11 +718,28 @@ label {
 .header-social .list-wrap li a:hover {
   color: var(--tg-primary-color);
 }
+/*
+  Logo | nav | account controls, all on one row.
+
+  This used to be `flex-wrap: wrap` with `justify-content: flex-start`, so as
+  soon as the row ran out of width the account block (search, avatar, name,
+  Logout) dropped onto a second line and started again at the left edge, under
+  the logo. That happens as soon as somebody signs in, because the avatar and
+  the member's full name are far wider than the Sign In / Join buttons the
+  width was budgeted for.
+
+  Nothing wraps now: the nav is the part allowed to give up width, and the
+  account block is pinned to the right by `margin-left: auto` so it lines up
+  with the nav above it whatever the viewport.
+*/
 .menu-nav {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-start;
+}
+.menu-nav > .logo {
+  flex-shrink: 0;
 }
 .logo img,
 .f-logo img,
@@ -733,6 +756,9 @@ label {
 .navbar-wrap {
   display: flex;
   flex-grow: 1;
+  /* Without this a flex item refuses to shrink below its content width, which
+     is what forced the overflow that made the row wrap. */
+  min-width: 0;
 }
 .navbar-wrap ul {
   display: flex;
@@ -776,6 +802,10 @@ label {
 .main-menu .navigation li.menu-item-has-children .dropdown-btn {
   display: none;
 }
+.header-action {
+  margin-left: auto;
+  flex-shrink: 0;
+}
 .header-action > ul {
   display: flex;
   align-items: center;
@@ -817,6 +847,31 @@ label {
   background: transparent;
   border-color: var(--tg-primary-color);
   color: var(--tg-primary-color);
+}
+/*
+  The signed-in bar carries an avatar, a name and two buttons where the signed-
+  out one carries two links, and the container tops out at 1250px. At the old
+  spacing that row measured wider than the container on every desktop width,
+  which is what pushed it onto a second line. These are the millimetres that
+  buy it back; the bar is unchanged for a signed-out visitor, who has the room.
+*/
+@media (min-width: 992px) {
+  .header-action > ul {
+    margin-left: 15px;
+  }
+  .header-action > ul li {
+    margin-left: 16px;
+  }
+  .navbar-wrap ul li a {
+    padding: 20px 11px;
+  }
+  .header-action .header-profile-link a {
+    padding: 8px;
+  }
+  .header-action .header-btn .btn {
+    padding: 10px 14px;
+    font-size: 11px;
+  }
 }
 .navbar-wrap ul li .sub-menu {
   position: absolute;

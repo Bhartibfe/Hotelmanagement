@@ -52,11 +52,11 @@ router.get("/", async (req: Request, res: Response) => {
     if (category) where.category = category;
     if (city) where.city = { contains: city as string, mode: "insensitive" };
     if (state) where.state = { contains: state as string, mode: "insensitive" };
+    // Company name only. Matching the description too meant a common word in
+    // somebody's write-up pulled in vendors the member had not searched for;
+    // category and city are filters of their own.
     if (search) {
-      where.OR = [
-        { companyName: { contains: search as string, mode: "insensitive" } },
-        { description: { contains: search as string, mode: "insensitive" } },
-      ];
+      where.companyName = { contains: search as string, mode: "insensitive" };
     }
 
     const [vendors, total] = await Promise.all([

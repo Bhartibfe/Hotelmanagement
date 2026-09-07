@@ -88,11 +88,36 @@
   }
 }
 
+/* Narrow desktop only: below 992px mobile.css owns the logo size. */
+@media (min-width: 992px) and (max-width: 1199.98px) {
+  .menu-area .logo img {
+    max-height: 38px !important;
+  }
+}
+
 /* Extra large devices (large desktops, 1200px and up) */
 @media (max-width: 1199.98px) {
   .container,
   .custom-container {
     max-width: 960px;
+  }
+  /* The row no longer wraps, so on the narrowest desktop the nav and the
+     account block have to share a tighter budget rather than spill over. The
+     container is 960px here and seven nav items plus a signed-in account block
+     do not both fit at full size, so the name gives way to the avatar (which
+     still links to the profile) and the logo comes down a few pixels. */
+  .navbar-wrap ul li a {
+    padding: 20px 10px;
+    font-size: 15px;
+  }
+  .header-action > ul {
+    margin-left: 15px;
+  }
+  .header-action > ul li {
+    margin-left: 15px;
+  }
+  .header-profile-name {
+    display: none;
   }
   .slider-content .title {
     font-size: 50px;

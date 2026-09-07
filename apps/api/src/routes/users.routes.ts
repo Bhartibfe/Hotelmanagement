@@ -51,13 +51,25 @@ router.get("/", async (req: Request, res: Response) => {
     if (memberType) where.memberType = memberType;
     if (city) where.city = { contains: city as string, mode: "insensitive" };
     if (state) where.state = { contains: state as string, mode: "insensitive" };
+    /*
+      Names only — job title was in here, so searching "manager" returned every
+      general manager on the platform rather than anyone called Manager.
+
+      Each word has to match one of the name fields, which is what makes a full
+      name work: "Priya Sharma" is two terms, and neither firstName nor
+      lastName contains the whole string on its own.
+    */
     if (search) {
-      where.OR = [
-        { firstName: { contains: search as string, mode: "insensitive" } },
-        { lastName: { contains: search as string, mode: "insensitive" } },
-        { title: { contains: search as string, mode: "insensitive" } },
-        { organizationName: { contains: search as string, mode: "insensitive" } },
-      ];
+      const terms = String(search).trim().split(/\s+/).filter(Boolean);
+      if (terms.length) {
+        where.AND = terms.map((term) => ({
+          OR: [
+            { firstName: { contains: term, mode: "insensitive" } },
+            { lastName: { contains: term, mode: "insensitive" } },
+            { organizationName: { contains: term, mode: "insensitive" } },
+          ],
+        }));
+      }
     }
 
     const orderBy = await resolveOwnerOrderBy(sort);

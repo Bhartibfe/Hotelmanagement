@@ -362,7 +362,11 @@ const api = {
   setOwnersSort: (mode) => request("PUT", "/admin/owners-sort", { body: { mode } }),
 
   // Share
-  createShareToken: (data) => request("POST", "/share/create-token", { body: data }),
+  // Takes the recipient address, not a body. Passing the bare string through
+  // as the body sent JSON like `"a@b.com"`, which express.json() rejects in
+  // strict mode — the request failed before it ever reached the route.
+  createShareToken: (email) =>
+    request("POST", "/share/create-token", { body: { email: email ? String(email).trim() : null } }),
   validateShareToken: (token) => request("GET", `/share/validate/${token}`, { auth: false }),
   submitSharedProfile: (token, data) => request("POST", `/share/submit/${token}`, { body: data, auth: false }),
 };

@@ -5,6 +5,7 @@ import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { DEFAULT_VENDOR_CATEGORIES, categoryColor, categoryLabel } from "../../lib/vendorCategories";
+import { matchesNameSearch } from "../../lib/nameSearch";
 
 
 
@@ -70,10 +71,7 @@ const VendorsPage = () => {
     const matchCategory =
       activeCategory === "ALL" || categoryLabel(v.category) === activeCategory;
     const matchSearch =
-      !searchTerm ||
-      (v.company || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (v.city || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (v.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+      matchesNameSearch(v, searchTerm);
     return matchCategory && matchSearch;
   });
 
@@ -116,7 +114,7 @@ const VendorsPage = () => {
             <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
               <input
                 type="text"
-                placeholder="Search partners..."
+                placeholder="Search by company name..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{

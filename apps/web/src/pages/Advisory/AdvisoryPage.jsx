@@ -4,6 +4,7 @@ import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { PersonCard, PersonCardStyles } from "../../components/common/PersonCard";
+import { matchesNameSearch } from "../../lib/nameSearch";
 
 // Advisory members are the same records as experts behind an ExpertKind flag,
 // so this page mirrors ExpertsPage — including the admin-editable expertise
@@ -95,7 +96,6 @@ const AdvisoryPage = () => {
   const getName = (e) => (e.user ? `${e.user.firstName} ${e.user.lastName}` : e.name || "");
   const getTitle = (e) => e.user?.title || e.title || "";
   const getCompany = (e) => e.user?.organizationName || e.company || "";
-  const getCity = (e) => e.user?.city || e.city || "";
   const getAvatar = (e) => e.user?.avatar || e.avatar || "";
 
   useAosRefresh(!loading);
@@ -103,12 +103,8 @@ const AdvisoryPage = () => {
   const filtered = members.filter((e) => {
     const matchExpertise =
       activeExpertise === "ALL" || (e.expertise && e.expertise.includes(activeExpertise));
-    const matchSearch =
-      !searchTerm ||
-      getName(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getCompany(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getCity(e).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.expertise && e.expertise.some((ex) => ex.toLowerCase().includes(searchTerm.toLowerCase())));
+    // Name and organisation only — see the Experts page for why.
+    const matchSearch = matchesNameSearch({ name: getName(e), company: getCompany(e) }, searchTerm);
     return matchExpertise && matchSearch;
   });
 
@@ -152,7 +148,7 @@ const AdvisoryPage = () => {
             <div style={{ display: "flex", gap: "12px", marginBottom: "16px", alignItems: "center" }}>
               <input
                 type="text"
-                placeholder="Search advisory board..."
+                placeholder="Search by name or organisation..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{

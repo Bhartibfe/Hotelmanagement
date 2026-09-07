@@ -3,6 +3,7 @@ import { Layout } from "../../layouts/Layout";
 import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
+import { matchesNameSearch } from "../../lib/nameSearch";
 
 const CATEGORIES = {
   ALL: "All Categories",
@@ -46,7 +47,7 @@ const MarketplacePage = () => {
 
   const filtered = vendors.filter((v) => {
     const matchCat = activeCat === "ALL" || v.category === activeCat;
-    const matchSearch = !searchTerm || (v.company || "").toLowerCase().includes(searchTerm.toLowerCase()) || (v.desc || v.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchSearch = matchesNameSearch(v, searchTerm);
     return matchCat && matchSearch;
   });
 
@@ -65,7 +66,7 @@ const MarketplacePage = () => {
               </div>
             </div>
             <div className="col-lg-4">
-              <input type="text" placeholder="Search vendors..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: "100%", padding: "12px 16px", border: "1px solid var(--tg-border-color)", fontSize: "14px", outline: "none" }} />
+              <input type="text" placeholder="Search by company name..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ width: "100%", padding: "12px 16px", border: "1px solid var(--tg-border-color)", fontSize: "14px", outline: "none" }} />
             </div>
           </div>
 

@@ -136,6 +136,8 @@ export const FooterOne = () => {
                         <i className="fab fa-linkedin-in"></i>
                       </a>
                     </li>
+                    {/* Twitter and Instagram are hidden until those accounts
+                        exist — add the URLs to SOCIAL_LINKS and uncomment.
                     <li>
                       <a href="#" aria-label="Twitter">
                         <i className="fab fa-twitter"></i>
@@ -146,6 +148,7 @@ export const FooterOne = () => {
                         <i className="fab fa-instagram"></i>
                       </a>
                     </li>
+                    */}
                     <li>
                       <a href="#" aria-label="YouTube">
                         <i className="fab fa-youtube"></i>

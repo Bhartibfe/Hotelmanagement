@@ -134,6 +134,8 @@ export const MobileMenu = () => {
                   <i className="fab fa-facebook-f"></i>
                 </a>
               </li>
+              {/* Twitter and Instagram are hidden until those accounts exist
+                  — add the URLs to SOCIAL_LINKS and uncomment.
               <li>
                 <a href="#" aria-label="Twitter">
                   <i className="fab fa-twitter"></i>
@@ -144,6 +146,7 @@ export const MobileMenu = () => {
                   <i className="fab fa-instagram"></i>
                 </a>
               </li>
+              */}
               <li>
                 <a href={SOCIAL_LINKS.linkedin} aria-label="LinkedIn" {...externalLinkProps}>
                   <i className="fab fa-linkedin-in"></i>
