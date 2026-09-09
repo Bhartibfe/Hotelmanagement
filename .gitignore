@@ -29,3 +29,7 @@ desktop.ini
 .idea/
 # Database dumps — contain member PII, never commit
 .dbdump/
+
+# Local-only database helpers — not part of the app
+scripts/migrate-render-to-local.sh
+scripts/sync-local-schema.sql
