@@ -42,8 +42,14 @@ type Registry = {
     doing — 21 seconds to return an empty 304.
   */
   version: (id: string) => Promise<Date | null>;
-  // Which of these ids actually hold an image. Selecting only the id keeps
-  // this query in the low tens of kilobytes however many rows there are.
+  /*
+    Which of these ids actually hold an image. Selecting only the id keeps this
+    query in the low tens of kilobytes however many rows there are.
+
+    Empty string counts as no image, not as an image. `not: null` alone let ""
+    through, so those rows were handed a /api/media URL that then 404s — the
+    directory showed a broken-image icon where it should have shown initials.
+  */
   present: (ids: string[]) => Promise<string[]>;
 };
 
@@ -52,37 +58,37 @@ const REGISTRY: Record<MediaKind, Registry> = {
     version: async (id) => (await prisma.user.findUnique({ where: { id }, select: { updatedAt: true } }))?.updatedAt ?? null,
     read: async (id) => (await prisma.user.findUnique({ where: { id }, select: { avatar: true } }))?.avatar ?? null,
     present: async (ids) =>
-      (await prisma.user.findMany({ where: { id: { in: ids }, avatar: { not: null } }, select: { id: true } })).map((r) => r.id),
+      (await prisma.user.findMany({ where: { id: { in: ids }, NOT: [{ avatar: null }, { avatar: "" }] }, select: { id: true } })).map((r) => r.id),
   },
   "event-cover": {
     version: async (id) => (await prisma.event.findUnique({ where: { id }, select: { updatedAt: true } }))?.updatedAt ?? null,
     read: async (id) => (await prisma.event.findUnique({ where: { id }, select: { coverImage: true } }))?.coverImage ?? null,
     present: async (ids) =>
-      (await prisma.event.findMany({ where: { id: { in: ids }, coverImage: { not: null } }, select: { id: true } })).map((r) => r.id),
+      (await prisma.event.findMany({ where: { id: { in: ids }, NOT: [{ coverImage: null }, { coverImage: "" }] }, select: { id: true } })).map((r) => r.id),
   },
   "event-organizer": {
     version: async (id) => (await prisma.event.findUnique({ where: { id }, select: { updatedAt: true } }))?.updatedAt ?? null,
     read: async (id) => (await prisma.event.findUnique({ where: { id }, select: { organizerAvatar: true } }))?.organizerAvatar ?? null,
     present: async (ids) =>
-      (await prisma.event.findMany({ where: { id: { in: ids }, organizerAvatar: { not: null } }, select: { id: true } })).map((r) => r.id),
+      (await prisma.event.findMany({ where: { id: { in: ids }, NOT: [{ organizerAvatar: null }, { organizerAvatar: "" }] }, select: { id: true } })).map((r) => r.id),
   },
   "vendor-logo": {
     version: async (id) => (await prisma.vendorProfile.findUnique({ where: { id }, select: { updatedAt: true } }))?.updatedAt ?? null,
     read: async (id) => (await prisma.vendorProfile.findUnique({ where: { id }, select: { logo: true } }))?.logo ?? null,
     present: async (ids) =>
-      (await prisma.vendorProfile.findMany({ where: { id: { in: ids }, logo: { not: null } }, select: { id: true } })).map((r) => r.id),
+      (await prisma.vendorProfile.findMany({ where: { id: { in: ids }, NOT: [{ logo: null }, { logo: "" }] }, select: { id: true } })).map((r) => r.id),
   },
   "vendor-cover": {
     version: async (id) => (await prisma.vendorProfile.findUnique({ where: { id }, select: { updatedAt: true } }))?.updatedAt ?? null,
     read: async (id) => (await prisma.vendorProfile.findUnique({ where: { id }, select: { coverImage: true } }))?.coverImage ?? null,
     present: async (ids) =>
-      (await prisma.vendorProfile.findMany({ where: { id: { in: ids }, coverImage: { not: null } }, select: { id: true } })).map((r) => r.id),
+      (await prisma.vendorProfile.findMany({ where: { id: { in: ids }, NOT: [{ coverImage: null }, { coverImage: "" }] }, select: { id: true } })).map((r) => r.id),
   },
   "testimonial-author": {
     version: async (id) => (await prisma.testimonial.findUnique({ where: { id }, select: { updatedAt: true } }))?.updatedAt ?? null,
     read: async (id) => (await prisma.testimonial.findUnique({ where: { id }, select: { authorAvatar: true } }))?.authorAvatar ?? null,
     present: async (ids) =>
-      (await prisma.testimonial.findMany({ where: { id: { in: ids }, authorAvatar: { not: null } }, select: { id: true } })).map((r) => r.id),
+      (await prisma.testimonial.findMany({ where: { id: { in: ids }, NOT: [{ authorAvatar: null }, { authorAvatar: "" }] }, select: { id: true } })).map((r) => r.id),
   },
 };
 

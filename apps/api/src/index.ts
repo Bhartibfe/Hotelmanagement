@@ -55,11 +55,43 @@ app.use(compression({
 
 app.use(morgan("combined"));
 
+/*
+  Reading the site is not rate limited; writing to it is.
+
+  The old limiter was 100 requests a minute across everything, /api/media
+  included. But images are no longer inlined in list responses — a directory of
+  twenty-five members is twenty-five separate image requests on top of the page's
+  own calls, so simply browsing two pages tripped the limit and the site started
+  answering 429 to a member who had done nothing wrong.
+
+  Caching does this job better. /api/media already answers versioned URLs as
+  immutable for a year, and the public directories below carry a short shared
+  max-age, so a visitor clicking around mostly never reaches the server at all.
+  A limit is kept on the things that actually cost something — writes, and
+  sign-in attempts — where each request is one deliberate action.
+*/
+const PUBLIC_READ_PREFIXES = [
+  "/api/media",
+  "/api/experts",
+  "/api/advisory",
+  "/api/marketplace",
+  "/api/testimonials",
+  "/api/events",
+  "/api/users",
+  "/api/hotels",
+  "/api/public-stats",
+  "/api/homepage-config",
+];
+
 const globalLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 100,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  // GET on a public directory is free. Anything that changes data still counts,
+  // so this cannot be used to hammer the write endpoints.
+  skip: (req) =>
+    req.method === "GET" && PUBLIC_READ_PREFIXES.some((p) => req.path.startsWith(p)),
   message: { error: "Too many requests from this device. Please wait a minute and try again." },
 });
 const authLimiter = rateLimit({
@@ -71,6 +103,44 @@ const authLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
+
+/*
+  Short-lived shared caching for the public directories — the other half of
+  dropping the rate limit. A member clicking between Owners, Experts and
+  Partners re-requests the same list constantly; this lets the browser answer
+  most of that itself.
+
+  Guarded two ways. Only GET, so nothing that changes data is ever cached. And
+  only when the request carries no Authorization header: an authenticated
+  response can contain things meant for one member, and `public` would let a
+  shared cache hand it to somebody else. Those get no-store instead.
+
+  Kept deliberately short. These lists change whenever an admin approves a
+  member, and a minute of staleness is the most that is worth trading for it.
+  Images are the opposite case and are cached for a year, because their URL
+  carries a version and changes the moment the photo does — see utils/media.ts.
+*/
+const PUBLIC_LIST_MAX_AGE = 60;
+app.use((req, res, next) => {
+  const isPublicRead =
+    req.method === "GET" &&
+    !req.headers.authorization &&
+    PUBLIC_READ_PREFIXES.some((p) => req.path.startsWith(p)) &&
+    // /api/media sets its own far-future headers; do not override them.
+    !req.path.startsWith("/api/media");
+
+  if (isPublicRead) {
+    res.setHeader(
+      "Cache-Control",
+      `public, max-age=${PUBLIC_LIST_MAX_AGE}, stale-while-revalidate=${PUBLIC_LIST_MAX_AGE * 2}`
+    );
+    // The same URL answers differently once signed in, so caches must key on it.
+    res.setHeader("Vary", "Authorization, Accept-Encoding");
+  } else if (req.method === "GET") {
+    res.setHeader("Cache-Control", "no-store");
+  }
+  next();
+});
 
 const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
 const origins = corsOrigin.split(",").map((o) => o.trim());
