@@ -341,12 +341,17 @@ const ExpertProfileView = ({ copy }) => {
                 <div style={{ flexShrink: 0 }}>
                   <div
                     style={{
-                      width: "130px",
-                      height: "130px",
+                      // Was a fixed 130px. clamp lets it grow on a wide screen
+                      // without overwhelming the name on a small laptop.
+                      width: "clamp(112px, 10vw, 140px)",
+                      aspectRatio: "1",
                       borderRadius: "50%",
                       backgroundImage: `url(${photo})`,
                       backgroundSize: "cover",
-                      backgroundPosition: "center",
+                      // Was "center", which crops through the face on a
+                      // portrait — the same fault the member page had. The
+                      // blurred backdrop above already anchors to center top.
+                      backgroundPosition: "center top",
                       border: "4px solid rgba(198,169,98,0.4)",
                       boxShadow: "0 8px 30px rgba(0,0,0,0.4)",
                     }}

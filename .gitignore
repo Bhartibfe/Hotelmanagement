@@ -27,3 +27,5 @@ desktop.ini
 # IDE
 .vscode/
 .idea/
+# Database dumps — contain member PII, never commit
+.dbdump/

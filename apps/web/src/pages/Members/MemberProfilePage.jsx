@@ -37,6 +37,9 @@ const MemberProfilePage = () => {
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // A broken avatar URL falls back to the monogram. Held in state rather than
+  // hidden with e.target.nextSibling, so React still owns what is on screen.
+  const [avatarBroken, setAvatarBroken] = useState(false);
 
   // If viewing own profile, redirect to /my-profile
   const isOwnProfile = currentUser && currentUser.id === id;
@@ -138,7 +141,7 @@ const MemberProfilePage = () => {
               }}
             >
               <i className="fas fa-arrow-left" style={{ marginRight: "8px" }}></i>
-              Back to Members Directory
+              Back to Owners Directory
             </Link>
           </div>
         </section>
@@ -175,51 +178,137 @@ const MemberProfilePage = () => {
 
   return (
     <Layout breadcrumb="Members" title="Member Profile">
-      {/* Profile Header */}
-      <section style={{ padding: "40px 0 60px", background: "#0A1628", position: "relative" }}>
+      {/* Written as classes rather than inline style because the sizing needs
+          clamp() and a breakpoint, neither of which an inline style can express. */}
+      <style>{`
+        .member-hero {
+          display: flex;
+          align-items: center;
+          gap: clamp(20px, 3vw, 34px);
+        }
+        .member-hero__text { min-width: 0; }
+
+        /* Scales 112 -> 168px with the viewport. The old fixed 100px left the
+           portrait smaller than the name next to it; the upper bound keeps it
+           from crowding the name on a wide screen. aspect-ratio guarantees a
+           true circle, so a non-square source can never render an oval. */
+        .member-avatar {
+          position: relative;
+          /* Same figure as the expert/advisory hero
+             (components/profile/ExpertProfileView.jsx), so the three detail
+             pages present a person at one consistent size. */
+          width: clamp(112px, 10vw, 140px);
+          aspect-ratio: 1;
+          flex-shrink: 0;
+        }
+        .member-avatar__img,
+        .member-avatar__monogram {
+          position: absolute;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+        }
+        .member-avatar__img {
+          object-fit: cover;
+          /* THE FIX for "doesn't fit": faces sit in the upper third of a
+             portrait, and the default 50% 50% crops straight through them.
+             Matches .owner-card__media on the list page. */
+          object-position: center top;
+          background: #16243A;
+        }
+        .member-avatar__monogram {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .member-avatar__monogram span {
+          font-family: 'Cormorant Garamond', serif;
+          font-weight: 700;
+          color: #FFFFFF;
+          /* Tracks the circle instead of a fixed 36px, so the initial stays
+             optically centred at every size. */
+          font-size: clamp(38px, 4vw, 50px);
+          line-height: 1;
+        }
+        /* Offset gold ring, echoing .owner-card__frame on the list page. */
+        .member-avatar__frame {
+          position: absolute;
+          inset: -11px;
+          border-radius: 50%;
+          border: 1px solid rgba(198, 169, 98, 0.38);
+          pointer-events: none;
+        }
+
+        @media (max-width: 575.98px) {
+          /* Stacked and centred on a phone: side by side, the circle leaves too
+             little room for the name and it wraps to three or four lines. */
+          .member-hero {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+          }
+        }
+      `}</style>
+
+      {/* Profile Header. The vertical padding is deliberately tighter than the
+          rest of the page: the avatar now carries the height, so the old
+          40/60 left a band of empty navy above and below it. */}
+      <section style={{ padding: "20px 0 28px", background: "#0A1628", position: "relative" }}>
         <div className="container">
+          {/* Matches the back link at the top of the expert hero
+              (components/profile/ExpertProfileView.jsx). This page previously
+              only offered the way back from the closing CTA, so anyone who had
+              scrolled had to go all the way down to leave. */}
+          <div style={{ marginBottom: "16px" }}>
+            <Link
+              to="/members"
+              style={{ color: "#8DA4BE", textDecoration: "none", fontSize: "13px", fontWeight: 600 }}
+            >
+              <i className="fas fa-arrow-left" style={{ marginRight: "8px" }}></i> Back to Owners Directory
+            </Link>
+          </div>
+
           <div className="row align-items-center">
             <div className="col-lg-8" data-aos="fade-right">
-              <div style={{ display: "flex", alignItems: "center", gap: "28px" }}>
-                {/* Avatar */}
-                {hasAvatar ? (
-                  <img
-                    src={member.avatar}
-                    alt={fullName}
-                    style={{
-                      width: "100px",
-                      height: "100px",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      border: "3px solid rgba(198,169,98,0.3)",
-                      flexShrink: 0,
-                    }}
-                    onError={(e) => {
-                      e.target.style.display = "none";
-                      e.target.nextSibling.style.display = "flex";
-                    }}
-                  />
-                ) : null}
-                <div
-                  style={{
-                    width: "100px",
-                    height: "100px",
-                    borderRadius: "50%",
-                    background: roleColor,
-                    display: hasAvatar ? "none" : "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#FFFFFF",
-                    fontWeight: 700,
-                    fontSize: "36px",
-                    fontFamily: "'Cormorant Garamond', serif",
-                    flexShrink: 0,
-                    border: "3px solid rgba(198,169,98,0.3)",
-                  }}
-                >
-                  {(fullName.charAt(0) || "?").toUpperCase()}
+              <div className="member-hero">
+                {/* Avatar.
+
+                    Three things were wrong with the old 100px circle:
+
+                    1. object-fit: cover with no object-position centres the
+                       crop, and a portrait photo has the face in its upper
+                       third — so heads were being cut off. The owner cards on
+                       the list page already anchor to `center top` for exactly
+                       this reason; this now matches them.
+                    2. 100px is smaller than the name beside it, so the person
+                       read as secondary to their own heading on their own page.
+                    3. A flat ring on a dark ground looked unfinished next to
+                       the gold-framed cards the list page shows.
+
+                    The frame echoes .owner-card__frame so the two views share
+                    one visual language. */}
+                <div className="member-avatar">
+                  {hasAvatar && !avatarBroken ? (
+                    <img
+                      className="member-avatar__img"
+                      src={member.avatar}
+                      alt={fullName}
+                      onError={() => setAvatarBroken(true)}
+                    />
+                  ) : (
+                    <div
+                      className="member-avatar__monogram"
+                      style={{ background: roleColor }}
+                      aria-hidden="true"
+                    >
+                      <span>{(fullName.charAt(0) || "?").toUpperCase()}</span>
+                    </div>
+                  )}
+                  <span className="member-avatar__frame" aria-hidden="true" />
                 </div>
-                <div>
+
+                <div className="member-hero__text">
                   <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
                     <h1
                       style={{
@@ -740,7 +829,7 @@ const MemberProfilePage = () => {
                   }}
                 >
                   <i className="fas fa-arrow-left" style={{ marginRight: "8px" }}></i>
-                  Back to Members Directory
+                  Back to Owners Directory
                 </Link>
               </div>
             </div>
