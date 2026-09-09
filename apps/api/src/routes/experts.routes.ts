@@ -24,12 +24,19 @@ const DIRECTORY_USER_FIELDS = {
   city: true,
   state: true,
   linkedinUrl: true,
+  // Not displayed. It is the cache-busting version for the photo URL below —
+  // without it the directory keeps showing a replaced photo for a day.
+  updatedAt: true,
 } as const;
 
 // Hangs the photo URL off each row's nested user, in one extra id-only query.
+// versionOf appends ?v=<updatedAt> so replacing a photo produces a new URL:
+// /api/media serves versioned URLs as immutable for a year, and unversioned
+// ones as cacheable for a day, so omitting it left the old photo on the board.
 const withAvatars = (req: Request, rows: any[]) =>
   attachMediaUrls(req, rows, "user-avatar", {
     idOf: (r) => r.user?.id,
+    versionOf: (r) => r.user?.updatedAt,
     set: (r, url) => { if (r.user) r.user.avatar = url; },
   });
 

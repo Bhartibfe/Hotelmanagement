@@ -91,6 +91,8 @@ router.get("/", async (req: Request, res: Response) => {
           isFeaturedExpert: true,
           isFeaturedVendor: true,
           createdAt: true,
+          // Not displayed — the cache-busting version for the photo URL below.
+          updatedAt: true,
         },
         skip,
         take: parseInt(limit as string),
@@ -101,8 +103,11 @@ router.get("/", async (req: Request, res: Response) => {
 
     // `avatar` is deliberately absent from the select above and filled in here
     // as a URL — see utils/media.ts for why.
+    // versionOf appends ?v=<updatedAt>, so a replaced photo gets a new URL and
+    // the directory stops serving the old one out of the browser cache.
     await attachMediaUrls(req, users as any[], "user-avatar", {
       idOf: (u) => u.id,
+      versionOf: (u) => u.updatedAt,
       set: (u, url) => { u.avatar = url; },
     });
 

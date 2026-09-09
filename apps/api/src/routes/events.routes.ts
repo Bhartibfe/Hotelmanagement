@@ -31,7 +31,7 @@ router.get("/featured", async (req: Request, res: Response) => {
       where: { isFeatured: true, isPublished: true },
       select: {
         ...EVENT_LIST_FIELDS,
-        createdBy: { select: { id: true, firstName: true, lastName: true } },
+        createdBy: { select: { id: true, firstName: true, lastName: true, updatedAt: true } },
         _count: { select: { registrations: true } },
       },
       orderBy: { displayOrder: "asc" },
@@ -46,6 +46,9 @@ router.get("/featured", async (req: Request, res: Response) => {
       }),
       attachMediaUrls(req, withMedia, "user-avatar", {
         idOf: (e) => e.createdBy?.id,
+        // The creator's own updatedAt, not the event's — the photo belongs to
+        // the user, so the event changing must not bust it and vice versa.
+        versionOf: (e) => e.createdBy?.updatedAt,
         set: (e, url) => { if (e.createdBy) e.createdBy.avatar = url; },
       }),
     ]);
@@ -86,7 +89,7 @@ router.get("/", async (req: Request, res: Response) => {
         where,
         select: {
           ...EVENT_LIST_FIELDS,
-          createdBy: { select: { id: true, firstName: true, lastName: true } },
+          createdBy: { select: { id: true, firstName: true, lastName: true, updatedAt: true } },
           _count: { select: { registrations: true } },
         },
         skip,
@@ -115,6 +118,9 @@ router.get("/", async (req: Request, res: Response) => {
       }),
       attachMediaUrls(req, withMedia, "user-avatar", {
         idOf: (e) => e.createdBy?.id,
+        // The creator's own updatedAt, not the event's — the photo belongs to
+        // the user, so the event changing must not bust it and vice versa.
+        versionOf: (e) => e.createdBy?.updatedAt,
         set: (e, url) => { if (e.createdBy) e.createdBy.avatar = url; },
       }),
     ]);
