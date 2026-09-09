@@ -160,10 +160,19 @@ model User {
   yearsInIndustry       Int?
   isFeaturedExpert      Boolean          @default(false)
   isFeaturedVendor      Boolean          @default(false)
+  // Pinned owners hold the top of the directory in their own curated order and
+  // are never displaced by anyone approved afterwards. Same idea as
+  // IndustryExpert.isPinned, so the two admin screens behave alike.
+  isPinned              Boolean          @default(false)
   // Manual admin-curated position in the Owners directory. Only read for
   // memberType = HOTEL_OWNER; vendors and experts carry their own displayOrder
   // on VendorProfile / IndustryExpert.
-  displayOrder          Int              @default(0)
+  //
+  // Null means "never placed by hand" and sorts last. It used to be a
+  // non-nullable 0, which sorted *first* under `displayOrder asc` — so every
+  // newly approved owner jumped to the top of the directory and pushed the
+  // whole curated order down by one.
+  displayOrder          Int?
   isActive              Boolean          @default(true)
   approvedAt            DateTime?
   approvedBy            String?
@@ -197,6 +206,8 @@ model User {
   @@index([role])
   @@index([memberType])
   @@index([memberType, displayOrder])
+  // Covers the directory's ordering: pinned block first, then curated position.
+  @@index([memberType, isPinned, displayOrder])
   @@index([membershipStatus])
   @@index([profileStatus])
   @@index([city, state])

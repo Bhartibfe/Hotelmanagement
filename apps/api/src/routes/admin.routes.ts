@@ -231,6 +231,7 @@ router.get("/members", async (req: Request, res: Response) => {
           isActive: true,
           isFeaturedExpert: true,
           isFeaturedVendor: true,
+          isPinned: true,
           displayOrder: true,
           createdAt: true,
           lastLoginAt: true,
@@ -292,6 +293,53 @@ router.put("/members/reorder", async (req: Request, res: Response) => {
   }
 });
 
+/*
+  PUT /api/admin/members/:id/pin - Toggle an owner's pin.
+
+  A pinned owner holds the top of the directory in the curated order and is not
+  displaced by anyone approved later. Mirrors /experts/:id/pin.
+
+  Pinning also gives the owner a displayOrder if it has none, placing them at the
+  end of the pinned block rather than leaving them null — null sorts last, which
+  inside the pinned block would drop a freshly pinned owner below the others
+  with no way to tell why until the admin dragged them.
+*/
+router.put("/members/:id/pin", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, isPinned: true, displayOrder: true },
+    });
+    if (!user) {
+      return res.status(404).json({ error: "That member no longer exists." });
+    }
+
+    const nowPinned = !user.isPinned;
+    const data: { isPinned: boolean; displayOrder?: number } = { isPinned: nowPinned };
+
+    if (nowPinned && user.displayOrder === null) {
+      const last = await prisma.user.aggregate({
+        where: { memberType: "HOTEL_OWNER" },
+        _max: { displayOrder: true },
+      });
+      data.displayOrder = (last._max.displayOrder ?? 0) + 1;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data,
+      select: { id: true, isPinned: true, displayOrder: true },
+    });
+
+    return res.json(updated);
+  } catch (error) {
+    console.error("Toggle member pin error:", error);
+    return res.status(500).json({ error: "Failed to change the pin on that member" });
+  }
+});
+
 // PUT /api/admin/owners-sort - Set the default ordering mode for the Owners directory.
 // Merges into the shared config singleton so homepage settings are preserved.
 router.put("/owners-sort", async (req: Request, res: Response) => {
@@ -331,7 +379,6 @@ router.put("/members/:id", async (req: Request, res: Response) => {
       organizationRole,
       isFeaturedExpert,
       isFeaturedVendor,
-      displayOrder,
     } = req.body;
 
     const user = await prisma.user.findUnique({ where: { id } });
@@ -349,7 +396,16 @@ router.put("/members/:id", async (req: Request, res: Response) => {
     if (organizationRole !== undefined) data.organizationRole = organizationRole;
     if (isFeaturedExpert !== undefined) data.isFeaturedExpert = isFeaturedExpert;
     if (isFeaturedVendor !== undefined) data.isFeaturedVendor = isFeaturedVendor;
-    if (displayOrder !== undefined) data.displayOrder = displayOrder;
+    /*
+      displayOrder and isPinned are deliberately NOT settable here.
+
+      A curated position is arranged by dragging, and it has to survive every
+      other kind of edit — changing someone's title or approving their profile
+      must never move them in the directory. This endpoint took displayOrder
+      straight from the request body, so any caller that echoed a whole user
+      object back would silently reset the position. Position changes only
+      through PUT /members/reorder, and the pin only through /members/:id/pin.
+    */
 
     // If suspending, set the status
     if (membershipStatus === "SUSPENDED") {

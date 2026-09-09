@@ -12,12 +12,31 @@ export const OWNER_SORT_MODES = ["manual", "name_asc", "name_desc", "newest", "o
 
 export type OwnerSortMode = (typeof OWNER_SORT_MODES)[number];
 
+/*
+  Pinned owners come first in every mode, in their own curated order. That is
+  the point of a pin: the block stays put no matter who is approved afterwards
+  and no matter which sort the visitor is looking at.
+
+  `nulls: "last"` is what keeps a new owner out of the way. displayOrder is null
+  until an admin drags the owner somewhere, and null sorts to the end — where it
+  previously defaulted to 0 and sorted ahead of everyone placed at 1, 2, 3.
+*/
+const PINNED_FIRST = { isPinned: "desc" } as const;
+const CURATED_POSITION = { displayOrder: { sort: "asc", nulls: "last" } } as const;
+
+/*
+  Only `manual` orders by the curated position. A reorder writes displayOrder to
+  every owner it lists, pinned or not, so carrying it into the other modes would
+  mean a previously-dragged owner outranking an untouched one under "name A-Z" —
+  which is not what the visitor asked for. There, pinned still leads and the
+  chosen sort decides the rest.
+*/
 export const OWNER_SORTS: Record<OwnerSortMode, Prisma.UserOrderByWithRelationInput[]> = {
-  manual: [{ displayOrder: "asc" }, { createdAt: "desc" }],
-  name_asc: [{ firstName: "asc" }, { lastName: "asc" }],
-  name_desc: [{ firstName: "desc" }, { lastName: "desc" }],
-  newest: [{ createdAt: "desc" }],
-  oldest: [{ createdAt: "asc" }],
+  manual: [PINNED_FIRST, CURATED_POSITION, { createdAt: "desc" }],
+  name_asc: [PINNED_FIRST, { firstName: "asc" }, { lastName: "asc" }],
+  name_desc: [PINNED_FIRST, { firstName: "desc" }, { lastName: "desc" }],
+  newest: [PINNED_FIRST, { createdAt: "desc" }],
+  oldest: [PINNED_FIRST, { createdAt: "asc" }],
 };
 
 export const isOwnerSortMode = (value: unknown): value is OwnerSortMode =>
@@ -90,6 +109,9 @@ router.get("/", async (req: Request, res: Response) => {
           organizationRole: true,
           isFeaturedExpert: true,
           isFeaturedVendor: true,
+          // Lets the directory mark a pinned owner if it ever wants to; the
+          // ordering itself is already applied above.
+          isPinned: true,
           createdAt: true,
           // Not displayed — the cache-busting version for the photo URL below.
           updatedAt: true,

@@ -359,6 +359,9 @@ const api = {
 
   // Owner ordering
   reorderMembers: (orderedIds) => request("PUT", "/admin/members/reorder", { body: { orderedIds } }),
+  // Pinned owners hold the top of the directory and are not displaced by
+  // anyone approved later. Returns the new { isPinned, displayOrder }.
+  toggleMemberPinned: (id) => request("PUT", `/admin/members/${id}/pin`),
   setOwnersSort: (mode) => request("PUT", "/admin/owners-sort", { body: { mode } }),
 
   // Share

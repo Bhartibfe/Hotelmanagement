@@ -55,6 +55,9 @@ const AdminMembers = () => {
   const [total, setTotal] = useState(0);
   const [dragIndex, setDragIndex] = useState(null);
   const [orderNotice, setOrderNotice] = useState(null);
+  // Id of the owner whose pin is currently being saved, so only that row
+  // shows a busy state rather than the whole table locking up.
+  const [pinningId, setPinningId] = useState(null);
   // The pre-drag list, so a failed save can be rolled back.
   const preDragOrder = useRef(null);
   const { toastError, toastSuccess } = useAdminToast();
@@ -185,6 +188,32 @@ const AdminMembers = () => {
     } catch (err) {
       setMembers(snapshot);
       toastError(err, "save the new order (the previous order has been restored)");
+    }
+  };
+
+  /*
+    Pinning changes where the owner sits, so the authoritative order has to come
+    back from the server rather than being guessed here: a newly pinned owner is
+    placed at the end of the pinned block, which depends on what the other pins
+    already hold. The row is toggled straight away so the click feels immediate,
+    then the list is refetched.
+  */
+  const handleTogglePin = async (member) => {
+    if (pinningId) return;
+    const fullName = ((member.firstName || "") + " " + (member.lastName || "")).trim();
+    setPinningId(member.id);
+    setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, isPinned: !m.isPinned } : m)));
+
+    try {
+      await api.toggleMemberPinned(member.id);
+      setOrderNotice(member.isPinned ? `${fullName} unpinned` : `${fullName} pinned to the top`);
+      // Re-read so the position matches what the server actually stored.
+      setReloadKey((k) => k + 1);
+    } catch (err) {
+      setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, isPinned: member.isPinned } : m)));
+      toastError(err, member.isPinned ? `unpin ${fullName}` : `pin ${fullName}`);
+    } finally {
+      setPinningId(null);
     }
   };
 
@@ -521,6 +550,9 @@ const AdminMembers = () => {
               <thead>
                 <tr style={{ background: "#F8FAFC" }}>
                   {sortMode === "manual" && <th style={{ ...thStyle, width: "64px" }}>#</th>}
+                  <th style={{ ...thStyle, width: "44px" }} title="Pinned owners stay at the top of the directory">
+                    <i className="fas fa-thumbtack" style={{ fontSize: "12px" }}></i>
+                  </th>
                   <th style={thStyle}>Member</th>
                   <th style={thStyle}>Type</th>
                   <th style={thStyle}>Organization</th>
@@ -548,11 +580,13 @@ const AdminMembers = () => {
                       style={{
                         borderBottom: "1px solid #F1F5F9",
                         transition: "all 0.25s ease",
-                        background: hoveredRow === member.id ? "#FAFBFC" : "transparent",
+                        // Pinned rows carry a faint gold wash so the block that
+                        // holds the top of the directory is visible at a glance.
+                        background: member.isPinned
+                          ? hoveredRow === member.id ? "#FDF8EC" : "#FEFBF3"
+                          : hoveredRow === member.id ? "#FAFBFC" : "transparent",
                         borderLeft:
-                          dragIndex === idx
-                            ? "3px solid #C6A962"
-                            : hoveredRow === member.id
+                          dragIndex === idx || hoveredRow === member.id || member.isPinned
                             ? "3px solid #C6A962"
                             : "3px solid transparent",
                         opacity: mounted ? (dragIndex === idx ? 0.6 : 1) : 0,
@@ -578,6 +612,43 @@ const AdminMembers = () => {
                           </div>
                         </td>
                       )}
+
+                      {/* Pin. A pinned owner holds the top of the directory in
+                          the order you drag them into, and stays there however
+                          many owners are approved afterwards. */}
+                      <td style={{ padding: "14px 8px", width: "44px" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePin(member)}
+                          disabled={pinningId === member.id}
+                          title={
+                            member.isPinned
+                              ? `Unpin ${fullName} — they will fall back into the normal order`
+                              : `Pin ${fullName} to the top of the directory`
+                          }
+                          aria-pressed={Boolean(member.isPinned)}
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            cursor: pinningId === member.id ? "wait" : "pointer",
+                            padding: "6px",
+                            lineHeight: 0,
+                            opacity: pinningId === member.id ? 0.5 : 1,
+                          }}
+                        >
+                          <i
+                            className="fas fa-thumbtack"
+                            style={{
+                              fontSize: "15px",
+                              color: member.isPinned ? "#C6A962" : "#CBD5E1",
+                              // Upright when pinned, tilted when not — the same
+                              // cue the expert directory admin already uses.
+                              transform: member.isPinned ? "rotate(0deg)" : "rotate(45deg)",
+                              transition: "color 0.25s ease, transform 0.25s ease",
+                            }}
+                          ></i>
+                        </button>
+                      </td>
                       <td style={{ padding: "14px 20px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           <div
