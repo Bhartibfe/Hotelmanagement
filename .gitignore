@@ -33,3 +33,6 @@ desktop.ini
 # Local-only database helpers — not part of the app
 scripts/migrate-render-to-local.sh
 scripts/sync-local-schema.sql
+
+# Git Bash crash dumps
+*.stackdump

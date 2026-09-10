@@ -388,7 +388,10 @@ model VendorProfile {
   serviceRegions     String[]
   insuranceDetails   String?
   isFeatured         Boolean             @default(false)
-  displayOrder       Int                 @default(0)
+  // Pinned partners hold the top of the directory, as for owners and experts.
+  isPinned           Boolean             @default(false)
+  // Null means "never placed by hand" and sorts last.
+  displayOrder       Int?
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
 
@@ -399,6 +402,7 @@ model VendorProfile {
   @@index([category])
   @@index([city, state])
   @@index([isFeatured])
+  @@index([isPinned, displayOrder])
 }
 
 model Product {
@@ -440,8 +444,12 @@ model IndustryExpert {
   awards              String[]
   certifications      String[]
   isFeatured          Boolean  @default(false)
+  // Pinned entries hold the top of their directory in the curated order and are
+  // not displaced by anyone added later. Same contract as User.isPinned.
   isPinned            Boolean  @default(false)
-  displayOrder        Int      @default(0)
+  // Null means "never placed by hand" and sorts last. See User.displayOrder —
+  // a non-nullable 0 sorted *first*, so every new entry jumped to the top.
+  displayOrder        Int?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -450,6 +458,7 @@ model IndustryExpert {
 
   @@index([isFeatured])
   @@index([kind, displayOrder])
+  @@index([kind, isPinned, displayOrder])
 }
 
 model ProfileRevision {

@@ -161,6 +161,18 @@ const AdminMembers = () => {
 
   const handleDragOver = (e, index) => {
     if (!canReorder || dragIndex === null || dragIndex === index) return;
+
+    /*
+      A pinned row cannot be dragged out of the pinned block, and an unpinned
+      one cannot be dragged into it. The directory always sorts pinned first, so
+      such a move would appear to work here and then have no effect for
+      visitors — the admin would be looking at one order and the public at
+      another. Unpin the owner first, then move it.
+    */
+    const moving = members[dragIndex];
+    const target = members[index];
+    if (Boolean(moving?.isPinned) !== Boolean(target?.isPinned)) return;
+
     e.preventDefault();
     setMembers((prev) => {
       const next = [...prev];
@@ -550,7 +562,10 @@ const AdminMembers = () => {
               <thead>
                 <tr style={{ background: "#F8FAFC" }}>
                   {sortMode === "manual" && <th style={{ ...thStyle, width: "64px" }}>#</th>}
-                  <th style={{ ...thStyle, width: "44px" }} title="Pinned owners stay at the top of the directory">
+                  <th
+                    style={{ ...thStyle, width: "44px" }}
+                    title="Pinned owners stay at the top of the directory. Unpin one before moving it below the others."
+                  >
                     <i className="fas fa-thumbtack" style={{ fontSize: "12px" }}></i>
                   </th>
                   <th style={thStyle}>Member</th>

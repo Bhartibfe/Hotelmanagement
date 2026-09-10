@@ -29,11 +29,19 @@ router.post("/", authenticate, requireApproved, async (req: Request, res: Respon
 router.get("/featured", async (_req: Request, res: Response) => {
   try {
     const vendors = await prisma.vendorProfile.findMany({
-      where: { isFeatured: true },
+      // The star says who is eligible for the homepage; a pinned partner is
+      // included whether or not it is starred, matching /experts/featured.
+      where: { OR: [{ isPinned: true }, { isFeatured: true }] },
       include: {
         user: { select: { id: true, firstName: true, lastName: true, avatar: true, title: true } },
       },
-      orderBy: { displayOrder: "asc" },
+      // Same order as the directory, so dragging in the admin moves the
+      // homepage strip too rather than the two disagreeing.
+      orderBy: [
+        { isPinned: "desc" },
+        { displayOrder: { sort: "asc", nulls: "last" } },
+        { createdAt: "desc" },
+      ],
     });
 
     return res.json(vendors);
@@ -67,7 +75,14 @@ router.get("/", async (req: Request, res: Response) => {
         },
         skip,
         take: parseInt(limit as string),
-        orderBy: { createdAt: "desc" },
+        // Pinned partners lead, then the admin's curated order; anything never
+        // placed by hand sorts last. This was createdAt desc, so a pin had no
+        // effect on the directory and dragging in the admin did nothing here.
+        orderBy: [
+          { isPinned: "desc" },
+          { displayOrder: { sort: "asc", nulls: "last" } },
+          { createdAt: "desc" },
+        ],
       }),
       prisma.vendorProfile.count({ where }),
     ]);

@@ -475,7 +475,17 @@ router.get("/vendors", async (req: Request, res: Response) => {
         },
         skip,
         take,
-        orderBy: { createdAt: "desc" },
+        /*
+          The same order the public directory uses. Dragging here writes
+          displayOrder 1..n against what is on screen, so if this list were
+          sorted differently — it was createdAt desc — the admin would be
+          arranging one sequence while visitors saw another.
+        */
+        orderBy: [
+          { isPinned: "desc" },
+          { displayOrder: { sort: "asc", nulls: "last" } },
+          { createdAt: "desc" },
+        ],
       }),
       prisma.vendorProfile.count({ where }),
     ]);
@@ -603,6 +613,41 @@ router.post("/vendors", async (req: Request, res: Response) => {
 });
 
 // PUT /api/admin/vendors/:id - Update vendor profile
+// Registered before the ":id" route below: Express matches in order, so
+// "/reorder" would otherwise be read as an id and 404 as a missing record.
+// PUT /api/admin/vendors/reorder - Drag-and-drop order for the partners directory.
+router.put("/vendors/reorder", async (req: Request, res: Response) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ error: "orderedIds must be a non-empty array" });
+    }
+    if (orderedIds.length > 500) {
+      return res.status(400).json({ error: "Cannot reorder more than 500 partners at once" });
+    }
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      return res.status(400).json({ error: "orderedIds contains duplicates" });
+    }
+
+    const found = await prisma.vendorProfile.count({ where: { id: { in: orderedIds } } });
+    if (found !== orderedIds.length) {
+      return res.status(400).json({ error: "One or more partners no longer exist" });
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id: string, index: number) =>
+        prisma.vendorProfile.update({ where: { id }, data: { displayOrder: index + 1 } })
+      )
+    );
+
+    return res.json({ success: true, count: orderedIds.length });
+  } catch (error) {
+    console.error("Reorder vendors error:", error);
+    return res.status(500).json({ error: "Failed to reorder partners" });
+  }
+});
+
 router.put("/vendors/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -701,7 +746,14 @@ router.get("/experts", async (req: Request, res: Response) => {
         },
         skip,
         take,
-        orderBy: [{ isPinned: "desc" }, { isFeatured: "desc" }, { displayOrder: "asc" }],
+        // Matches the public directory exactly, for the same reason as above.
+        // isFeatured used to sort here, which pushed starred entries above the
+        // curated position and made a dragged order look wrong.
+        orderBy: [
+          { isPinned: "desc" },
+          { displayOrder: { sort: "asc", nulls: "last" } },
+          { createdAt: "desc" },
+        ],
       }),
       prisma.industryExpert.count({ where: { kind } }),
     ]);
@@ -814,6 +866,49 @@ router.post("/experts", async (req: Request, res: Response) => {
 });
 
 // PUT /api/admin/experts/:id - Toggle expert featured status (star)
+// Registered before the ":id" route below: Express matches in order, so
+// "/reorder" would otherwise be read as an id and 404 as a missing record.
+/*
+  PUT /api/admin/experts/reorder - Drag-and-drop order for one directory.
+
+  Mirrors /members/reorder. The caller sends the ids of a single kind in their
+  new order; positions are 1..n. Reordering a filtered or partial list has no
+  defined meaning for the whole sequence, which is why the admin screens only
+  allow dragging when the full list is on screen.
+*/
+router.put("/experts/reorder", async (req: Request, res: Response) => {
+  try {
+    const { orderedIds } = req.body;
+
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return res.status(400).json({ error: "orderedIds must be a non-empty array" });
+    }
+    if (orderedIds.length > 500) {
+      return res.status(400).json({ error: "Cannot reorder more than 500 entries at once" });
+    }
+    if (new Set(orderedIds).size !== orderedIds.length) {
+      return res.status(400).json({ error: "orderedIds contains duplicates" });
+    }
+
+    // Reject unknown ids up front so a bad payload cannot half-apply.
+    const found = await prisma.industryExpert.count({ where: { id: { in: orderedIds } } });
+    if (found !== orderedIds.length) {
+      return res.status(400).json({ error: "One or more entries no longer exist" });
+    }
+
+    await prisma.$transaction(
+      orderedIds.map((id: string, index: number) =>
+        prisma.industryExpert.update({ where: { id }, data: { displayOrder: index + 1 } })
+      )
+    );
+
+    return res.json({ success: true, count: orderedIds.length });
+  } catch (error) {
+    console.error("Reorder experts error:", error);
+    return res.status(500).json({ error: "Failed to reorder entries" });
+  }
+});
+
 router.put("/experts/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -847,22 +942,70 @@ router.put("/experts/:id/pin", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const expert = await prisma.industryExpert.findUnique({ where: { id } });
+    const expert = await prisma.industryExpert.findUnique({
+      where: { id },
+      select: { id: true, kind: true, isPinned: true, displayOrder: true },
+    });
     if (!expert) {
       return res.status(404).json({ error: "Expert profile not found" });
     }
 
-    const updated = await prisma.industryExpert.update({
-      where: { id },
-      data: { isPinned: !expert.isPinned },
-    });
+    const nowPinned = !expert.isPinned;
+    const data: { isPinned: boolean; displayOrder?: number } = { isPinned: nowPinned };
 
+    // Give a never-placed entry a position so it lands at the end of the pinned
+    // block rather than below it — null sorts last. Scoped to its own kind, so
+    // pinning an advisory member does not count the experts' positions.
+    if (nowPinned && expert.displayOrder === null) {
+      const last = await prisma.industryExpert.aggregate({
+        where: { kind: expert.kind },
+        _max: { displayOrder: true },
+      });
+      data.displayOrder = (last._max.displayOrder ?? 0) + 1;
+    }
+
+    const updated = await prisma.industryExpert.update({ where: { id }, data });
     return res.json(updated);
   } catch (error) {
     console.error("Toggle expert pinned error:", error);
     return res.status(500).json({ error: "Failed to update expert" });
   }
 });
+
+
+// PUT /api/admin/vendors/:id/pin - Toggle a partner's pin. See /members/:id/pin.
+router.put("/vendors/:id/pin", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const vendor = await prisma.vendorProfile.findUnique({
+      where: { id },
+      select: { id: true, isPinned: true, displayOrder: true },
+    });
+    if (!vendor) {
+      return res.status(404).json({ error: "That partner no longer exists." });
+    }
+
+    const nowPinned = !vendor.isPinned;
+    const data: { isPinned: boolean; displayOrder?: number } = { isPinned: nowPinned };
+
+    if (nowPinned && vendor.displayOrder === null) {
+      const last = await prisma.vendorProfile.aggregate({ _max: { displayOrder: true } });
+      data.displayOrder = (last._max.displayOrder ?? 0) + 1;
+    }
+
+    const updated = await prisma.vendorProfile.update({
+      where: { id },
+      data,
+      select: { id: true, isPinned: true, displayOrder: true },
+    });
+    return res.json(updated);
+  } catch (error) {
+    console.error("Toggle vendor pin error:", error);
+    return res.status(500).json({ error: "Failed to change the pin on that partner" });
+  }
+});
+
 
 // PUT /api/admin/experts/:id/edit - Update expert profile
 router.put("/experts/:id/edit", async (req: Request, res: Response) => {

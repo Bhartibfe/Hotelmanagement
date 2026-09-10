@@ -328,6 +328,11 @@ const api = {
   updateExpert: (id, data) => request("PUT", `/admin/experts/${id}/edit`, { body: data }),
   toggleExpertFeatured: (id) => request("PUT", `/admin/experts/${id}`),
   toggleExpertPinned: (id) => request("PUT", `/admin/experts/${id}/pin`),
+  // Drag-and-drop order for one directory (experts or advisory — send the ids
+  // of a single kind). Positions become 1..n.
+  reorderExperts: (orderedIds) => request("PUT", "/admin/experts/reorder", { body: { orderedIds } }),
+  togglePartnerPinned: (id) => request("PUT", `/admin/vendors/${id}/pin`),
+  reorderPartners: (orderedIds) => request("PUT", "/admin/vendors/reorder", { body: { orderedIds } }),
   deleteExpert: (id) => request("DELETE", `/admin/experts/${id}`),
   getAdminEvents: (params) => request("GET", `/admin/events?${new URLSearchParams(params || {})}`),
   getEventRegistrations: (id) => request("GET", `/admin/events/${id}/registrations`),

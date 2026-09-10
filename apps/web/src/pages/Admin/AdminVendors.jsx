@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
 import { useAdminToast } from "../../components/admin/AdminToast";
@@ -53,6 +53,10 @@ const AdminVendors = () => {
   const [editingId, setEditingId] = useState(null);
   const { toastError, toastSuccess } = useAdminToast();
   const [loadError, setLoadError] = useState(null);
+  // Index of the row being dragged, plus the pre-drag list for rollback.
+  const [dragIndex, setDragIndex] = useState(null);
+  const [pinningId, setPinningId] = useState(null);
+  const preDragOrder = useRef(null);
 
   const fetchVendors = useCallback(async () => {
     setLoading(true);
@@ -93,6 +97,75 @@ const AdminVendors = () => {
     }
     return () => { document.body.style.overflow = ""; };
   }, [showForm]);
+
+  // Dragging rewrites the stored sequence, so only while the whole list shows.
+  const canReorder = !searchTerm && !loading;
+
+  const handleTogglePin = async (vendor) => {
+    if (pinningId) return;
+    setPinningId(vendor.id);
+    setVendors((prev) => prev.map((v) => (v.id === vendor.id ? { ...v, isPinned: !v.isPinned } : v)));
+    try {
+      await api.togglePartnerPinned(vendor.id);
+      // The server decides where a newly pinned partner lands, so re-read.
+      await fetchVendors();
+    } catch (err) {
+      setVendors((prev) => prev.map((v) => (v.id === vendor.id ? { ...v, isPinned: vendor.isPinned } : v)));
+      toastError(err, vendor.isPinned ? `unpin ${vendor.companyName}` : `pin ${vendor.companyName}`);
+    } finally {
+      setPinningId(null);
+    }
+  };
+
+  const handleDragStart = (e, index) => {
+    if (!canReorder) return;
+    preDragOrder.current = vendors;
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e, index) => {
+    if (!canReorder || dragIndex === null || dragIndex === index) return;
+
+    /*
+      A pinned row cannot be dragged out of the pinned block, and an unpinned
+      one cannot be dragged into it. The directory always sorts pinned first, so
+      such a move would appear to work here and then have no effect for
+      visitors — the admin would be looking at one order and the public at
+      another. Unpin the partner first, then move it.
+    */
+    const moving = vendors[dragIndex];
+    const target = vendors[index];
+    if (Boolean(moving?.isPinned) !== Boolean(target?.isPinned)) return;
+
+    e.preventDefault();
+    setVendors((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
+    setDragIndex(index);
+  };
+
+  // Saves once, on drop — dragOver fires continuously and would spam the API.
+  const handleDragEnd = async () => {
+    const snapshot = preDragOrder.current;
+    preDragOrder.current = null;
+    setDragIndex(null);
+    if (!snapshot) return;
+
+    const orderedIds = vendors.map((v) => v.id);
+    if (snapshot.map((v) => v.id).join(",") === orderedIds.join(",")) return;
+
+    try {
+      await api.reorderPartners(orderedIds);
+      toastSuccess("Order saved");
+    } catch (err) {
+      setVendors(snapshot);
+      toastError(err, "save the new order (the previous order has been restored)");
+    }
+  };
 
   const filtered = vendors.filter(
     (v) => {
@@ -470,6 +543,13 @@ const AdminVendors = () => {
             <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F8FAFC" }}>
+                  {canReorder && <th style={{ ...thStyle, width: "56px" }}>#</th>}
+                  <th
+                    style={{ ...thStyle, width: "44px" }}
+                    title="Pinned partners stay at the top of the directory. Unpin one before moving it below the others."
+                  >
+                    <i className="fas fa-thumbtack" style={{ fontSize: "12px" }}></i>
+                  </th>
                   <th style={thStyle}>Company</th>
                   <th style={thStyle}>Category</th>
                   <th style={thStyle}>Contact Person</th>
@@ -485,18 +565,60 @@ const AdminVendors = () => {
                   return (
                     <tr
                       key={vendor.id}
+                      draggable={canReorder}
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => handleDragOver(e, idx)}
+                      onDragEnd={handleDragEnd}
+                      onDrop={(e) => e.preventDefault()}
                       onMouseEnter={() => setHoveredRow(vendor.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                       style={{
                         borderBottom: "1px solid #F1F5F9",
                         transition: "all 0.25s ease",
-                        background: hoveredRow === vendor.id ? "#FAFBFC" : "transparent",
-                        borderLeft: hoveredRow === vendor.id ? "3px solid #C6A962" : "3px solid transparent",
-                        opacity: mounted ? 1 : 0,
+                        // Pinned rows carry a faint gold wash, as on the owners screen.
+                        background: vendor.isPinned
+                          ? hoveredRow === vendor.id ? "#FDF8EC" : "#FEFBF3"
+                          : hoveredRow === vendor.id ? "#FAFBFC" : "transparent",
+                        borderLeft:
+                          hoveredRow === vendor.id || vendor.isPinned || dragIndex === idx
+                            ? "3px solid #C6A962"
+                            : "3px solid transparent",
+                        opacity: mounted ? (dragIndex === idx ? 0.6 : 1) : 0,
                         transform: mounted ? "translateY(0)" : "translateY(8px)",
-                        transitionDelay: `${0.3 + idx * 0.04}s`,
+                        transitionDelay: dragIndex === null ? `${0.3 + idx * 0.04}s` : "0s",
                       }}
                     >
+                      {canReorder && (
+                        <td style={{ padding: "14px 8px", width: "56px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "grab", color: "#C6A962" }}>
+                            <i className="fas fa-grip-vertical" style={{ fontSize: "13px" }}></i>
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "#94A3B8" }}>{idx + 1}</span>
+                          </div>
+                        </td>
+                      )}
+                      <td style={{ padding: "14px 8px", width: "44px" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePin(vendor)}
+                          disabled={pinningId === vendor.id}
+                          title={vendor.isPinned
+                            ? `Unpin ${vendor.companyName} — it falls back into the normal order`
+                            : `Pin ${vendor.companyName} to the top of the directory`}
+                          aria-pressed={Boolean(vendor.isPinned)}
+                          style={{
+                            background: "transparent", border: "none", padding: "6px", lineHeight: 0,
+                            cursor: pinningId === vendor.id ? "wait" : "pointer",
+                            opacity: pinningId === vendor.id ? 0.5 : 1,
+                          }}
+                        >
+                          <i className="fas fa-thumbtack" style={{
+                            fontSize: "15px",
+                            color: vendor.isPinned ? "#C6A962" : "#CBD5E1",
+                            transform: vendor.isPinned ? "rotate(0deg)" : "rotate(45deg)",
+                            transition: "color 0.25s ease, transform 0.25s ease",
+                          }}></i>
+                        </button>
+                      </td>
                       <td style={{ padding: "14px 20px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           <div

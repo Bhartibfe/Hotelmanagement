@@ -56,7 +56,19 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
           include: { user: { select: DIRECTORY_USER_FIELDS } },
           skip,
           take: parseInt(limit as string),
-          orderBy: { displayOrder: "asc" },
+          /*
+            Pinned first, then the curated order. This listing used to sort on
+            displayOrder alone, which is why pinning an expert changed the
+            homepage strip but did nothing to the directory itself.
+
+            nulls: "last" keeps anything never placed by hand at the end,
+            where a non-nullable 0 previously sorted it to the very top.
+          */
+          orderBy: [
+            { isPinned: "desc" },
+            { displayOrder: { sort: "asc", nulls: "last" } },
+            { createdAt: "desc" },
+          ],
         }),
         prisma.industryExpert.count({ where: { kind } }),
       ]);
@@ -72,28 +84,30 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
   // GET /featured - Featured entries for homepage (pinned first, then random starred)
   router.get("/featured", async (req: Request, res: Response) => {
     try {
-      // Get pinned experts (always shown)
-      const pinned = await prisma.industryExpert.findMany({
-        where: { kind, isPinned: true },
+      /*
+        The star decides who is eligible for the homepage; the admin's sequence
+        decides the order. So if the starred entries sit at positions 3 and 6 in
+        the directory, the homepage shows them in that order too, and dragging
+        them in the admin moves them here as well.
+
+        This was two queries — pinned, then starred shuffled with Fisher-Yates —
+        so the strip came back in a different order on every request and ignored
+        the curated position entirely. One ordered query replaces both, using the
+        same ordering as the directory listing above.
+
+        Pinned entries appear whether or not they are starred: pinning is the
+        stronger statement of the two, and that was the previous behaviour.
+      */
+      const experts = await prisma.industryExpert.findMany({
+        where: { kind, OR: [{ isPinned: true }, { isFeatured: true }] },
         include: { user: { select: DIRECTORY_USER_FIELDS } },
-        orderBy: { displayOrder: "asc" },
+        orderBy: [
+          { isPinned: "desc" },
+          { displayOrder: { sort: "asc", nulls: "last" } },
+          { createdAt: "desc" },
+        ],
       });
 
-      // Get starred (featured) experts excluding pinned ones
-      const pinnedIds = pinned.map((p) => p.id);
-      const starred = await prisma.industryExpert.findMany({
-        where: { kind, isFeatured: true, id: { notIn: pinnedIds } },
-        include: { user: { select: DIRECTORY_USER_FIELDS } },
-      });
-
-      // Shuffle starred experts for random display
-      for (let i = starred.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [starred[i], starred[j]] = [starred[j], starred[i]];
-      }
-
-      // Pinned first, then random starred
-      const experts = [...pinned, ...starred];
       await withAvatars(req, experts);
 
       return res.json(experts);

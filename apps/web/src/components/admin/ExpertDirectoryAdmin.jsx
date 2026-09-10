@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import ReactDOM from "react-dom";
 import api from "../../services/api";
 import PhotoUpload from "../profile/PhotoUpload";
@@ -67,6 +67,10 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
   const [saving, setSaving] = useState(false);
   const [expertiseOptions, setExpertiseOptions] = useState(DEFAULT_EXPERTISE);
   const [editingId, setEditingId] = useState(null);
+  // Index of the card currently being dragged, and the pre-drag list so a
+  // failed save can be rolled back rather than leaving a lie on screen.
+  const [dragIndex, setDragIndex] = useState(null);
+  const preDragOrder = useRef(null);
 
   const emptyForm = {
     email: "", password: "", firstName: "", lastName: "",
@@ -117,6 +121,11 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
     }
   }, [kind]);
 
+  // Dragging rewrites the whole stored sequence, so it is only allowed while
+  // the visible list is the complete list — reordering a filtered subset has no
+  // defined meaning for the full order. Mirrors the owners screen.
+  const canReorder = !searchTerm && !loading;
+
   const filtered = experts.filter((e) => {
     const fullName = ((e.user?.firstName || "") + " " + (e.user?.lastName || "")).trim();
     return (
@@ -158,9 +167,65 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
     const verb = expert?.isPinned ? "unpin" : "pin";
     try {
       await api.toggleExpertPinned(id);
-      setExperts((prev) => prev.map((e) => (e.id === id ? { ...e, isPinned: !e.isPinned } : e)));
+      // Pinning moves the entry to the pinned block, so re-read rather than
+      // guessing the new position: the server decides where it lands.
+      await fetchExperts();
     } catch (err) {
       toastError(err, `${verb} ${nameOf(id)}`);
+    }
+  };
+
+  /*
+    Drag-and-drop ordering. Only offered when the visible list is the whole
+    list — see the note by the grid.
+  */
+  const handleDragStart = (e, index) => {
+    if (!canReorder) return;
+    preDragOrder.current = experts;
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e, index) => {
+    if (!canReorder || dragIndex === null || dragIndex === index) return;
+
+    /*
+      A pinned row cannot be dragged out of the pinned block, and an unpinned
+      one cannot be dragged into it. The directory always sorts pinned first, so
+      such a move would appear to work here and then have no effect for
+      visitors — the admin would be looking at one order and the public at
+      another. Unpin the entry first, then move it.
+    */
+    const moving = experts[dragIndex];
+    const target = experts[index];
+    if (Boolean(moving?.isPinned) !== Boolean(target?.isPinned)) return;
+
+    e.preventDefault();
+    setExperts((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(index, 0, moved);
+      return next;
+    });
+    setDragIndex(index);
+  };
+
+  // Saves once, on drop — dragOver fires continuously and would spam the API.
+  const handleDragEnd = async () => {
+    const snapshot = preDragOrder.current;
+    preDragOrder.current = null;
+    setDragIndex(null);
+    if (!snapshot) return;
+
+    const orderedIds = experts.map((e) => e.id);
+    if (snapshot.map((e) => e.id).join(",") === orderedIds.join(",")) return;
+
+    try {
+      await api.reorderExperts(orderedIds);
+      toastSuccess("Order saved");
+    } catch (err) {
+      setExperts(snapshot);
+      toastError(err, "save the new order (the previous order has been restored)");
     }
   };
 
@@ -550,23 +615,62 @@ const ExpertDirectoryAdmin = ({ kind = "EXPERT", copy }) => {
             )}
           </div>
 
+          {/* Dragging reorders the real stored sequence, so it is only offered
+              when the whole list is on screen — reordering a filtered subset
+              has no defined meaning for the full order. */}
+          {!canReorder && filtered.length > 1 && (
+            <p style={{ fontSize: "12px", color: "#94A3B8", margin: "0 0 12px" }}>
+              <i className="fas fa-info-circle" style={{ marginRight: "6px" }}></i>
+              Clear the search to drag cards into a new order.
+            </p>
+          )}
+          {canReorder && filtered.some((e) => e.isPinned) && (
+            <p style={{ fontSize: "12px", color: "#94A3B8", margin: "0 0 12px" }}>
+              <i className="fas fa-thumbtack" style={{ marginRight: "6px", color: "#C6A962" }}></i>
+              Pinned cards hold the top of the directory. Unpin one before moving it below the rest.
+            </p>
+          )}
+
           {/* Grid of Cards */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
-            {filtered.map((expert) => {
+            {filtered.map((expert, idx) => {
               const fullName = ((expert.user?.firstName || "") + " " + (expert.user?.lastName || "")).trim();
               return (
                 <div
                   key={expert.id}
+                  draggable={canReorder}
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  onDrop={(e) => e.preventDefault()}
                   onMouseEnter={() => setHoveredCard(expert.id)}
                   onMouseLeave={() => setHoveredCard(null)}
                   style={{
-                    background: "#FFFFFF", border: "1px solid #E2E8F0", borderRadius: "8px", padding: "24px",
+                    background: "#FFFFFF",
+                    // A pinned card is outlined so the block holding the top of
+                    // the directory is obvious at a glance.
+                    border: expert.isPinned ? "1px solid #C6A962" : "1px solid #E2E8F0",
+                    borderRadius: "8px", padding: "24px",
                     transition: "all 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
                     transform: hoveredCard === expert.id ? "translateY(-4px)" : "translateY(0)",
                     boxShadow: hoveredCard === expert.id ? "0 12px 32px rgba(10, 22, 40, 0.12)" : "0 1px 3px rgba(0, 0, 0, 0.04)",
                     position: "relative", overflow: "hidden",
+                    opacity: dragIndex === idx ? 0.5 : 1,
+                    cursor: canReorder ? "grab" : "default",
                   }}
                 >
+                  {canReorder && (
+                    <div
+                      title="Drag to reorder"
+                      style={{
+                        position: "absolute", top: "18px", left: "14px",
+                        color: "#CBD5E1", fontSize: "12px", zIndex: 2, pointerEvents: "none",
+                      }}
+                    >
+                      <i className="fas fa-grip-vertical"></i>
+                      <span style={{ marginLeft: "6px", fontWeight: 600 }}>{idx + 1}</span>
+                    </div>
+                  )}
                   {/* Star + Pin buttons */}
                   <div style={{ position: "absolute", top: "16px", right: "16px", display: "flex", gap: "8px", zIndex: 2 }}>
                     <button
