@@ -143,6 +143,21 @@ model User {
   salutation            String?
   firstName             String
   lastName              String
+  // Public URL segment: firstname-lastname, with a numeric suffix on collision.
+  // Assigned once when the row is created and NEVER regenerated when the person
+  // is renamed — the slug is the page's address, not a view of the name, and
+  // rewriting it would orphan every link ever shared.
+  //
+  // Lives here rather than on IndustryExpert because that row is deleted and
+  // recreated wholesale on profile resubmit (profile.routes.ts), which would
+  // throw away an expert's URL every time. IndustryExpert also carries no name
+  // fields, so the slug has to derive from User regardless. One slug per person
+  // serves /members/<slug>, /experts/<slug> and /advisory/<slug>.
+  //
+  // Nullable so the column could land on a live table ahead of the unique
+  // index, and so a hand-inserted row degrades to its id URL rather than
+  // throwing. Application code always populates it.
+  slug                  String?          @unique
   title                 String?
   phone                 String?
   avatar                String?

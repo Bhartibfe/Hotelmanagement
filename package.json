@@ -14,6 +14,7 @@
     "dev:web": "npm run start --workspace=apps/web",
     "dev:api": "npm run dev --workspace=apps/api",
     "db:migrate": "npm run migrate --workspace=packages/database",
+    "db:migrate:prod": "npm run migrate:prod --workspace=packages/database",
     "db:generate": "npm run generate --workspace=packages/database"
   },
   "devDependencies": {
