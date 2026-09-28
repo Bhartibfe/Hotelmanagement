@@ -3,6 +3,7 @@ import { Layout } from "../../layouts/Layout";
 import { ErrorNotice } from "../../components/common/ErrorNotice";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import Seo from "../../components/seo/Seo";
 
 const TestimonialsPage = () => {
   const [testimonials, setTestimonials] = useState([]);
@@ -29,6 +30,11 @@ const TestimonialsPage = () => {
 
   return (
     <Layout breadcrumb="Testimonials" title="What Our Members Say">
+      <Seo
+        title="Member Testimonials"
+        description="What hotel owners, operators and partners say about being part of Hotel Sircle."
+        canonical="/testimonials"
+      />
       {/* Hero Quote Section */}
       {testimonials.length > 0 && (
         <section style={{ padding: "48px 0", background: "var(--tg-primary-color)", position: "relative", overflow: "hidden" }}>

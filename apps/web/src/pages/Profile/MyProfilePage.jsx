@@ -9,6 +9,7 @@ import CreatePostForm from "../../components/profile/CreatePostForm";
 import PostDetailModal from "../../components/profile/PostDetailModal";
 import CreateEventForm from "../../components/profile/CreateEventForm";
 import FormDialog from "../../components/profile/FormDialog";
+import Seo from "../../components/seo/Seo";
 
 const ROLE_LABELS = {
   HOTEL_OWNER: "Hotel Owner",
@@ -191,6 +192,7 @@ const MyProfilePage = () => {
   if (loading || loadingProfile) {
     return (
       <Layout header={1} footer={1}>
+      <Seo title="My Profile" noindex />
         <section style={{ padding: "48px 0", background: "#FFFFFF" }}>
           <div className="container">
             <div className="row justify-content-center">

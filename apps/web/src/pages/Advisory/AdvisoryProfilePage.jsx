@@ -15,6 +15,8 @@ const COPY = {
   directoryPath: "/advisory",
   backToDirectory: "Back to Advisory Board",
   fallbackName: "Advisory Board Member",
+  // Used in the <title> and the fallback meta description.
+  seoRoleLabel: "Advisory Board Member, Hotel Sircle",
   heroBadge: "Advisory Board",
   contactButton: "Contact Advisor",
   ctaBody: "Our advisory board guides the direction of the network. Reach out to start a conversation.",

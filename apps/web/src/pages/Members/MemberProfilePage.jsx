@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, Navigate } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import Seo from "../../components/seo/Seo";
 import { getErrorMessage } from "../../lib/errors";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
@@ -32,7 +33,9 @@ const TIER_COLORS = {
 };
 
 const MemberProfilePage = () => {
-  const { id } = useParams();
+  // Either a slug (venkata-krishna-gannamaneni) or, for links made before
+  // slugs existed, a cuid. The API resolves both.
+  const { id: idOrSlug } = useParams();
   const { user: currentUser } = useAuth();
   const [member, setMember] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,15 +44,29 @@ const MemberProfilePage = () => {
   // hidden with e.target.nextSibling, so React still owns what is on screen.
   const [avatarBroken, setAvatarBroken] = useState(false);
 
-  // If viewing own profile, redirect to /my-profile
-  const isOwnProfile = currentUser && currentUser.id === id;
+  /*
+    If viewing own profile, redirect to /my-profile.
+
+    This compared currentUser.id to the URL segment, which stopped being true
+    the moment that segment became a slug — a signed-in member opening their
+    own profile got the public read-only view instead of their editor. The
+    slug clause keeps the redirect firing on the first render for the normal
+    case; the member clause is the authoritative check, for anyone whose row
+    has no slug yet.
+  */
+  const isOwnProfile = Boolean(
+    currentUser &&
+      (currentUser.id === idOrSlug ||
+        currentUser.slug === idOrSlug ||
+        (member && currentUser.id === member.id))
+  );
 
   useEffect(() => {
     const fetchMember = async () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await api.getUser(id);
+        const data = await api.getUser(idOrSlug);
         if (data) {
           setMember(data);
         } else {
@@ -64,7 +81,7 @@ const MemberProfilePage = () => {
       }
     };
     fetchMember();
-  }, [id]);
+  }, [idOrSlug]);
 
   if (isOwnProfile) {
     return <Navigate to="/my-profile" replace />;
@@ -99,6 +116,7 @@ const MemberProfilePage = () => {
   if (error || !member) {
     return (
       <Layout breadcrumb="Members" title="Member Profile">
+        <Seo title="Member not found" noindex />
         <section style={{ padding: "48px 0", textAlign: "center" }}>
           <div className="container">
             <div
@@ -176,8 +194,51 @@ const MemberProfilePage = () => {
     !isHotelOwner && (member.email || member.phone || member.websiteUrl || member.website)
   );
 
+  /*
+    The canonical always points at the slug URL even when this page was reached
+    by id, so the two addresses do not compete as separate pages.
+  */
+  const canonicalPath = `/members/${member.slug || member.id}`;
+  const seoTitle = [fullName, [displayTitle, displayOrg].filter(Boolean).join(", ")]
+    .filter(Boolean)
+    .join(" — ");
+  const seoDescription =
+    bio ||
+    [fullName, displayTitle, displayOrg && `at ${displayOrg}`, location]
+      .filter(Boolean)
+      .join(", ");
+  const personJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: fullName,
+    ...(displayTitle ? { jobTitle: displayTitle } : {}),
+    ...(displayOrg ? { worksFor: { "@type": "Organization", name: displayOrg } } : {}),
+    ...(displayCity || displayState
+      ? {
+          address: {
+            "@type": "PostalAddress",
+            ...(displayCity ? { addressLocality: displayCity } : {}),
+            ...(displayState ? { addressRegion: displayState } : {}),
+            addressCountry: member.country || "India",
+          },
+        }
+      : {}),
+    ...(hasAvatar ? { image: member.avatar } : {}),
+    ...([member.linkedinUrl, member.websiteUrl].filter(Boolean).length
+      ? { sameAs: [member.linkedinUrl, member.websiteUrl].filter(Boolean) }
+      : {}),
+  };
+
   return (
     <Layout breadcrumb="Members" title="Member Profile">
+      <Seo
+        title={seoTitle}
+        description={seoDescription}
+        canonical={canonicalPath}
+        image={hasAvatar ? member.avatar : undefined}
+        type="profile"
+        jsonLd={personJsonLd}
+      />
       {/* Written as classes rather than inline style because the sizing needs
           clamp() and a breakpoint, neither of which an inline style can express. */}
       <style>{`

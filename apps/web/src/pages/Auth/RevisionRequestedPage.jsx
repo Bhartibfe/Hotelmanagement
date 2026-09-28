@@ -7,6 +7,7 @@ import { ErrorNotice } from "../../components/common/ErrorNotice";
 import HotelOwnerProfileForm from "../../components/profile/HotelOwnerProfileForm";
 import VendorProfileForm from "../../components/profile/VendorProfileForm";
 import ExpertProfileForm from "../../components/profile/ExpertProfileForm";
+import Seo from "../../components/seo/Seo";
 
 const RevisionRequestedPage = () => {
   const { user, loading, checkAuth } = useAuth();
@@ -99,6 +100,7 @@ const RevisionRequestedPage = () => {
 
   return (
     <Layout header={1} footer={1}>
+      <Seo title="Revision Requested" noindex />
       <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">

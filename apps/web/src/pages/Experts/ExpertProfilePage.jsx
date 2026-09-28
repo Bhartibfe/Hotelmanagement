@@ -13,6 +13,8 @@ const COPY = {
   directoryPath: "/experts",
   backToDirectory: "Back to Experts Directory",
   fallbackName: "Industry Expert",
+  // Used in the <title> and the fallback meta description.
+  seoRoleLabel: "Hospitality Industry Expert",
   heroBadge: "Verified Industry Expert",
   contactButton: "Contact Expert",
   ctaBody: "Join our hospitality network to connect with verified industry experts and consultants.",

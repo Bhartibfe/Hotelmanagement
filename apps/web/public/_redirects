@@ -1,3 +1,7 @@
+# NOTE: this is a Netlify file and only affects the Netlify demo deploy. The
+# production site is served by nginx, which ignores it — the real 301s for
+# these paths live in deploy/nginx-hotelsircle.conf.example. Change both.
+#
 # Retired public URLs. "Vendor" is the internal name for these records; the
 # pages have always been branded Partners. 301 so search engines and bookmarks
 # follow, rather than relying on the in-app <Navigate> bounce alone.

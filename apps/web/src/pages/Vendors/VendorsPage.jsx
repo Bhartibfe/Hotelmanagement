@@ -6,6 +6,7 @@ import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { DEFAULT_VENDOR_CATEGORIES, categoryColor, categoryLabel } from "../../lib/vendorCategories";
 import { matchesNameSearch } from "../../lib/nameSearch";
+import Seo from "../../components/seo/Seo";
 
 
 
@@ -77,6 +78,11 @@ const VendorsPage = () => {
 
   return (
     <Layout breadcrumb="Partners" title="Verified Partners">
+      <Seo
+        title="Hospitality Partners & Suppliers"
+        description="Verified suppliers and service partners serving hotels across India, from operations and F&B to technology and design."
+        canonical="/hospitality-partners"
+      />
       <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Search & Filters */}

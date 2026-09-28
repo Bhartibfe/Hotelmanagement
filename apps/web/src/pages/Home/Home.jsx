@@ -10,6 +10,7 @@ import { BrandTwo } from "../../components/Brand/BrandTwo";
 import { Layout } from "../../layouts/Layout";
 import api from "../../services/api";
 import { ErrorNotice } from "../../components/common/ErrorNotice";
+import Seo from "../../components/seo/Seo";
 
 const Home = () => {
   const [config, setConfig] = useState(null);
@@ -35,6 +36,12 @@ const Home = () => {
 
   return (
     <Layout header={1} footer={1} transparentHeader>
+      <Seo
+        title="Hotel Sircle — India's Premier Hotel Owners Network"
+        appendSiteName={false}
+        description="A closed, owners-only network for hotel promoters, founders and chairmen. Stronger Together. Better Results."
+        canonical="/"
+      />
       <HeroSection config={config} configLoaded={configLoaded} />
 
       {configError && (

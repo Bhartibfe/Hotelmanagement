@@ -5,6 +5,7 @@ import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { PersonCard, PersonCardStyles } from "../../components/common/PersonCard";
 import { matchesNameSearch } from "../../lib/nameSearch";
+import Seo from "../../components/seo/Seo";
 
 // Advisory members are the same records as experts behind an ExpertKind flag,
 // so this page mirrors ExpertsPage — including the admin-editable expertise
@@ -110,6 +111,11 @@ const AdvisoryPage = () => {
 
   return (
     <Layout breadcrumb="Advisory" title="Advisory Board">
+      <Seo
+        title="Advisory Board"
+        description="The senior hospitality leaders who guide the direction of the Hotel Sircle network."
+        canonical="/advisory"
+      />
       <PersonCardStyles />
       <section style={{ padding: "28px 0 72px", background: "#FFFFFF" }}>
         <div className="container">
@@ -211,7 +217,7 @@ const AdvisoryPage = () => {
                 style={{ marginBottom: "20px" }}
               >
                 <PersonCard
-                  to={`/advisory/${member.id}`}
+                  to={`/advisory/${member.user?.slug || member.id}`}
                   name={getName(member)}
                   title={getTitle(member)}
                   company={getCompany(member)}

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../layouts/Layout";
 import { ErrorNotice } from "../../components/common/ErrorNotice";
+import Seo from "../../components/seo/Seo";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -41,6 +42,7 @@ const LoginPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb="Sign In" title="Sign In">
+      <Seo title="Sign In" noindex />
       <section style={{ padding: "40px 0", background: "var(--tg-section-background)" }}>
         <div className="container">
           <div className="row justify-content-center">

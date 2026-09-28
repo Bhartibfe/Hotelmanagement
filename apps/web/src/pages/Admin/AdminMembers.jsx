@@ -730,7 +730,7 @@ const AdminMembers = () => {
                       <td style={{ padding: "14px 20px", textAlign: "right" }}>
                         <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
                           <button
-                            onClick={() => window.open(`/members/${member.id}`, "_blank")}
+                            onClick={() => window.open(`/members/${member.slug || member.id}`, "_blank")}
                             onMouseEnter={() => setHoveredBtn(`view-${member.id}`)}
                             onMouseLeave={() => setHoveredBtn(null)}
                             style={{

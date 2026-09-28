@@ -3,8 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <!--
+      Pre-hydration defaults only. Every route overwrites these on mount via
+      components/seo/Seo.jsx, so what a JS-capable crawler (Googlebot) reads is
+      the per-page value, not these.
+
+      They still matter, because the crawlers that do NOT run JS — Facebook,
+      LinkedIn, X, WhatsApp, Slack and most LLM crawlers — never see anything
+      but this file. Link previews for every URL on the site come from here.
+      Fixing that properly needs a prerender layer; see the /_seo routes on the
+      API for where it would hook in.
+    -->
     <title>Hotel Sircle - India's Premier Hotel Owners Platform</title>
     <meta name="description" content="A closed, owners-only network for hotel promoters, founders & chairmen. Stronger Together. Better Results." />
+    <meta property="og:site_name" content="Hotel Sircle" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Hotel Sircle - India's Premier Hotel Owners Platform" />
+    <meta property="og:description" content="A closed, owners-only network for hotel promoters, founders & chairmen. Stronger Together. Better Results." />
+    <meta property="og:url" content="https://www.hotelsircle.com/" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Hotel Sircle - India's Premier Hotel Owners Platform" />
+    <meta name="twitter:description" content="A closed, owners-only network for hotel promoters, founders & chairmen. Stronger Together. Better Results." />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="msvalidate.01" content="D08EF51C76309FCB080458AD07B714E4" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.png" />

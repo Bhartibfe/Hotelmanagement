@@ -5,6 +5,7 @@ import { useToast } from "../../components/common/Toast";
 import { getErrorMessage } from "../../lib/errors";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
+import Seo from "../../components/seo/Seo";
 
 const TYPE_COLORS = { SUMMIT: "#C6A962", CONFERENCE: "#1A365D", NETWORKING: "#276749", WEBINAR: "#553C9A" };
 const TYPE_LABELS = { SUMMIT: "Summit", CONFERENCE: "Conference", NETWORKING: "Networking", WEBINAR: "Webinar" };
@@ -129,8 +130,47 @@ const EventDetailPage = () => {
   const isFull = event.maxAttendees && attendeeCount >= event.maxAttendees;
   const isPast = new Date(event.endDate) < new Date();
 
+  // Slug URL even when reached by id, so the two do not compete.
+  const canonicalPath = `/events/${event.slug || event.id}`;
+  const eventLocation = [event.venue, event.city, event.state].filter(Boolean).join(", ");
+  const eventJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    ...(event.description ? { description: event.description } : {}),
+    ...(event.startDate ? { startDate: event.startDate } : {}),
+    ...(event.endDate ? { endDate: event.endDate } : {}),
+    eventStatus: "https://schema.org/EventScheduled",
+    ...(eventLocation
+      ? {
+          location: {
+            "@type": "Place",
+            name: event.venue || eventLocation,
+            address: {
+              "@type": "PostalAddress",
+              ...(event.city ? { addressLocality: event.city } : {}),
+              ...(event.state ? { addressRegion: event.state } : {}),
+              addressCountry: event.country || "India",
+            },
+          },
+        }
+      : {}),
+    organizer: {
+      "@type": "Organization",
+      name: event.organizerName || "Hotel Sircle",
+    },
+    ...(event.registrationUrl ? { url: event.registrationUrl } : {}),
+  };
+
   return (
     <Layout breadcrumb="Events" title={event.title}>
+      <Seo
+        title={event.title}
+        description={event.description || [event.title, eventLocation].filter(Boolean).join(" — ")}
+        canonical={canonicalPath}
+        type="article"
+        jsonLd={eventJsonLd}
+      />
       {/* Hero Section */}
       <section style={{ position: "relative", background: "#0A1628", overflow: "hidden" }}>
         {/* Cover Image */}

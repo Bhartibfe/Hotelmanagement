@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
+import Seo from "../../components/seo/Seo";
 
 const CATEGORIES = ["All", "Investment", "Technology", "Development", "Operations", "Sustainability", "Procurement"];
 
@@ -9,6 +10,9 @@ const InsightsPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb={"Insights"} title={"Industry Insights"}>
+      {/* noindex until there is real content behind this: no insights model,
+          no API, nothing to rank. */}
+      <Seo title="Industry Insights" noindex />
       <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Filters */}

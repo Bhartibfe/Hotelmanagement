@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../layouts/Layout";
 import { ErrorNotice } from "../../components/common/ErrorNotice";
+import Seo from "../../components/seo/Seo";
 
 const VendorRegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -63,6 +64,11 @@ const VendorRegisterPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb="Join as Partner" title="Join as Partner">
+      <Seo
+        title="Join as a Hospitality Partner"
+        description="Apply to list your company in the Hotel Sircle partner directory and reach India's hotel owners directly."
+        canonical="/register/partner"
+      />
       <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">

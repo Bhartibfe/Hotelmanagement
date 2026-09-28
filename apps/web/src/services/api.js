@@ -240,7 +240,18 @@ const api = {
 
   // Users
   getUsers: (params) => request("GET", `/users?${new URLSearchParams(params || {})}`),
-  getUser: (id) => request("GET", `/users/${id}`, { auth: false }),
+  /*
+    idOrSlug: the API resolves either form, so a link built before slugs
+    existed still works.
+
+    The explicit `action` matters here. describeAction guesses the resource
+    from the last non-id-looking segment, and a short slug like "raj-kumar"
+    does not look like an id to it — so a failed fetch used to apologise for
+    not loading "the raj kumar". Tightening that heuristic instead would
+    swallow real segments such as membership-requests and product-approvals.
+  */
+  getUser: (idOrSlug) =>
+    request("GET", `/users/${idOrSlug}`, { auth: false, action: "load this member profile" }),
   updateProfile: (data) => request("PUT", "/users/me", { body: data }),
 
   // Profile
@@ -278,12 +289,14 @@ const api = {
 
   // Experts
   getExperts: (params) => request("GET", `/experts?${new URLSearchParams(params || {})}`, { auth: false }),
-  getExpert: (id) => request("GET", `/experts/${id}`, { auth: false }),
+  getExpert: (idOrSlug) =>
+    request("GET", `/experts/${idOrSlug}`, { auth: false, action: "load this expert profile" }),
   getFeaturedExperts: () => cachedGet("/experts/featured"),
 
   // Advisory board — same record shape as experts, admin-created only
   getAdvisory: (params) => request("GET", `/advisory?${new URLSearchParams(params || {})}`, { auth: false }),
-  getAdvisoryMember: (id) => request("GET", `/advisory/${id}`, { auth: false }),
+  getAdvisoryMember: (idOrSlug) =>
+    request("GET", `/advisory/${idOrSlug}`, { auth: false, action: "load this advisory profile" }),
 
   // Testimonials
   getTestimonials: (params) => cachedGet(`/testimonials?${new URLSearchParams(params || {})}`),

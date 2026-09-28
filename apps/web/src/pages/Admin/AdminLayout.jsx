@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useNavigate, useLocation, Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import Seo from "../../components/seo/Seo";
 
 const NAV_ITEMS = [
   { path: "/admin", label: "Dashboard", icon: "fas fa-th-large", exact: true },
@@ -63,6 +64,8 @@ const AdminLayout = () => {
       className={`admin-shell${drawerOpen ? " admin-sidebar-open" : ""}`}
       style={{ display: "flex", minHeight: "100vh", background: "#F8FAFC" }}
     >
+      {/* Covers every nested admin route in one place. */}
+      <Seo title="Admin" noindex />
       {/* Sidebar */}
       <aside
         className="admin-sidebar"

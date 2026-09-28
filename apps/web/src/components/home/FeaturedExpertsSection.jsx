@@ -109,7 +109,7 @@ export const FeaturedExpertsSection = ({ config }) => {
               style={{ marginBottom: "20px" }}
             >
               <PersonCard
-                to={`/experts/${expert.id}`}
+                to={`/experts/${expert.user?.slug || expert.id}`}
                 name={`${expert.user?.firstName || ""} ${expert.user?.lastName || ""}`.trim()}
                 title={expert.user?.title}
                 company={expert.user?.organizationName}

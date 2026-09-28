@@ -4,6 +4,7 @@ import { Layout } from "../../layouts/Layout";
 import api from "../../services/api";
 import HotelOwnerProfileForm from "../../components/profile/HotelOwnerProfileForm";
 import VendorProfileForm from "../../components/profile/VendorProfileForm";
+import Seo from "../../components/seo/Seo";
 
 const SharedProfileFormPage = () => {
   const { token } = useParams();
@@ -38,6 +39,7 @@ const SharedProfileFormPage = () => {
   if (loading) {
     return (
       <Layout header={1} footer={1}>
+        <Seo title="Shared Profile" noindex />
         <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
           <div className="container text-center">
             <p style={{ fontSize: "16px", color: "#6B7280" }}>Validating link...</p>
@@ -50,6 +52,7 @@ const SharedProfileFormPage = () => {
   if (error) {
     return (
       <Layout header={1} footer={1}>
+        <Seo title="Shared Profile" noindex />
         <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
           <div className="container">
             <div className="row justify-content-center">
@@ -98,6 +101,7 @@ const SharedProfileFormPage = () => {
   if (submitted) {
     return (
       <Layout header={1} footer={1}>
+        <Seo title="Shared Profile" noindex />
         <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
           <div className="container">
             <div className="row justify-content-center">
@@ -147,6 +151,7 @@ const SharedProfileFormPage = () => {
 
   return (
     <Layout header={1} footer={1}>
+      <Seo title="Shared Profile" noindex />
       <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">

@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import api from "../../services/api";
 import PostDetailModal from "../../components/profile/PostDetailModal";
+import Seo from "../../components/seo/Seo";
 
 const TYPE_FILTERS = [
   { key: "All", label: "All" },
@@ -228,6 +229,9 @@ const FeedPage = () => {
 
   return (
     <Layout breadcrumb="Feed" title="Industry Feed">
+      {/* Signed-out visitors see only a CTA here, so there is nothing worth
+          indexing. */}
+      <Seo title="Industry Feed" noindex />
       <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Membership notice for non-approved users */}

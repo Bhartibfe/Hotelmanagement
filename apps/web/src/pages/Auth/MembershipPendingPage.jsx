@@ -3,6 +3,7 @@ import { useNavigate, Navigate, Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
 import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { useAuth } from "../../contexts/AuthContext";
+import Seo from "../../components/seo/Seo";
 
 const MembershipPendingPage = () => {
   const { user, loading, logout, checkAuth } = useAuth();
@@ -63,6 +64,7 @@ const MembershipPendingPage = () => {
 
   return (
     <Layout header={1} footer={1}>
+      <Seo title="Membership Pending" noindex />
       <section
         style={{
           padding: "48px 0",

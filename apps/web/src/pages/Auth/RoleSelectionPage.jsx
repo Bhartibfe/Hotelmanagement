@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
+import Seo from "../../components/seo/Seo";
 
 const RoleSelectionPage = () => {
   const cardStyle = {
@@ -21,6 +22,11 @@ const RoleSelectionPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb="Join the Network" title="Join the Network">
+      <Seo
+        title="Join the Network"
+        description="Apply to Hotel Sircle as a hotel owner, an industry expert, or a hospitality partner."
+        canonical="/register"
+      />
       <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">

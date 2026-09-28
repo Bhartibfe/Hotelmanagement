@@ -6,6 +6,7 @@ import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { PersonCard, PersonCardStyles } from "../../components/common/PersonCard";
 import { matchesNameSearch } from "../../lib/nameSearch";
+import Seo from "../../components/seo/Seo";
 
 const DEFAULT_EXPERTISE_OPTIONS = [
   "General Management",
@@ -118,6 +119,11 @@ const ExpertsPage = () => {
 
   return (
     <Layout breadcrumb="Experts" title="Industry Experts">
+      <Seo
+        title="Hospitality Industry Experts"
+        description="Verified hospitality consultants, operators and specialists advising hotel owners across India."
+        canonical="/experts"
+      />
       <PersonCardStyles />
       <section style={{ padding: "28px 0 72px", background: "#FFFFFF" }}>
         <div className="container">
@@ -219,7 +225,7 @@ const ExpertsPage = () => {
                 style={{ marginBottom: "20px" }}
               >
                 <PersonCard
-                  to={`/experts/${expert.id}`}
+                  to={`/experts/${expert.user?.slug || expert.id}`}
                   name={getName(expert)}
                   title={getTitle(expert)}
                   company={getCompany(expert)}

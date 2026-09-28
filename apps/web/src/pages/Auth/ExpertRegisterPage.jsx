@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Layout } from "../../layouts/Layout";
 import { ErrorNotice } from "../../components/common/ErrorNotice";
+import Seo from "../../components/seo/Seo";
 
 const ExpertRegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -63,6 +64,11 @@ const ExpertRegisterPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb="Join as Industry Expert" title="Join as Industry Expert">
+      <Seo
+        title="Join as an Industry Expert"
+        description="Apply to join the Hotel Sircle expert directory as a hospitality consultant, operator or specialist."
+        canonical="/register/expert"
+      />
       <section style={{ padding: "40px 0", background: "#FFFFFF" }}>
         <div className="container">
           <div className="row justify-content-center">

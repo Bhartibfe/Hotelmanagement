@@ -4,6 +4,7 @@ import { ErrorNotice } from "../../components/common/ErrorNotice";
 import { Link } from "react-router-dom";
 import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
+import Seo from "../../components/seo/Seo";
 
 const TYPE_LABELS = { ALL: "All Events", SUMMIT: "Summits", CONFERENCE: "Conferences", NETWORKING: "Networking", WEBINAR: "Webinars" };
 const TYPE_COLORS = { SUMMIT: "#C6A962", CONFERENCE: "#1A365D", NETWORKING: "#276749", WEBINAR: "#553C9A" };
@@ -186,6 +187,11 @@ const EventsPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb={"Events"} title={"Events & Summits"}>
+      <Seo
+        title="Hospitality Events & Summits"
+        description="Summits, roundtables and member gatherings for India's hotel owners and operators."
+        canonical="/events"
+      />
       <section style={{ padding: "28px 0 100px", background: "#FFFFFF" }}>
         <div className="container">
           {/* Filters */}

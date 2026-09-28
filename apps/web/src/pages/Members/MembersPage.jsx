@@ -6,6 +6,7 @@ import api from "../../services/api";
 import { useAosRefresh } from "../../lib/hooks/useAosRefresh";
 import { SkeletonKeyframes } from "../../components/common/Skeleton";
 import { matchesNameSearch } from "../../lib/nameSearch";
+import Seo from "../../components/seo/Seo";
 
 // "" means: let the API apply the order the admin chose in the panel.
 const SORT_OPTIONS = [
@@ -56,6 +57,11 @@ const MembersPage = () => {
 
   return (
     <Layout breadcrumb="Owners" title="Hotel Owners">
+      <Seo
+        title="Hotel Owners Directory"
+        description="Browse the promoters, founders and chairmen behind India's independent and group hotels, by city, state and portfolio."
+        canonical="/members"
+      />
       {/* Owner cards are deliberately heavier than the expert cards: a taller
           portrait, an inset gold frame with corner marks, and a serif name.
           Written as classes rather than inline style + hover state so the whole
@@ -358,7 +364,7 @@ const MembersPage = () => {
                 .join("") || "?";
               return (
                 <div key={member.id} className="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay={i * 50} style={{ marginBottom: "24px" }}>
-                  <Link to={`/members/${member.id}`} className="owner-card">
+                  <Link to={`/members/${member.slug || member.id}`} className="owner-card">
                     {member.avatar ? (
                       <div
                         className="owner-card__media"

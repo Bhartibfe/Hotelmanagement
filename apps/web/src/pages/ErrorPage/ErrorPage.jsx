@@ -1,10 +1,12 @@
 import React from "react";
 import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
+import Seo from "../../components/seo/Seo";
 
 const ErrorPage = () => {
   return (
     <Layout>
+      <Seo title="Page Not Found" noindex />
       {/* error-area */}
       <section className="error-area">
         <div className="container">

@@ -2,13 +2,16 @@ import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Layout } from "../../layouts/Layout";
 import { getErrorMessage } from "../../lib/errors";
+import Seo from "../seo/Seo";
 
 
 // Experts and advisory board members are one record split by ExpertKind, so
 // both public profiles are this view with different copy and a different
 // fetcher. Only the labels, the directory links, and the closing CTA differ.
 const ExpertProfileView = ({ copy }) => {
-  const { id } = useParams();
+  // Slug for anything linked from the site, cuid for links that predate slugs.
+  // Both resolve server-side, so nothing here has to tell them apart.
+  const { id: idOrSlug } = useParams();
   const [expert, setExpert] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -30,7 +33,7 @@ const ExpertProfileView = ({ copy }) => {
       setLoading(true);
       setError(null);
       try {
-        const data = await copy.fetch(id);
+        const data = await copy.fetch(idOrSlug);
         if (data) {
           setExpert(data);
         } else {
@@ -47,7 +50,7 @@ const ExpertProfileView = ({ copy }) => {
     };
     fetchExpert();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [idOrSlug]);
 
   const handleMessageSubmit = (e) => {
     e.preventDefault();
@@ -95,6 +98,7 @@ const ExpertProfileView = ({ copy }) => {
   if (error || !expert) {
     return (
       <Layout breadcrumb={copy.breadcrumb} title={copy.pageTitle}>
+        <Seo title={copy.notFoundTitle} noindex />
         <section style={{ padding: "48px 0", textAlign: "center", background: "#FFFFFF" }}>
           <div className="container">
             <div
@@ -198,8 +202,61 @@ const ExpertProfileView = ({ copy }) => {
   const hasAvatar = avatar && avatar.trim() !== "";
   const photo = hasAvatar ? avatar : "";
 
+  /*
+    Canonical always points at the slug URL, even when this page was opened by
+    id, so the two addresses do not compete as separate pages.
+
+    A hotel owner can also hold an expert record, and one slug serves both
+    directories — so the same person is reachable at /members/<slug> and
+    /experts/<slug> with the same name and overlapping content. /members is
+    the primary page for an owner, so point there and let this page be the
+    duplicate that defers. Non-owners are canonical on their own page.
+  */
+  const profileSlug = expert.user?.slug;
+  const isHotelOwner = expert.user?.memberType === "HOTEL_OWNER";
+  const canonicalPath =
+    isHotelOwner && profileSlug
+      ? `/members/${profileSlug}`
+      : `${copy.directoryPath}/${profileSlug || expert.id}`;
+  const seoDescription =
+    bio ||
+    [fullName, copy.seoRoleLabel, currentOrganization && `at ${currentOrganization}`, location]
+      .filter(Boolean)
+      .join(", ") ||
+    specializations.slice(0, 4).join(", ");
+  const personJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    name: fullName,
+    ...(currentRole ? { jobTitle: currentRole } : {}),
+    ...(currentOrganization
+      ? { worksFor: { "@type": "Organization", name: currentOrganization } }
+      : {}),
+    ...(city || state
+      ? {
+          address: {
+            "@type": "PostalAddress",
+            ...(city ? { addressLocality: city } : {}),
+            ...(state ? { addressRegion: state } : {}),
+            addressCountry: "India",
+          },
+        }
+      : {}),
+    ...(specializations.length ? { knowsAbout: specializations } : {}),
+    ...(awards.length ? { award: awards } : {}),
+    ...(hasAvatar ? { image: photo } : {}),
+  };
+
   return (
     <Layout breadcrumb={copy.breadcrumb} title={fullName}>
+      <Seo
+        title={`${fullName} — ${copy.seoRoleLabel}`}
+        description={seoDescription}
+        canonical={canonicalPath}
+        image={hasAvatar ? photo : undefined}
+        type="profile"
+        jsonLd={personJsonLd}
+      />
       {/* Styles */}
       <style>{`
         .expert-hero-badge {

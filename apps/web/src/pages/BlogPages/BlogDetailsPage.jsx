@@ -12,10 +12,14 @@ import { VideoPlayerOne } from "../../components/VideoPlayers/VideoPlayerOne";
 import { BlogAuthorInfo } from "../../components/BlogAreas/BlogAuthorInfo";
 import { BlogComments } from "../../components/BlogAreas/BlogComments";
 import { BlogCommentForm } from "../../components/BlogAreas/BlogCommentForm";
+import Seo from "../../components/seo/Seo";
 
 const BlogDetailsPage = () => {
   return (
     <Layout breadcrumb={"Blog Details"} title={"Blog Details"}>
+      {/* Hardcoded theme markup with no data behind it. Keep it out of the
+          index until /insights is actually built. */}
+      <Seo title="Insight" noindex />
       <BlogPageWrapper>
         {/* image */}
         <div className="blog-details-thumb">

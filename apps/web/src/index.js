@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { BrowserRouter } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import "./assets/css/bootstrap.min.css";
 import "./assets/css/animate.min.css";
 import "./assets/css/fontawesome-all.min.css";
@@ -21,8 +22,15 @@ suppressTouchHover();
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    {/*
+      Outside BrowserRouter so anything rendered outside <App> is covered too.
+      Every page's <title>, description, canonical and og:* tags come from the
+      <Seo> component; index.html only holds the pre-hydration defaults.
+    */}
+    <HelmetProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </HelmetProvider>
   </React.StrictMode>
 );

@@ -3,6 +3,7 @@ import { Layout } from "../../layouts/Layout";
 import { Link } from "react-router-dom";
 import { Odometer } from "../../components/Odometer/Odometer";
 import api from "../../services/api";
+import Seo from "../../components/seo/Seo";
 
 const CIRCLE_BENEFITS = [
   { icon: "fas fa-search-plus", title: "Deeper Reference Checks", desc: "Validate vendors, partners, and opportunities through a trusted network of fellow hotel owners who have first-hand experience." },
@@ -33,6 +34,11 @@ const AboutPage = () => {
 
   return (
     <Layout header={1} footer={1} breadcrumb={"About"} title={"About Hotel Sircle"}>
+      <Seo
+        title="About Hotel Sircle"
+        description="Who we are: a closed network of Indian hotel promoters, founders and chairmen, and the advisors and partners who work alongside them."
+        canonical="/about"
+      />
 
       {/* Hero / Mission */}
       <section style={{ padding: "48px 0", background: "#FFFFFF" }}>
