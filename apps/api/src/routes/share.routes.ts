@@ -4,6 +4,7 @@ import { prisma } from "@hospitality/database";
 import { oversizedImageError } from "../utils/media";
 import { authenticate } from "../middleware/auth";
 import { slugify } from "../utils/slugify";
+import { siteUrl } from "../utils/siteUrl";
 import { normalizeProfileFields } from "../utils/profileFields";
 
 const router = Router();
@@ -49,8 +50,9 @@ router.post("/create-token", authenticate, async (req: Request, res: Response) =
       },
     });
 
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const shareUrl = `${baseUrl}/shared-profile/${shareToken.token}`;
+    // FRONTEND_URL is not set on the server, so this used to email members a
+    // localhost link. siteUrl() falls back to the real origin instead.
+    const shareUrl = `${siteUrl()}/shared-profile/${shareToken.token}`;
 
     return res.json({
       token: shareToken.token,

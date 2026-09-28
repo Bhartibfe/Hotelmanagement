@@ -260,7 +260,14 @@ router.put("/:id", authenticate, async (req: Request, res: Response) => {
     if (oversized) return res.status(413).json({ error: oversized });
 
     const data: any = {};
-    if (title !== undefined) { data.title = title.trim(); data.slug = slugify(title) + "-" + Date.now().toString(36); }
+    /*
+      Renaming an event deliberately does NOT re-slug it. The slug is the
+      event's address, not a view of its title: this used to mint a fresh one
+      on every title edit, which silently 404'd every link that had already
+      been shared and dropped whatever ranking the page had built up. Fixing a
+      typo in a title must not cost the URL.
+    */
+    if (title !== undefined) { data.title = title.trim(); }
     if (type !== undefined) data.type = type;
     if (description !== undefined) data.description = description;
     if (venue !== undefined) data.venue = venue || null;

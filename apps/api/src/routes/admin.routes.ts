@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { prisma } from "@hospitality/database";
 import { authenticate, requireAdmin } from "../middleware/auth";
 import { slugify } from "../utils/slugify";
+import { nextAvailableUserSlug } from "../utils/profileSlug";
 import { sendEmail } from "../services/email.service";
 import * as emailTemplates from "../templates/email.templates";
 import { isOwnerSortMode, resolveOwnerOrderBy } from "./users.routes";
@@ -218,6 +219,9 @@ router.get("/members", async (req: Request, res: Response) => {
           email: true,
           firstName: true,
           lastName: true,
+          // Powers the admin table's "view profile" link, which opens the
+          // public page. Without it the button falls back to an id URL.
+          slug: true,
           role: true,
           memberType: true,
           membershipStatus: true,
@@ -420,6 +424,10 @@ router.put("/members/:id", async (req: Request, res: Response) => {
         email: true,
         firstName: true,
         lastName: true,
+        // The admin table swaps this row into local state, so dropping slug
+        // here would silently revert that member's "view profile" link to an
+        // id URL until the page is reloaded.
+        slug: true,
         role: true,
         memberType: true,
         membershipStatus: true,
@@ -550,12 +558,16 @@ router.post("/vendors", async (req: Request, res: Response) => {
     const vendorSlug = slugify(companyName) + "-" + Date.now().toString(36);
 
     const result = await prisma.$transaction(async (tx: any) => {
+      // Inside the transaction so the "is this slug free" read and the insert
+      // cannot be interleaved with another admin creating the same name.
+      const slug = await nextAvailableUserSlug(tx, firstName, lastName);
       const user = await tx.user.create({
         data: {
           email,
           passwordHash,
           firstName,
           lastName,
+          slug,
           role: "MEMBER",
           memberType: "VENDOR",
           membershipStatus: "APPROVED",
@@ -803,12 +815,15 @@ router.post("/experts", async (req: Request, res: Response) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     const result = await prisma.$transaction(async (tx: any) => {
+      // See the vendor create above: slug resolution belongs inside the tx.
+      const slug = await nextAvailableUserSlug(tx, firstName, lastName);
       const user = await tx.user.create({
         data: {
           email,
           passwordHash,
           firstName,
           lastName,
+          slug,
           role: "MEMBER",
           memberType: "PROFESSIONAL",
           membershipStatus: "APPROVED",
@@ -1291,7 +1306,9 @@ router.put("/events/:id", async (req: Request, res: Response) => {
     } = req.body;
 
     const data: any = {};
-    if (title !== undefined) { data.title = title; data.slug = slugify(title) + "-" + Date.now().toString(36); }
+    // Slug is intentionally left alone on rename — see the matching comment in
+    // events.routes.ts. The URL outlives the title.
+    if (title !== undefined) { data.title = title; }
     if (type !== undefined) data.type = type;
     if (description !== undefined) data.description = description;
     if (venue !== undefined) data.venue = venue;

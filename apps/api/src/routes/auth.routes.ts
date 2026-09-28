@@ -7,6 +7,7 @@ import { authenticate } from "../middleware/auth";
 import { validate, registerSchema, loginSchema } from "../utils/validation";
 import { sendEmail } from "../services/email.service";
 import { welcomeEmail } from "../templates/email.templates";
+import { createUserWithSlug } from "../utils/profileSlug";
 
 const router = Router();
 
@@ -35,39 +36,47 @@ router.post("/register", validate(registerSchema), async (req: Request, res: Res
 
     const passwordHash = await bcrypt.hash(password, AUTH_CONFIG.saltRounds);
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        firstName,
-        lastName,
-        role: "MEMBER",
-        membershipStatus: "PENDING",
-        memberType,
-        title,
-        phone,
-        city,
-        state,
-        organizationName,
-        organizationRole,
-        businessOverview,
-      },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        salutation: true,
-        role: true,
-        membershipStatus: true,
-        profileStatus: true,
-        memberType: true,
-        title: true,
-        avatar: true,
-        organizationName: true,
-        createdAt: true,
-      },
-    });
+    // The slug is assigned here, at creation, rather than on approval: there
+    // are only three places a user can be created, whereas a user can be moved
+    // to APPROVED from several admin paths and by hand in the database. Fixing
+    // it at birth is also what makes "never regenerate on rename" free.
+    const user = await createUserWithSlug(prisma, { firstName, lastName }, (slug) =>
+      prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          slug,
+          role: "MEMBER",
+          membershipStatus: "PENDING",
+          memberType,
+          title,
+          phone,
+          city,
+          state,
+          organizationName,
+          organizationRole,
+          businessOverview,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          slug: true,
+          salutation: true,
+          role: true,
+          membershipStatus: true,
+          profileStatus: true,
+          memberType: true,
+          title: true,
+          avatar: true,
+          organizationName: true,
+          createdAt: true,
+        },
+      })
+    );
 
     const tokens = generateTokens({
       userId: user.id,
@@ -128,6 +137,9 @@ router.post("/login", validate(loginSchema), async (req: Request, res: Response)
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        // The profile pages compare this against the URL segment to detect
+        // "this is me" without waiting for the record to load.
+        slug: user.slug,
         salutation: user.salutation,
         role: user.role,
         membershipStatus: user.membershipStatus,
@@ -183,6 +195,7 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
         email: true,
         firstName: true,
         lastName: true,
+        slug: true,
         salutation: true,
         role: true,
         memberType: true,

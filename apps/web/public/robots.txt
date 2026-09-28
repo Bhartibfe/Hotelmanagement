@@ -1,3 +1,27 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+
+# Authenticated or per-person surfaces. Nothing here can be crawled usefully,
+# and /shared-profile/ carries a single-use secret token in the path.
+Disallow: /admin
+Disallow: /my-profile
+Disallow: /complete-profile
+Disallow: /membership-pending
+Disallow: /revision-requested
+Disallow: /shared-profile/
+Disallow: /login
+
+# Unbuilt scaffolding: no model, no API, hardcoded theme markup behind it.
+Disallow: /insights
+
+# Note: Disallow stops crawling, not indexing. A URL someone links to can still
+# show up in results, title-only. That is why these pages also carry a
+# noindex meta tag (see components/seo/Seo.jsx) — and why, if one of them ever
+# does turn up indexed, its Disallow has to come off temporarily so the crawler
+# can actually fetch the page and read the noindex.
+#
+# This is not a security control either. What protects a share link is that the
+# token is 32 random bytes, single-use, and expires after 7 days.
+
+Sitemap: https://www.hotelsircle.com/sitemap.xml

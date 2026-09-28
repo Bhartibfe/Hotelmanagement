@@ -100,6 +100,9 @@ router.get("/", async (req: Request, res: Response) => {
           id: true,
           firstName: true,
           lastName: true,
+          // The directory links to /members/<slug>; id is only the fallback
+          // for a row that has not been backfilled.
+          slug: true,
           role: true,
           memberType: true,
           title: true,
@@ -150,6 +153,7 @@ router.get("/me", authenticate, async (req: Request, res: Response) => {
         email: true,
         firstName: true,
         lastName: true,
+        slug: true,
         role: true,
         memberType: true,
         membershipStatus: true,
@@ -226,15 +230,28 @@ router.put("/me", authenticate, async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/users/:id - Public profile (only APPROVED users)
-router.get("/:id", async (req: Request, res: Response) => {
+// GET /api/users/:idOrSlug - Public profile (only APPROVED users)
+//
+// Accepts either form so the id URLs that were live before slugs existed keep
+// resolving; nginx 301s them to the slug URL, but the API must still answer
+// them for anything that reaches it directly. Same shape as the events route.
+// findFirst rather than findUnique: an OR is not a unique selector.
+router.get("/:idOrSlug", async (req: Request, res: Response) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.params.id, isActive: true, membershipStatus: "APPROVED" },
+    const { idOrSlug } = req.params;
+    const user = await prisma.user.findFirst({
+      where: {
+        isActive: true,
+        membershipStatus: "APPROVED",
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+      },
       select: {
         id: true,
         firstName: true,
         lastName: true,
+        // The page builds its canonical tag from this, so it points at the
+        // slug URL even when the visitor arrived by id.
+        slug: true,
         role: true,
         memberType: true,
         title: true,

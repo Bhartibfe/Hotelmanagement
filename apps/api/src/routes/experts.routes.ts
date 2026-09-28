@@ -17,6 +17,11 @@ const DIRECTORY_USER_FIELDS = {
   id: true,
   firstName: true,
   lastName: true,
+  // These directories link to /experts/<slug> and /advisory/<slug>. The slug
+  // lives on User, not IndustryExpert, because an expert row is deleted and
+  // recreated on every profile resubmit — a slug stored there would be thrown
+  // away each time, and IndustryExpert holds no name to derive one from.
+  slug: true,
   title: true,
   memberType: true,
   organizationName: true,
@@ -28,6 +33,17 @@ const DIRECTORY_USER_FIELDS = {
   // without it the directory keeps showing a replaced photo for a day.
   updatedAt: true,
 } as const;
+
+/*
+  Only approved, active people are listed publicly.
+
+  These directories previously filtered on `kind` alone, so a member who was
+  still PENDING — or had been rejected, suspended or deactivated — kept a live
+  card and a working profile page. That was invisible while nothing advertised
+  those URLs; it stops being invisible the moment a sitemap hands them to
+  Google. The same filter is applied in the sitemap builder, so the two agree.
+*/
+const PUBLIC_USER = { isActive: true, membershipStatus: "APPROVED" } as const;
 
 // Hangs the photo URL off each row's nested user, in one extra id-only query.
 // versionOf appends ?v=<updatedAt> so replacing a photo produces a new URL:
@@ -52,7 +68,7 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
 
       const [experts, total] = await Promise.all([
         prisma.industryExpert.findMany({
-          where: { kind },
+          where: { kind, user: PUBLIC_USER },
           include: { user: { select: DIRECTORY_USER_FIELDS } },
           skip,
           take: parseInt(limit as string),
@@ -70,7 +86,7 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
             { createdAt: "desc" },
           ],
         }),
-        prisma.industryExpert.count({ where: { kind } }),
+        prisma.industryExpert.count({ where: { kind, user: PUBLIC_USER } }),
       ]);
 
       await withAvatars(req, experts);
@@ -99,7 +115,7 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
         stronger statement of the two, and that was the previous behaviour.
       */
       const experts = await prisma.industryExpert.findMany({
-        where: { kind, OR: [{ isPinned: true }, { isFeatured: true }] },
+        where: { kind, user: PUBLIC_USER, OR: [{ isPinned: true }, { isFeatured: true }] },
         include: { user: { select: DIRECTORY_USER_FIELDS } },
         orderBy: [
           { isPinned: "desc" },
@@ -116,17 +132,26 @@ export const createExpertDirectoryRouter = (kind: ExpertKind) => {
     }
   });
 
-  // GET /:id - Single entry with full user profile
-  router.get("/:id", async (req: Request, res: Response) => {
+  // GET /:idOrSlug - Single entry with full user profile
+  //
+  // Resolves by the expert row's own id or by the linked user's slug, so the
+  // id URLs that predate slugs keep working. Registered after /featured, which
+  // is why profileSlug.ts refuses to mint "featured" as a slug.
+  router.get("/:idOrSlug", async (req: Request, res: Response) => {
     try {
-      const expert = await prisma.industryExpert.findUnique({
-        where: { id: req.params.id },
+      const { idOrSlug } = req.params;
+      const expert = await prisma.industryExpert.findFirst({
+        where: {
+          user: PUBLIC_USER,
+          OR: [{ id: idOrSlug }, { user: { slug: idOrSlug } }],
+        },
         include: {
           user: {
             select: {
               id: true,
               firstName: true,
               lastName: true,
+              slug: true,
               avatar: true,
               title: true,
               bio: true,

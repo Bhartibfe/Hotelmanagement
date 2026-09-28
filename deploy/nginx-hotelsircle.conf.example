@@ -1,0 +1,189 @@
+# Reference nginx configuration for hotelsircle.com
+#
+# Mirrors /etc/nginx/sites-available/hotelsircle.com on the production server.
+# Nothing reads this file; it lives here so the server-side half of the SEO
+# work is reviewable and reproducible. The Express routes in
+# apps/api/src/routes/seo.routes.ts do nothing until nginx forwards these paths
+# to them.
+#
+# Ports on this host:
+#   127.0.0.1:5111   the API   (apps/api, under pm2 — API_PORT=5111)
+#   127.0.0.1:3001   the web   (apps/web build, served by its own process)
+#
+# Note the frontend is PROXIED, not served from a docroot — there is no `root`
+# and no try_files anywhere in this file. That is why @spa below proxies to
+# 3001 rather than serving index.html off disk.
+#
+# ─── APPLY THIS LAST ────────────────────────────────────────────────────────
+# The redirect block sends every cuid-shaped profile URL to the API expecting a
+# slug back. If it goes live before the API can resolve slugs, every old
+# profile link 301s to a URL that 404s and every profile page breaks at once,
+# with Google recording the failures. Deploy the app, confirm the curl checks
+# at the bottom pass against 127.0.0.1:5111, and only then reload nginx.
+
+
+# ── 1. All HTTP → canonical HTTPS www ───────────────────────────────────────
+#
+# Replaces a Certbot-generated block whose condition read
+#   if ($host = hostelsircle.com)     ← hostel, not hotel
+# That typo never matched, so the block fell through to its `return 404` and
+# every plain-http request to the site answered 404 instead of redirecting.
+server {
+    listen 80;
+    server_name hotelsircle.com www.hotelsircle.com;
+    return 301 https://www.hotelsircle.com$request_uri;
+}
+
+
+# ── 2. HTTPS non-www → www ──────────────────────────────────────────────────
+#
+# One server block previously answered on both hostnames, so every page was
+# reachable and returned 200 at two addresses. Google treats that as duplicate
+# content and splits ranking between them. The sitemap emits www URLs (SITE_URL
+# in the API env), so www is the canonical form and the bare host redirects to
+# it.
+server {
+    listen 443 ssl;
+    server_name hotelsircle.com;
+
+    ssl_certificate /etc/letsencrypt/live/hotelsircle.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/hotelsircle.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://www.hotelsircle.com$request_uri;
+}
+
+
+# ── 3. The site ─────────────────────────────────────────────────────────────
+server {
+    listen 443 ssl;
+    server_name www.hotelsircle.com;
+
+    access_log /var/log/nginx/hotelsircle_access.log;
+    error_log  /var/log/nginx/hotelsircle_error.log;
+
+    ssl_certificate /etc/letsencrypt/live/hotelsircle.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/hotelsircle.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # ── Retired id-based profile URLs → real 301 to the slug URL ────────────
+    #
+    # Matches cuid-shaped ids only. A slug is firstname-lastname and always
+    # contains a hyphen; a cuid never does, so the two languages are disjoint
+    # and /members/priya-sharma falls straight through to the SPA below without
+    # ever being proxied here. (profileSlug.ts also refuses to mint a
+    # cuid-shaped slug, so the invariant holds from both ends.)
+    #
+    # A regex location beats the `location /` prefix match regardless of order,
+    # but keeping it above `location /` makes the intent readable.
+    #
+    # The Express handler answers 404 when the id resolves to nothing, and
+    # proxy_intercept_errors hands that to @spa — so an unknown or deleted id
+    # behaves exactly as it did before slugs existed. The 502/503/504 entry
+    # means a dead API cannot take profile URLs down with it: they degrade to
+    # the id-based page instead of showing an nginx error.
+    # NB: the capture is named pcuid, not pid — $pid is a built-in nginx
+    # variable (the worker process id) and reusing it fails nginx -t with
+    # `duplicate "pid" variable`.
+    location ~ "^/(?<ptype>members|experts|advisory)/(?<pcuid>c[a-z0-9]{20,30})/?$" {
+        proxy_pass              http://127.0.0.1:5111/_seo/legacy-profile/$ptype/$pcuid;
+        proxy_http_version      1.1;
+        proxy_set_header        Host              $host;
+        proxy_set_header        X-Real-IP         $remote_addr;
+        proxy_set_header        X-Forwarded-For   $proxy_add_x_forwarded_for;
+        # Required: the API sets `trust proxy`, so without this every absolute
+        # URL it builds comes back as http.
+        proxy_set_header        X-Forwarded-Proto $scheme;
+        proxy_intercept_errors  on;
+        error_page              404 502 503 504 = @spa;
+    }
+
+    # ── Live sitemap, generated from the database by the API ────────────────
+    #
+    # Served from this origin, which is what makes it valid: Google only
+    # accepts a sitemap listing URLs on the same host that serves it.
+    # An exact-match location, so it wins over everything else here.
+    location = /sitemap.xml {
+        proxy_pass              http://127.0.0.1:5111/sitemap.xml;
+        proxy_http_version      1.1;
+        proxy_set_header        Host              $host;
+        proxy_set_header        X-Forwarded-Proto $scheme;
+        proxy_intercept_errors  on;
+        error_page              502 503 504 = @sitemap_down;
+    }
+
+    # 503 tells Google "come back later". A 200 carrying an empty <urlset>
+    # would tell it the site has no pages at all, which is far worse.
+    location @sitemap_down {
+        return 503;
+    }
+
+    # ── Retired public URLs ─────────────────────────────────────────────────
+    #
+    # apps/web/public/_redirects declares these, but that is a Netlify file and
+    # nginx ignores it, so here they have only ever been client-side <Navigate>
+    # bounces inside the SPA — no 301, no signal to Google. These make them
+    # real.
+    location = /vendors         { return 301 /hospitality-partners; }
+    location = /marketplace     { return 301 /hospitality-partners; }
+    location = /register/vendor { return 301 /register/partner; }
+
+    # ── API ─────────────────────────────────────────────────────────────────
+    location /api/ {
+        proxy_pass         http://localhost:5111/api/;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        'upgrade';
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # ── Frontend ────────────────────────────────────────────────────────────
+    #
+    # @spa is where a missed id-redirect lands. proxy_pass with no URI part
+    # forwards the original $request_uri, so the web process sees the URL the
+    # visitor actually asked for and serves the app for it.
+    location @spa {
+        proxy_pass         http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        proxy_pass         http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade           $http_upgrade;
+        proxy_set_header   Connection        'upgrade';
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+
+# ─── Apply ──────────────────────────────────────────────────────────────────
+#   sudo nginx -t                  # never reload without this
+#   sudo systemctl reload nginx    # reload, not restart: no dropped connections
+#
+# ─── Verify ─────────────────────────────────────────────────────────────────
+# On the box, before touching nginx:
+#   curl -s  http://127.0.0.1:5111/sitemap.xml | head -20
+#   curl -si http://127.0.0.1:5111/_seo/legacy-profile/members/<real-cuid> | head -5
+#       → 301 + Location: /members/<slug> + Cache-Control: public, max-age=86400
+#
+# Through nginx, afterwards:
+#   curl -sI http://hotelsircle.com/                    → 301 → https://www...
+#   curl -sI https://hotelsircle.com/members            → 301 → https://www...
+#   curl -sI https://www.hotelsircle.com/sitemap.xml    → 200, application/xml
+#   curl -sI https://www.hotelsircle.com/members/<cuid> → 301 → /members/<slug>
+#   curl -sI https://www.hotelsircle.com/members/<slug> → 200, NO Location
+#   curl -sI https://www.hotelsircle.com/vendors        → 301 → /hospitality-partners

@@ -28,6 +28,7 @@ import advisoryRoutes from "./routes/advisory.routes";
 import profileRoutes from "./routes/profile.routes";
 import shareRoutes from "./routes/share.routes";
 import mediaRoutes from "./routes/media.routes";
+import seoRoutes from "./routes/seo.routes";
 
 const app = express();
 // Render terminates TLS in front of this, so req.protocol must follow
@@ -88,10 +89,21 @@ const globalLimiter = rateLimit({
   max: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  // GET on a public directory is free. Anything that changes data still counts,
-  // so this cannot be used to hammer the write endpoints.
+  /*
+    GET on a public directory is free. Anything that changes data still counts,
+    so this cannot be used to hammer the write endpoints.
+
+    The sitemap and the id->slug redirects are exempt too. Googlebot recrawling
+    the retired profile URLs arrives in bursts, and a 429 there is not a
+    throttle — Google reads it as a failed fetch and, on the sitemap, as the
+    sitemap being unavailable. Neither is reachable from outside except through
+    the specific nginx location blocks, so this is not an abuse surface.
+  */
   skip: (req) =>
-    req.method === "GET" && PUBLIC_READ_PREFIXES.some((p) => req.path.startsWith(p)),
+    req.method === "GET" &&
+    (req.path === "/sitemap.xml" ||
+      req.path.startsWith("/_seo/") ||
+      PUBLIC_READ_PREFIXES.some((p) => req.path.startsWith(p))),
   message: { error: "Too many requests from this device. Please wait a minute and try again." },
 });
 const authLimiter = rateLimit({
@@ -167,6 +179,12 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/share", shareRoutes);
 // Images referenced by URL from list responses rather than inlined into them.
 app.use("/api/media", mediaRoutes);
+
+// Mounted at the root, not under /api: nginx proxies /sitemap.xml and the
+// cuid-shaped profile URLs straight here, so these paths are part of the
+// public site's address space. The notFoundHandler below is scoped to /api and
+// leaves them alone.
+app.use(seoRoutes);
 
 // Public homepage config (no auth needed)
 app.get("/api/homepage-config", async (_req, res) => {
